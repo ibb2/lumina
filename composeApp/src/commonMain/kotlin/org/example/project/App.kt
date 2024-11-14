@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +27,28 @@ import lumina.composeapp.generated.resources.compose_multiplatform
 fun App(emailService: EmailService) {
     MaterialTheme {
         var showContent by remember { mutableStateOf(false) }
+        var emailAddress by remember { mutableStateOf("email@example.com")}
+        var password by remember {mutableStateOf("")}
+        var login by remember { mutableStateOf(false) }
+
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column {
+                TextField(
+                    value = emailAddress,
+                    onValueChange = { it -> emailAddress = it},
+                    label = { Text("Email Address") }
+                )
+                TextField(
+                    value = password,
+                    onValueChange = { it -> password = it},
+                    label = { Text("Password") }
+                )
+                Button(onClick = {
+                   login = true
+                }) {
+                    Text("Login")
+                }
+            }
             Button(onClick = { showContent = !showContent }) {
                 Text("Click me!")
             }
@@ -37,45 +59,52 @@ fun App(emailService: EmailService) {
                     Text("Compose: $greeting")
                 }
             }
-            displayEmails(emailService)
+            displayEmails(emailService, emailAddress, password, login)
 
         }
     }
 }
 
+
 @Composable
-fun displayEmails(emailService: EmailService) {
+fun displayEmails(emailService: EmailService, emailAddress: String, password: String, login: Boolean) {
 
-    val emailMessages: Array<Email> = emailService.getEmails()
+    if (login) {
+        val emailMessages: Array<Email> = emailService.getEmails(emailAddress, password)
 
-    Column {
-        emailMessages.forEach { email: Email ->
-            Column(
-                modifier = Modifier.border(
-                    width = 1.dp,
-                    color = Color.DarkGray,
-                    shape = RoundedCornerShape(4.dp)
-                ).background(
-                    color = Color.LightGray
-                )
-            ) {
-                Text(
-                    text = email.from ?: "No from"
-                )
-                Text(
-                    text = email.subject
-                )
-                Text(
-                    text = email.body
-                )
+        Column {
+            emailMessages.forEach { email: Email ->
+                Column(
+                    modifier = Modifier.border(
+                        width = 1.dp,
+                        color = Color.DarkGray,
+                        shape = RoundedCornerShape(4.dp)
+                    ).background(
+                        color = Color.LightGray
+                    )
+                ) {
+                    Text(
+                        text = email.from ?: "No from"
+                    )
+                    Text(
+                        text = email.subject
+                    )
+                    Text(
+                        text = email.body
+                    )
+                }
             }
         }
+    } else {
+        Text(
+            text = "Please log in."
+        )
     }
 }
 
 
 expect class EmailService {
-    fun getEmails(): Array<Email>
+    fun getEmails(emailAddress: String, password: String): Array<Email>
 }
 
 data class Email(

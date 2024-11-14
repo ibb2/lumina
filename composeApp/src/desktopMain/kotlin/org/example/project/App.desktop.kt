@@ -9,13 +9,13 @@ import java.util.*
 
 
 actual class EmailService {
-    actual fun getEmails(): Array<Email> {
+    actual fun getEmails(emailAddress: String, password: String): Array<Email> {
 
         val properties: Properties = Properties().apply {
             put("mail.store.protocol", "imap")
 //            put("mail.imap.ssl.trust", "imap.gmail.com")
-            put("mail.imap.username", "")
-            put("mail.imap.password", "")
+            put("mail.imap.username", emailAddress)
+            put("mail.imap.password", password)
             put("mail.imap.host", "imap.gmail.com")
             put("mail.imap.port", "993")
             put("mail.imap.ssl.enable", "true")
