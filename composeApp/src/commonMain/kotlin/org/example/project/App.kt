@@ -17,19 +17,37 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.russhwolf.settings.ExperimentalSettingsApi
+import com.russhwolf.settings.ObservableSettings
+import com.russhwolf.settings.Settings
+import com.russhwolf.settings.SettingsListener
+import com.russhwolf.settings.observable.makeObservable
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import lumina.composeapp.generated.resources.Res
 import lumina.composeapp.generated.resources.compose_multiplatform
 
+@OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
 fun App(emailService: EmailService) {
     MaterialTheme {
+        val settings = Settings()
         var showContent by remember { mutableStateOf(false) }
-        var emailAddress by remember { mutableStateOf("email@example.com")}
+        var emailAddress by remember { mutableStateOf("")}
         var password by remember {mutableStateOf("")}
-        var login by remember { mutableStateOf(false) }
+        var loggedIn by remember { mutableStateOf(false) }
+
+        val observableSettings: ObservableSettings = settings.makeObservable()
+
+        observableSettings.putString("emailAddress", "")
+        observableSettings.putString("password", "")
+        observableSettings.putBoolean("login", false)
+
+        observableSettings.addBooleanListener("login", defaultValue = false) { value -> loggedIn = value }
+        observableSettings.addStringListener("emailAddress", defaultValue = "") { value -> emailAddress = value }
+        observableSettings.addStringListener("password", defaultValue = "") {value -> password = value}
+
 
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
             Column {
@@ -44,13 +62,18 @@ fun App(emailService: EmailService) {
                     label = { Text("Password") }
                 )
                 Button(onClick = {
-                   login = true
+                   login(observableSettings, emailAddress, password)
                 }) {
                     Text("Login")
                 }
             }
             Button(onClick = { showContent = !showContent }) {
                 Text("Click me!")
+            }
+            Button(onClick = { logout(observableSettings) }) {
+                Text(
+                    "Logout"
+                )
             }
             AnimatedVisibility(showContent) {
                 val greeting = remember { Greeting().greet() }
@@ -59,17 +82,30 @@ fun App(emailService: EmailService) {
                     Text("Compose: $greeting")
                 }
             }
-            displayEmails(emailService, emailAddress, password, login)
+            displayEmails(observableSettings, emailService, loggedIn, emailAddress, password)
 
         }
     }
 }
 
+fun login(observableSettings: ObservableSettings, emailAddress: String, password: String): Unit {
+    observableSettings.putString("emailAddress", emailAddress)
+    observableSettings.putString("password", password)
+    observableSettings.putBoolean("login", true)
+    println("Logged in as $emailAddress")
+}
+
+fun logout(observableSettings: ObservableSettings): Unit {
+    observableSettings.putString("emailAddress", "")
+    observableSettings.putString("password", "")
+    observableSettings.putBoolean("login", false)
+}
+
 
 @Composable
-fun displayEmails(emailService: EmailService, emailAddress: String, password: String, login: Boolean) {
+fun displayEmails(observableSettings: ObservableSettings, emailService: EmailService, loggedIn : Boolean, emailAddress: String, password: String) {
 
-    if (login) {
+    if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
         val emailMessages: Array<Email> = emailService.getEmails(emailAddress, password)
 
         Column {

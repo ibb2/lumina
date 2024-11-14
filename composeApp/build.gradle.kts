@@ -48,6 +48,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation("org.eclipse.angus:angus-mail:2.0.3")
             implementation("com.russhwolf:multiplatform-settings-no-arg:1.2.0")
+            implementation("com.russhwolf:multiplatform-settings-make-observable:1.2.0")
+
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
