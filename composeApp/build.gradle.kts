@@ -46,6 +46,7 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation("org.eclipse.angus:angus-mail:2.0.3")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
