@@ -17,6 +17,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.cash.sqldelight.db.SqlDriver
+import com.example.AccountTableQueries
+import com.example.project.database.LuminaDatabase
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
@@ -26,12 +29,19 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import lumina.composeapp.generated.resources.Res
 import lumina.composeapp.generated.resources.compose_multiplatform
+import org.example.project.shared.AppModule
+import org.example.project.sqldelight.AccountDataSource
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
-fun App(emailService: EmailService) {
+fun App(emailService: EmailService, driver: SqlDriver) {
     MaterialTheme {
+
+        // db related stuff
+        val database = LuminaDatabase(driver)
+        val accountQueries = database.accountTableQueries
+
         val settings = Settings()
         var showContent by remember { mutableStateOf(false) }
         var emailAddress by remember { mutableStateOf("") }
@@ -70,7 +80,7 @@ fun App(emailService: EmailService) {
 
                     )
                     Button(onClick = {
-                        login(observableSettings, emailAddress, password)
+                        login(observableSettings, accountQueries, emailAddress, password)
                     }) {
                         Text("Login")
                     }
@@ -88,12 +98,15 @@ fun App(emailService: EmailService) {
 
 }
 
-fun login(observableSettings: ObservableSettings, emailAddress: String, password: String): Unit {
+fun login(observableSettings: ObservableSettings, accountQueries: AccountTableQueries, emailAddress: String, password: String): Unit {
+
+
+
     observableSettings.putString("emailAddress", emailAddress)
     observableSettings.putString("password", password)
     observableSettings.putBoolean("login", true)
+    accountQueries.insertAccount(emailAddress)
     println("Logged in as $emailAddress")
-
 
 }
 
