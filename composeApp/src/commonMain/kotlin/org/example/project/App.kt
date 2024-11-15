@@ -4,9 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
@@ -16,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
@@ -34,8 +34,8 @@ fun App(emailService: EmailService) {
     MaterialTheme {
         val settings = Settings()
         var showContent by remember { mutableStateOf(false) }
-        var emailAddress by remember { mutableStateOf("")}
-        var password by remember {mutableStateOf("")}
+        var emailAddress by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
         var loggedIn by remember { mutableStateOf(false) }
 
         val observableSettings: ObservableSettings = settings.makeObservable()
@@ -46,46 +46,46 @@ fun App(emailService: EmailService) {
 
         observableSettings.addBooleanListener("login", defaultValue = false) { value -> loggedIn = value }
         observableSettings.addStringListener("emailAddress", defaultValue = "") { value -> emailAddress = value }
-        observableSettings.addStringListener("password", defaultValue = "") {value -> password = value}
+        observableSettings.addStringListener("password", defaultValue = "") { value -> password = value }
 
 
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-            Column {
-                TextField(
-                    value = emailAddress,
-                    onValueChange = { it -> emailAddress = it},
-                    label = { Text("Email Address") }
-                )
-                TextField(
-                    value = password,
-                    onValueChange = { it -> password = it},
-                    label = { Text("Password") }
-                )
-                Button(onClick = {
-                   login(observableSettings, emailAddress, password)
-                }) {
-                    Text("Login")
+        if (!loggedIn) {
+            Box(
+                Modifier.fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
+                    Text("Login", fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
+                    TextField(
+                        value = emailAddress,
+                        onValueChange = { it -> emailAddress = it },
+                        label = { Text("Email Address") },
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    TextField(
+                        value = password,
+                        onValueChange = { it -> password = it },
+                        label = { Text("Password") },
+                                modifier = Modifier.padding(bottom = 8.dp)
+
+                    )
+                    Button(onClick = {
+                        login(observableSettings, emailAddress, password)
+                    }) {
+                        Text("Login")
+                    }
                 }
             }
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
+        } else {
             Button(onClick = { logout(observableSettings) }) {
                 Text(
                     "Logout"
                 )
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
-            }
             displayEmails(observableSettings, emailService, loggedIn, emailAddress, password)
-
         }
     }
+
 }
 
 fun login(observableSettings: ObservableSettings, emailAddress: String, password: String): Unit {
@@ -93,6 +93,8 @@ fun login(observableSettings: ObservableSettings, emailAddress: String, password
     observableSettings.putString("password", password)
     observableSettings.putBoolean("login", true)
     println("Logged in as $emailAddress")
+
+
 }
 
 fun logout(observableSettings: ObservableSettings): Unit {
@@ -103,7 +105,13 @@ fun logout(observableSettings: ObservableSettings): Unit {
 
 
 @Composable
-fun displayEmails(observableSettings: ObservableSettings, emailService: EmailService, loggedIn : Boolean, emailAddress: String, password: String) {
+fun displayEmails(
+    observableSettings: ObservableSettings,
+    emailService: EmailService,
+    loggedIn: Boolean,
+    emailAddress: String,
+    password: String
+) {
 
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
         val emailMessages: Array<Email> = emailService.getEmails(emailAddress, password)
