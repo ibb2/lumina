@@ -40,7 +40,6 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
             implementation(libs.android.driver)
-
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -65,6 +64,7 @@ kotlin {
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
+            implementation(libs.jvm.driver)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
