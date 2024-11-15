@@ -1,0 +1,20 @@
+CREATE TABLE Email(
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    from_user TEXT NOT NULL,
+    to_user TEXT NOT NULL,
+    cc TEXT,
+    bcc TEXT,
+    subject TEXT ,
+    body TEXT NOT NULL,
+    account TEXT NOT NULL,
+    FOREIGN KEY(account) REFERENCES Account(emailAddress) ON DELETE CASCADE
+);
+
+insertEmail:
+INSERT INTO Email(from_user, to_user, cc, bcc, subject, body, account) VALUES(?, ?, ?, ?, ?, ?, ?);
+
+removeAllEmails:
+DELETE FROM Email;
+
+selectAllEmails:
+SELECT * FROM Email;

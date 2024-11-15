@@ -120,7 +120,7 @@ compose.desktop {
 sqldelight {
     databases {
         create("LuminaDatabase") {
-            packageName.set("com.lumina.email.database")
+            packageName.set("com.example.project.database")
         }
     }
 }
