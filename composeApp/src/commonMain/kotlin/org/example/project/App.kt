@@ -125,9 +125,9 @@ fun displayEmails(observableSettings: ObservableSettings, emailService: EmailSer
                     Text(
                         text = email.subject
                     )
-                    Text(
-                        text = email.body
-                    )
+//                    Text(
+//                        text = email.body
+//                    )
                 }
             }
         }
