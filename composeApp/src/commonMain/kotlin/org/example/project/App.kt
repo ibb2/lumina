@@ -21,11 +21,19 @@ import app.cash.sqldelight.db.SqlDriver
 import com.example.AccountTableQueries
 import com.example.EmailTableQueries
 import com.example.project.database.LuminaDatabase
+import com.mohamedrejeb.ksoup.html.parser.KsoupHtmlHandler
+import com.mohamedrejeb.ksoup.html.parser.KsoupHtmlParser
+import com.mohamedrejeb.richeditor.model.rememberRichTextState
+import com.mohamedrejeb.richeditor.ui.material3.RichText
+import com.multiplatform.webview.web.WebView
+import com.multiplatform.webview.web.rememberWebViewState
+import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SettingsListener
 import com.russhwolf.settings.observable.makeObservable
+import io.ktor.http.ContentType.Text.Html
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import lumina.composeapp.generated.resources.Res
@@ -63,14 +71,18 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         observableSettings.addBooleanListener("login", defaultValue = false) { value -> loggedIn = value }
         observableSettings.addStringListener("emailAddress", defaultValue = "") { value -> emailAddress = value }
         observableSettings.addStringListener("password", defaultValue = "") { value -> password = value }
+//        val state = rememberWebViewState("https://example.com")
+//        WebView(state)
 
 
         if (!loggedIn) {
             Box(
-                Modifier.fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()),
+                Modifier.fillMaxWidth().fillMaxHeight(),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp).verticalScroll(
+                    rememberScrollState()
+                )) {
                     Text("Login", fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
                     TextField(
                         value = emailAddress,
@@ -138,11 +150,14 @@ fun displayEmails(
     password: String
 ) {
 
+
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
         val emailMessages: List<Email> = emailService.getEmails(emailDataSource, emailTableQueries, accountQueries, emailAddress, password)
 
         Column {
             emailMessages.forEach { email: Email ->
+                val state = rememberRichTextState().setHtml(email.body)
+
                 Column(
                     modifier = Modifier.border(
                         width = 1.dp,
@@ -158,12 +173,14 @@ fun displayEmails(
                     Text(
                         text = email.subject ?: "No subject"
                     )
-//                    Text(
-//                        text = email.body
-//                    )
+                    RichText(
+                        state = state
+                    )
                 }
             }
         }
+//        ksoupHtmlParser.end()
+
     } else {
         Text(
             text = "Please log in."

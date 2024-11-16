@@ -18,7 +18,7 @@ actual class EmailService {
     actual fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
 
         val properties: Properties = Properties().apply {
-            put("mail.store.protocol", "imap.gmail.com")
+            put("mail.store.protocol", "imap")
             // put("mail.imap.ssl.trust", "imap.gmail.com")
             put("mail.imap.username", emailAddress)
             put("mail.imap.password", password)
@@ -35,10 +35,10 @@ actual class EmailService {
         // Check if emails exist in db
         val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
 
-        if (emailsExist) {
-            val emails = returnEmails(emailTableQueries, emailDataSource)
-            return emails
-        }
+//        if (emailsExist) {
+//            val emails = returnEmails(emailTableQueries, emailDataSource)
+//            return emails
+//        }
 
         val email: List<Email> = fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
 
@@ -64,6 +64,7 @@ actual class EmailService {
 
         // Account
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
+
 
         for (message in messages) {
             emails += (Email(
@@ -99,6 +100,9 @@ actual class EmailService {
         val result = StringBuilder()
         for (i in 0 until mimeMultipart.count) {
             val bodyPart = mimeMultipart.getBodyPart(i)
+
+
+
             when {
                 bodyPart.isMimeType("text/plain") -> result.append(bodyPart.content)
                 bodyPart.isMimeType("text/html") -> result.append(bodyPart.content) // Optionally, ignore or prefer text/plain
