@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.cash.sqldelight.db.SqlDriver
 import com.example.AccountTableQueries
+import com.example.EmailTableQueries
 import com.example.project.database.LuminaDatabase
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
@@ -41,6 +42,9 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         // db related stuff
         val database = LuminaDatabase(driver)
         val accountQueries = database.accountTableQueries
+
+        // Email db stuff
+        val emailQueries = database.emailTableQueries
 
         val settings = Settings()
         var showContent by remember { mutableStateOf(false) }
@@ -92,20 +96,22 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                     "Logout"
                 )
             }
-            displayEmails(observableSettings, emailService, loggedIn, emailAddress, password)
+            displayEmails(observableSettings,emailQueries, accountQueries, emailService, loggedIn, emailAddress, password)
         }
     }
 
 }
 
 fun login(observableSettings: ObservableSettings, accountQueries: AccountTableQueries, emailAddress: String, password: String): Unit {
-
-
-
     observableSettings.putString("emailAddress", emailAddress)
     observableSettings.putString("password", password)
     observableSettings.putBoolean("login", true)
-    accountQueries.insertAccount(emailAddress)
+
+    val accountExists: String? = accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
+
+    if (accountExists == null) {
+        accountQueries.insertAccount(emailAddress)
+    }
     println("Logged in as $emailAddress")
 
 }
@@ -120,6 +126,8 @@ fun logout(observableSettings: ObservableSettings): Unit {
 @Composable
 fun displayEmails(
     observableSettings: ObservableSettings,
+    emailTableQueries: EmailTableQueries,
+    accountQueries: AccountTableQueries,
     emailService: EmailService,
     loggedIn: Boolean,
     emailAddress: String,
@@ -127,7 +135,7 @@ fun displayEmails(
 ) {
 
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
-        val emailMessages: Array<Email> = emailService.getEmails(emailAddress, password)
+        val emailMessages: Array<Email> = emailService.getEmails(emailTableQueries, accountQueries, emailAddress, password)
 
         Column {
             emailMessages.forEach { email: Email ->
@@ -161,7 +169,7 @@ fun displayEmails(
 
 
 expect class EmailService {
-    fun getEmails(emailAddress: String, password: String): Array<Email>
+    fun getEmails(emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): Array<Email>
 }
 
 data class Email(
