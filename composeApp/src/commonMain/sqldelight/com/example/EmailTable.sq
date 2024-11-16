@@ -1,22 +1,7 @@
-import kotlin.Boolean;
-
-CREATE TABLE Account(
-    emailAddress TEXT NOT NULL PRIMARY KEY
-);
-
-insertAccount:
-INSERT INTO Account(emailAddress) VALUES(?);
-
-removeAllAccounts:
-DELETE FROM Account;
-
-selectAllAccounts:
-SELECT * FROM Account;
-
 CREATE TABLE Email(
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     from_user TEXT NOT NULL,
-    to_user TEXT NOT NULL,
+    to_user TEXT,
     cc TEXT,
     bcc TEXT,
     subject TEXT ,
@@ -33,4 +18,3 @@ DELETE FROM Email;
 
 selectAllEmails:
 SELECT * FROM Email;
-

@@ -1,0 +1,21 @@
+import kotlin.Boolean;
+
+CREATE TABLE Account(
+    emailAddress TEXT NOT NULL PRIMARY KEY
+);
+
+insertAccount:
+INSERT INTO Account(emailAddress) VALUES(?);
+
+removeAccount:
+DELETE FROM Account WHERE emailAddress = ?;
+
+removeAllAccounts:
+DELETE FROM Account;
+
+selectAllAccounts:
+SELECT * FROM Account;
+
+selectAccount:
+SELECT * FROM Account WHERE emailAddress = ?;
+
