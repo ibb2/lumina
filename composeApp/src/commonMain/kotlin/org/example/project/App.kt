@@ -32,6 +32,7 @@ import lumina.composeapp.generated.resources.Res
 import lumina.composeapp.generated.resources.compose_multiplatform
 import org.example.project.shared.AppModule
 import org.example.project.sqldelight.AccountDataSource
+import org.example.project.sqldelight.EmailDataSource
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
@@ -45,6 +46,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
 
         // Email db stuff
         val emailQueries = database.emailTableQueries
+        val emailDataSource: EmailDataSource = EmailDataSource(database)
 
         val settings = Settings()
         var showContent by remember { mutableStateOf(false) }
@@ -96,7 +98,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                     "Logout"
                 )
             }
-            displayEmails(observableSettings,emailQueries, accountQueries, emailService, loggedIn, emailAddress, password)
+            displayEmails(emailDataSource, observableSettings,emailQueries, accountQueries, emailService, loggedIn, emailAddress, password)
         }
     }
 
@@ -126,6 +128,7 @@ fun logout(observableSettings: ObservableSettings): Unit {
 
 @Composable
 fun displayEmails(
+    emailDataSource: EmailDataSource,
     observableSettings: ObservableSettings,
     emailTableQueries: EmailTableQueries,
     accountQueries: AccountTableQueries,
@@ -136,7 +139,7 @@ fun displayEmails(
 ) {
 
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
-        val emailMessages: Array<Email> = emailService.getEmails(emailTableQueries, accountQueries, emailAddress, password)
+        val emailMessages: List<Email> = emailService.getEmails(emailDataSource, emailTableQueries, accountQueries, emailAddress, password)
 
         Column {
             emailMessages.forEach { email: Email ->
@@ -153,7 +156,7 @@ fun displayEmails(
                         text = email.from ?: "No from"
                     )
                     Text(
-                        text = email.subject
+                        text = email.subject ?: "No subject"
                     )
 //                    Text(
 //                        text = email.body
@@ -170,11 +173,23 @@ fun displayEmails(
 
 
 expect class EmailService {
-    fun getEmails(emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): Array<Email>
+
+    fun getEmails(
+        emailDataSource: EmailDataSource,
+        emailTableQueries: EmailTableQueries,
+        accountQueries: AccountTableQueries,
+        emailAddress: String,
+        password: String
+    ): List<Email>
 }
 
 data class Email(
     val from: String?,
-    val subject: String,
-    val body: String
+    val subject: String?,
+    val body: String,
+    val to: String?,
+    val cc: String?,
+    val bcc: String?,
+    val account: String
 )
+

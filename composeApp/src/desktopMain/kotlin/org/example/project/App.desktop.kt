@@ -9,12 +9,13 @@ import jakarta.mail.Session
 import jakarta.mail.Store
 import jakarta.mail.internet.MimeMultipart
 import org.example.project.sqldelight.DesktopAppModule
+import org.example.project.sqldelight.EmailDataSource
 import org.koin.core.component.KoinComponent
 import java.util.*
 
 
 actual class EmailService {
-    actual fun getEmails(emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): Array<Email> {
+    actual fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
 
         val properties: Properties = Properties().apply {
             put("mail.store.protocol", "imap.gmail.com")
@@ -26,30 +27,49 @@ actual class EmailService {
             put("mail.imap.ssl.enable", "true")
             put("mail.imap.connectiontimeout", 10000)
             put("mail.imap.timeout", 10000)
-
         }
 
         val session = Session.getInstance(properties)
         val store: Store = session.getStore("imap").apply { connect(properties.getProperty("mail.imap.host"),properties.getProperty("mail.imap.username"), properties.getProperty("mail.imap.password")) }
 
-        val email: Array<Email> = fetchEmailBodies(emailAddress,emailTableQueries, accountQueries, store)
+        // Check if emails exist in db
+        val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
+
+        if (emailsExist) {
+            val emails = returnEmails(emailTableQueries, emailDataSource)
+            return emails
+        }
+
+        val email: List<Email> = fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
 
         return email
     }
 
-    fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, store: Store): Array<Email> {
+    fun doEmailsExist(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): Boolean {
+        val emailsExist = emailTableQueries.selectAllEmails().executeAsList()
+
+        return emailsExist.isNotEmpty()
+    }
+
+    fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email> {
+        val emails = emailDataSource.selectAllEmails()
+        return emails
+    }
+
+    fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries,emailDataSource: EmailDataSource, accountQueries: AccountTableQueries, store: Store): List<Email> {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         val messages: List<Message> = folder.messages.slice(0..10)
 
-        var emails: Array<Email> = emptyArray()
+        var emails: List<Email> = emptyList()
 
         // Account
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
         for (message in messages) {
             emails += (Email(
-               from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message)
+               from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message), to = "", cc = null, bcc = null, account = account[0]
             ))
+
             emailTableQueries.insertEmail(
                 from_user = message.from?.joinToString() ?: "",
                 subject = message.subject ?: "",
