@@ -16,3 +16,6 @@ DELETE FROM Account;
 selectAllAccounts:
 SELECT * FROM Account;
 
+selectAccount:
+SELECT * FROM Account WHERE emailAddress = ?;
+

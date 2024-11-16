@@ -1,5 +1,8 @@
 package org.example.project
 
+import com.example.Account
+import com.example.AccountTableQueries
+import com.example.EmailTableQueries
 import jakarta.mail.Folder
 import jakarta.mail.Message
 import jakarta.mail.Session
@@ -11,10 +14,10 @@ import java.util.*
 
 
 actual class EmailService {
-    actual fun getEmails(emailAddress: String, password: String): Array<Email> {
+    actual fun getEmails(emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): Array<Email> {
 
         val properties: Properties = Properties().apply {
-            put("mail.store.protocol", "imap")
+            put("mail.store.protocol", "imap.gmail.com")
             // put("mail.imap.ssl.trust", "imap.gmail.com")
             put("mail.imap.username", emailAddress)
             put("mail.imap.password", password)
@@ -29,21 +32,33 @@ actual class EmailService {
         val session = Session.getInstance(properties)
         val store: Store = session.getStore("imap").apply { connect(properties.getProperty("mail.imap.host"),properties.getProperty("mail.imap.username"), properties.getProperty("mail.imap.password")) }
 
-        val email: Array<Email> = fetchEmailBodies(store)
+        val email: Array<Email> = fetchEmailBodies(emailAddress,emailTableQueries, accountQueries, store)
 
         return email
     }
 
-    fun fetchEmailBodies(store: Store): Array<Email> {
+    fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, store: Store): Array<Email> {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         val messages: List<Message> = folder.messages.slice(0..10)
 
         var emails: Array<Email> = emptyArray()
 
+        // Account
+        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
+
         for (message in messages) {
             emails += (Email(
                from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message)
             ))
+            emailTableQueries.insertEmail(
+                from_user = message.from?.joinToString() ?: "",
+                subject = message.subject ?: "",
+                body = getEmailBody(message),
+                to_user = "",
+                cc = null,
+                bcc = null,
+                account = account[0]
+            )
         }
 
         folder.close(false)

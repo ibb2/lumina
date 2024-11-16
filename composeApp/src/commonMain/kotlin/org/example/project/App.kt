@@ -112,6 +112,7 @@ fun login(observableSettings: ObservableSettings, accountQueries: AccountTableQu
     if (accountExists == null) {
         accountQueries.insertAccount(emailAddress)
     }
+
     println("Logged in as $emailAddress")
 
 }

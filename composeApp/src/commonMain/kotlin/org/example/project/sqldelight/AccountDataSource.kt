@@ -8,6 +8,8 @@ class AccountDataSource(db: LuminaDatabase) {
 
     fun insert(emailAddress: String) = queries.insertAccount(emailAddress)
 
+    fun select(emailAddress: String) = queries.selectAccount(emailAddress)
+
     fun remove(emailAddress: String) = queries.removeAccount(emailAddress)
 
     fun removeAll() = queries.removeAllAccounts()
