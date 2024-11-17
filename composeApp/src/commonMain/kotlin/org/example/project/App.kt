@@ -2,8 +2,7 @@ package org.example.project
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -68,15 +67,23 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         observableSettings.addStringListener("emailAddress", defaultValue = "") { value -> emailAddress = value }
         observableSettings.addStringListener("password", defaultValue = "") { value -> password = value }
 
-        if (!loggedIn) {
-            Box(
-                Modifier.fillMaxWidth().fillMaxHeight(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp).verticalScroll(
-                    rememberScrollState()
-                )) {
-                    Text("Login", fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(
+                rememberScrollState()
+            ).padding(32.dp)
+        ) {
+
+
+            if (!loggedIn) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        "Login",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
                     TextField(
                         value = emailAddress,
                         onValueChange = { it -> emailAddress = it },
@@ -87,7 +94,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                         value = password,
                         onValueChange = { it -> password = it },
                         label = { Text("Password") },
-                                modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp)
 
                     )
                     Button(onClick = {
@@ -95,22 +102,36 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                     }) {
                         Text("Login")
                     }
-                } }
+                }
 
-        } else {
-            Button(onClick = { logout(observableSettings) }) {
-                Text(
-                    "Logout"
+            } else {
+                Button(onClick = { logout(observableSettings) }) {
+                    Text(
+                        "Logout"
+                    )
+                }
+                displayEmails(
+                    emailDataSource,
+                    observableSettings,
+                    emailQueries,
+                    accountQueries,
+                    emailService,
+                    loggedIn,
+                    emailAddress,
+                    password
                 )
             }
-
-            displayEmails(emailDataSource, observableSettings,emailQueries, accountQueries, emailService, loggedIn, emailAddress, password)
         }
     }
 
 }
 
-fun login(observableSettings: ObservableSettings, accountQueries: AccountTableQueries, emailAddress: String, password: String): Unit {
+fun login(
+    observableSettings: ObservableSettings,
+    accountQueries: AccountTableQueries,
+    emailAddress: String,
+    password: String
+): Unit {
     observableSettings.putString("emailAddress", emailAddress)
     observableSettings.putString("password", password)
     observableSettings.putBoolean("login", true)
@@ -146,11 +167,11 @@ fun displayEmails(
 
 
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
-        val emailMessages: List<Email> = emailService.getEmails(emailDataSource, emailTableQueries, accountQueries, emailAddress, password)
+        val emailMessages: List<Email> =
+            emailService.getEmails(emailDataSource, emailTableQueries, accountQueries, emailAddress, password)
 
         Column {
             emailMessages.forEach { email: Email ->
-                val initialUrl = "https://github.com/KevinnZou/compose-webview-multiplatform"
                 val state = rememberWebViewStateWithHTMLData(email.body)
                 LaunchedEffect(Unit) {
                     state.webSettings.apply {
@@ -237,12 +258,6 @@ fun displayEmails(
                     Text(
                         text = email.subject ?: "No subject"
                     )
-//                    WebView(
-//                        state = state,
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                    )
-
                     WebView(
                         state = state,
                         modifier =
@@ -253,7 +268,6 @@ fun displayEmails(
                 }
             }
         }
-//        ksoupHtmlParser.end()
 
     } else {
         Text(

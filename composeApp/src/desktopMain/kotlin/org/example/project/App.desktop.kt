@@ -36,10 +36,10 @@ actual class EmailService {
         // Check if emails exist in db
         val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
 
-        if (emailsExist) {
-            val emails = returnEmails(emailTableQueries, emailDataSource)
-            return emails
-        }
+//        if (emailsExist) {
+//            val emails = returnEmails(emailTableQueries, emailDataSource)
+//            return emails
+//        }
 
         val email: List<Email> = fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
 
@@ -59,7 +59,7 @@ actual class EmailService {
 
     fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries,emailDataSource: EmailDataSource, accountQueries: AccountTableQueries, store: Store): List<Email> {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
-        val messages: List<Message> = folder.messages.slice(6..10)
+        val messages: List<Message> = folder.messages.slice(0..10)
 
         var emails: List<Email> = emptyList()
 
