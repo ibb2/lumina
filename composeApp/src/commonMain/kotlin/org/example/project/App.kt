@@ -14,9 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import app.cash.sqldelight.db.SqlDriver
 import com.example.AccountTableQueries
 import com.example.EmailTableQueries
@@ -82,7 +85,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                         "Login",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 24.dp)
+                        modifier = Modifier.padding(bottom = 24.dp),
                     )
                     TextField(
                         value = emailAddress,
@@ -164,6 +167,46 @@ fun displayEmails(
     emailAddress: String,
     password: String
 ) {
+    var display: Boolean by remember { mutableStateOf(false) }
+    var emailFromUser: String by remember { mutableStateOf("") }
+    var emailSubject: String by remember { mutableStateOf("") }
+    var emailContet: String by remember { mutableStateOf("") }
+
+    fun displayEmailBody(show: Boolean, email: Email) {
+
+        emailFromUser = ""
+        emailSubject = ""
+        emailContet = ""
+
+        if (show) {
+            display = true
+            emailFromUser = email.from ?: ""
+            emailSubject = email.subject ?: ""
+            emailContet = email.body
+        }
+    }
+
+    val state = rememberWebViewStateWithHTMLData(emailContet)
+    LaunchedEffect(Unit) {
+        state.webSettings.apply {
+            logSeverity = KLogSeverity.Debug
+            customUserAgentString =
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like Gecko) Version/14.3.43 Safari/625.20"
+        }
+    }
+    val navigator = rememberWebViewNavigator()
+    var textFieldValue by remember(state.lastLoadedUrl) {
+        mutableStateOf(state.lastLoadedUrl)
+    }
+
+
+    val loadingState = state.loadingState
+    if (loadingState is LoadingState.Loading) {
+        LinearProgressIndicator(
+            progress = loadingState.progress,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 
 
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
@@ -172,18 +215,51 @@ fun displayEmails(
 
         Column {
             emailMessages.forEach { email: Email ->
-                val state = rememberWebViewStateWithHTMLData(email.body)
-                LaunchedEffect(Unit) {
-                    state.webSettings.apply {
-                        logSeverity = KLogSeverity.Debug
-                        customUserAgentString =
-                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like Gecko) Version/14.3.43 Safari/625.20"
+                Column(
+                    modifier = Modifier.border(
+                        width = 1.dp,
+                        color = Color.DarkGray,
+                        shape = RoundedCornerShape(4.dp)
+                    ).background(
+                        color = Color.LightGray
+                    ).fillMaxSize()
+                ) {
+                    Text(
+                        text = email.from ?: "No from",
+                    )
+                    Text(
+                        text = email.subject ?: "No subject"
+                    )
+                    Button(
+                        onClick = {
+                            displayEmailBody(!display, email)
+                        },
+                    ) {
+                        Text("View Email")
                     }
                 }
-                val navigator = rememberWebViewNavigator()
-                var textFieldValue by remember(state.lastLoadedUrl) {
-                    mutableStateOf(state.lastLoadedUrl)
-                }
+            }
+        }
+
+    } else {
+        Text(
+            text = "Please log in."
+        )
+    }
+
+    if (display) {
+        Dialog(
+            onDismissRequest = { display = false },
+            properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+        ) {
+            // Draw a rectangle shape with rounded corners inside the dialog
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(375.dp)
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+            ) {
 
                 Column {
                     TopAppBar(
@@ -234,46 +310,49 @@ fun displayEmails(
                     }
                 }
 
-                val loadingState = state.loadingState
-                if (loadingState is LoadingState.Loading) {
-                    LinearProgressIndicator(
-                        progress = loadingState.progress,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
+                WebView(
+                    state = state,
+                    modifier =
+                        Modifier
+                            .fillMaxSize(),
+                    navigator = navigator,
+                )
 
                 Column(
-                    modifier = Modifier.border(
-                        width = 1.dp,
-                        color = Color.DarkGray,
-                        shape = RoundedCornerShape(4.dp)
-                    ).background(
-                        color = Color.LightGray
-                    )
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+
                     Text(
-                        text = email.from ?: "No from"
+                        text = "This is a dialog with buttons and an image.",
+                        modifier = Modifier.padding(16.dp),
                     )
-                    Text(
-                        text = email.subject ?: "No subject"
-                    )
-                    WebView(
-                        state = state,
-                        modifier =
-                            Modifier
-                                .fillMaxSize(),
-                        navigator = navigator,
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        TextButton(
+                            onClick = { /* TODO */ },
+                            modifier = Modifier.padding(8.dp),
+                        ) {
+                            Text("Dismiss")
+                        }
+                        TextButton(
+                            onClick = { /* TODO*/ },
+                            modifier = Modifier.padding(8.dp),
+                        ) {
+                            Text("Confirm")
+                        }
+                    }
                 }
             }
-        }
 
-    } else {
-        Text(
-            text = "Please log in."
-        )
+        }
     }
+
 }
 
 
