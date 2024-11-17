@@ -14,11 +14,12 @@ import org.koin.core.component.KoinComponent
 import java.util.*
 
 
+
 actual class EmailService {
     actual fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
 
         val properties: Properties = Properties().apply {
-            put("mail.store.protocol", "imap.gmail.com")
+            put("mail.store.protocol", "imap")
             // put("mail.imap.ssl.trust", "imap.gmail.com")
             put("mail.imap.username", emailAddress)
             put("mail.imap.password", password)
@@ -65,6 +66,7 @@ actual class EmailService {
         // Account
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
+
         for (message in messages) {
             emails += (Email(
                from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message), to = "", cc = null, bcc = null, account = account[0]
@@ -99,6 +101,9 @@ actual class EmailService {
         val result = StringBuilder()
         for (i in 0 until mimeMultipart.count) {
             val bodyPart = mimeMultipart.getBodyPart(i)
+
+
+
             when {
                 bodyPart.isMimeType("text/plain") -> result.append(bodyPart.content)
                 bodyPart.isMimeType("text/html") -> result.append(bodyPart.content) // Optionally, ignore or prefer text/plain
@@ -111,3 +116,4 @@ actual class EmailService {
     }
 
 }
+
