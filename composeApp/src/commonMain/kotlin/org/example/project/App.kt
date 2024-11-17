@@ -250,106 +250,106 @@ fun displayEmails(
     if (display) {
         Dialog(
             onDismissRequest = { display = false },
-            properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+            properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true, usePlatformDefaultWidth = false),
         ) {
             // Draw a rectangle shape with rounded corners inside the dialog
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(375.dp)
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
+            Surface(modifier = Modifier.fillMaxSize(0.6f)) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(525.dp)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Column {
+                        TopAppBar(
+                            title = { Text(text = "WebView Sample") },
+                            navigationIcon = {
+                                if (navigator.canGoBack) {
+                                    IconButton(onClick = { navigator.navigateBack() }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowBack,
+                                            contentDescription = "Back",
+                                        )
+                                    }
+                                }
+                            },
+                        )
 
-                Column {
-                    TopAppBar(
-                        title = { Text(text = "WebView Sample") },
-                        navigationIcon = {
-                            if (navigator.canGoBack) {
-                                IconButton(onClick = { navigator.navigateBack() }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowBack,
-                                        contentDescription = "Back",
+                        Row {
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (state.errorsForCurrentRequest.isNotEmpty()) {
+                                    Image(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Error",
+                                        colorFilter = ColorFilter.tint(Color.Red),
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .padding(8.dp),
                                     )
                                 }
-                            }
-                        },
-                    )
 
-                    Row {
-                        Box(modifier = Modifier.weight(1f)) {
-                            if (state.errorsForCurrentRequest.isNotEmpty()) {
-                                Image(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Error",
-                                    colorFilter = ColorFilter.tint(Color.Red),
-                                    modifier =
-                                        Modifier
-                                            .align(Alignment.CenterEnd)
-                                            .padding(8.dp),
+                                OutlinedTextField(
+                                    value = textFieldValue ?: "",
+                                    onValueChange = { textFieldValue = it },
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
 
-                            OutlinedTextField(
-                                value = textFieldValue ?: "",
-                                onValueChange = { textFieldValue = it },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                textFieldValue?.let {
-                                    navigator.loadUrl(it)
-                                }
-                            },
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                        ) {
-                            Text("Go")
+                            Button(
+                                onClick = {
+                                    textFieldValue?.let {
+                                        navigator.loadUrl(it)
+                                    }
+                                },
+                                modifier = Modifier.align(Alignment.CenterVertically),
+                            ) {
+                                Text("Go")
+                            }
                         }
                     }
-                }
 
-                WebView(
-                    state = state,
-                    modifier =
-                        Modifier
-                            .fillMaxSize(),
-                    navigator = navigator,
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-
-                    Text(
-                        text = "This is a dialog with buttons and an image.",
-                        modifier = Modifier.padding(16.dp),
+                    WebView(
+                        state = state,
+                        modifier =
+                            Modifier
+                                .fillMaxSize(),
+                        navigator = navigator,
                     )
-                    Row(
+
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        TextButton(
-                            onClick = { /* TODO */ },
-                            modifier = Modifier.padding(8.dp),
+
+                        Text(
+                            text = "This is a dialog with buttons and an image.",
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
                         ) {
-                            Text("Dismiss")
-                        }
-                        TextButton(
-                            onClick = { /* TODO*/ },
-                            modifier = Modifier.padding(8.dp),
-                        ) {
-                            Text("Confirm")
+                            TextButton(
+                                onClick = { /* TODO */ },
+                                modifier = Modifier.padding(8.dp),
+                            ) {
+                                Text("Dismiss")
+                            }
+                            TextButton(
+                                onClick = { /* TODO*/ },
+                                modifier = Modifier.padding(8.dp),
+                            ) {
+                                Text("Confirm")
+                            }
                         }
                     }
                 }
             }
-
         }
     }
 
