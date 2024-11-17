@@ -6,14 +6,15 @@ import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,13 +22,8 @@ import app.cash.sqldelight.db.SqlDriver
 import com.example.AccountTableQueries
 import com.example.EmailTableQueries
 import com.example.project.database.LuminaDatabase
-import com.mohamedrejeb.ksoup.html.parser.KsoupHtmlHandler
-import com.mohamedrejeb.ksoup.html.parser.KsoupHtmlParser
-import com.mohamedrejeb.richeditor.model.rememberRichTextState
-import com.mohamedrejeb.richeditor.ui.material3.RichText
-import com.multiplatform.webview.web.WebView
-import com.multiplatform.webview.web.rememberWebViewState
-import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
+import com.multiplatform.webview.util.KLogSeverity
+import com.multiplatform.webview.web.*
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
@@ -71,47 +67,125 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         observableSettings.addBooleanListener("login", defaultValue = false) { value -> loggedIn = value }
         observableSettings.addStringListener("emailAddress", defaultValue = "") { value -> emailAddress = value }
         observableSettings.addStringListener("password", defaultValue = "") { value -> password = value }
-//        val state = rememberWebViewState("https://example.com")
-//        WebView(state)
 
 
-        if (!loggedIn) {
-            Box(
-                Modifier.fillMaxWidth().fillMaxHeight(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp).verticalScroll(
-                    rememberScrollState()
-                )) {
-                    Text("Login", fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
-                    TextField(
-                        value = emailAddress,
-                        onValueChange = { it -> emailAddress = it },
-                        label = { Text("Email Address") },
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    TextField(
-                        value = password,
-                        onValueChange = { it -> password = it },
-                        label = { Text("Password") },
-                                modifier = Modifier.padding(bottom = 8.dp)
+        val initialUrl = "https://github.com/KevinnZou/compose-webview-multiplatform"
+        val state = rememberWebViewState(url = initialUrl)
+        LaunchedEffect(Unit) {
+            state.webSettings.apply {
+                logSeverity = KLogSeverity.Debug
+                customUserAgentString =
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like Gecko) Version/14.3.43 Safari/625.20"
+            }
+        }
+        val navigator = rememberWebViewNavigator()
+        var textFieldValue by remember(state.lastLoadedUrl) {
+            mutableStateOf(state.lastLoadedUrl)
+        }
 
-                    )
-                    Button(onClick = {
-                        login(observableSettings, accountQueries, emailAddress, password)
-                    }) {
-                        Text("Login")
+        Column {
+            TopAppBar(
+                title = { Text(text = "WebView Sample") },
+                navigationIcon = {
+                    if (navigator.canGoBack) {
+                        IconButton(onClick = { navigator.navigateBack() }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                            )
+                        }
                     }
+                },
+            )
+
+            Row {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (state.errorsForCurrentRequest.isNotEmpty()) {
+                        Image(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Error",
+                            colorFilter = ColorFilter.tint(Color.Red),
+                            modifier =
+                                Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(8.dp),
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = textFieldValue ?: "",
+                        onValueChange = { textFieldValue = it },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        textFieldValue?.let {
+                            navigator.loadUrl(it)
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.CenterVertically),
+                ) {
+                    Text("Go")
                 }
             }
-        } else {
-            Button(onClick = { logout(observableSettings) }) {
-                Text(
-                    "Logout"
+
+            val loadingState = state.loadingState
+            if (loadingState is LoadingState.Loading) {
+                LinearProgressIndicator(
+                    progress = loadingState.progress,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-            displayEmails(emailDataSource, observableSettings,emailQueries, accountQueries, emailService, loggedIn, emailAddress, password)
+
+            WebView(
+                state = state,
+                modifier =
+                    Modifier
+                        .fillMaxSize(),
+                navigator = navigator,
+            )
         }
+
+
+//        if (!loggedIn) {
+//            Box(
+//                Modifier.fillMaxWidth().fillMaxHeight(),
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp).verticalScroll(
+//                    rememberScrollState()
+//                )) {
+//                    Text("Login", fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 24.dp))
+//                    TextField(
+//                        value = emailAddress,
+//                        onValueChange = { it -> emailAddress = it },
+//                        label = { Text("Email Address") },
+//                        modifier = Modifier.padding(bottom = 12.dp)
+//                    )
+//                    TextField(
+//                        value = password,
+//                        onValueChange = { it -> password = it },
+//                        label = { Text("Password") },
+//                                modifier = Modifier.padding(bottom = 8.dp)
+//
+//                    )
+//                    Button(onClick = {
+//                        login(observableSettings, accountQueries, emailAddress, password)
+//                    }) {
+//                        Text("Login")
+//                    }
+//                } }
+//
+//        } else {
+//            Button(onClick = { logout(observableSettings) }) {
+//                Text(
+//                    "Logout"
+//                )
+//            }
+//            displayEmails(emailDataSource, observableSettings,emailQueries, accountQueries, emailService, loggedIn, emailAddress, password)
+//        }
     }
 
 }
@@ -156,7 +230,12 @@ fun displayEmails(
 
         Column {
             emailMessages.forEach { email: Email ->
-                val state = rememberRichTextState().setHtml(email.body)
+//                val state = rememberWebViewState("https://github.com/MohamedRejeb")
+//                WebView(
+//                    state = state,
+//                    modifier = Modifier
+//                        .fillMaxSize()
+//                )
 
                 Column(
                     modifier = Modifier.border(
@@ -173,9 +252,11 @@ fun displayEmails(
                     Text(
                         text = email.subject ?: "No subject"
                     )
-                    RichText(
-                        state = state
-                    )
+//                    WebView(
+//                        state = state,
+//                        modifier = Modifier
+//                            .fillMaxSize()
+//                    )
                 }
             }
         }

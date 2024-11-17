@@ -25,6 +25,8 @@ fun main() = application {
         LaunchedEffect(Unit) {
             withContext(Dispatchers.IO) {
                 KCEF.init(builder = {
+                    release("jbr-release-17.0.10b1087.23")
+//                    release("jbr_jcef-17.0.10-windows-x64-b1087.23")
                     installDir(File("kcef-bundle"))
                     progress {
                         onDownloading {
@@ -38,7 +40,7 @@ fun main() = application {
                         cachePath = File("cache").absolutePath
                     }
                 }, onError = {
-                    it?.printStackTrace()
+                    it!!.printStackTrace()
                 }, onRestartRequired = {
                     restartRequired = true
                 })
@@ -53,13 +55,13 @@ fun main() = application {
             } else {
                 Text(text = "Downloading $downloading%")
             }
-
-            DisposableEffect(Unit) {
-                onDispose {
-                    KCEF.disposeBlocking()
-                }
-            }
-
         }
+
+        DisposableEffect(Unit) {
+            onDispose {
+                KCEF.disposeBlocking()
+            }
+        }
+
     }
 }

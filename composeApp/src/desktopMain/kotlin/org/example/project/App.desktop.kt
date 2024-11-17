@@ -14,6 +14,7 @@ import org.koin.core.component.KoinComponent
 import java.util.*
 
 
+
 actual class EmailService {
     actual fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
 
@@ -115,3 +116,4 @@ actual class EmailService {
     }
 
 }
+

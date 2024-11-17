@@ -63,11 +63,6 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.koin.core)
             api("io.github.kevinnzou:compose-webview-multiplatform:1.8.4")
-            // For parsing HTML
-            implementation("com.mohamedrejeb.ksoup:ksoup-html:$version")
-            // Only for encoding and decoding HTML entities
-            implementation("com.mohamedrejeb.ksoup:ksoup-entities:$version")
-            implementation("com.mohamedrejeb.richeditor:richeditor-compose:1.0.0-rc10")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -129,6 +124,10 @@ compose.desktop {
         if (System.getProperty("os.name").contains("Mac")) {
             jvmArgs("--add-opens", "java.desktop/sun.lwawt=ALL-UNNAMED")
             jvmArgs("--add-opens", "java.desktop/sun.lwawt.macosx=ALL-UNNAMED")
+        }
+
+        buildTypes.release.proguard {
+            configurationFiles.from("../compose-desktop.pro")
         }
 
     }
