@@ -36,10 +36,10 @@ actual class EmailService {
         // Check if emails exist in db
         val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
 
-//        if (emailsExist) {
-//            val emails = returnEmails(emailTableQueries, emailDataSource)
-//            return emails
-//        }
+        if (emailsExist) {
+            val emails = returnEmails(emailTableQueries, emailDataSource)
+            return emails
+        }
 
         val email: List<Email> = fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
 
