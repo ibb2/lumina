@@ -59,7 +59,7 @@ actual class EmailService {
 
     fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries,emailDataSource: EmailDataSource, accountQueries: AccountTableQueries, store: Store): List<Email> {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
-        val messages: List<Message> = folder.messages.slice(0..10)
+        val messages: List<Message> = folder.messages.slice(6..10)
 
         var emails: List<Email> = emptyList()
 
