@@ -480,6 +480,7 @@ expect class EmailService {
 
     suspend fun deleteEmails(emailDataSource: EmailDataSource)
 
+    fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email>
     fun getEmailCount(emailDataSource: EmailDataSource): Int
 }
 

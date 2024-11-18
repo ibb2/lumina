@@ -64,10 +64,10 @@ actual class EmailService {
         // Check if emails exist in db
         val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
 
-//        if (emailsExist) {
-//            val emails = returnEmails(emailTableQueries, emailDataSource)
-//            return emails
-//        }
+        if (emailsExist) {
+            val emails = returnEmails(emailTableQueries, emailDataSource)
+            return emails
+        }
 
         fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
 
@@ -102,7 +102,6 @@ actual class EmailService {
          */
 
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
-        println("Number of messages: ${folder.messageCount}")
         val messages: List<Message> = folder.messages.takeLast(10)
 
         // Email UIDs
@@ -112,9 +111,8 @@ actual class EmailService {
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
 
-        for ((index, message) in messages.withIndex()) {
+        for ( message in messages) {
             val emailUID = uf.getUID(message)
-            println(message)
             emails.add(
                 Email(
                     id = emailUID,
@@ -128,18 +126,18 @@ actual class EmailService {
                 )
             )
 
-            emailCount++
+            emailTableQueries.insertEmail(
+                id = emailUID,
+                from_user = message.from?.joinToString() ?: "",
+                subject = message.subject ?: "",
+                body = getEmailBody(message),
+                to_user = "",
+                cc = null,
+                bcc = null,
+                account = account[0]
+            )
 
-//            emailTableQueries.insertEmail(
-//                id = emailUID,
-//                from_user = message.from?.joinToString() ?: "",
-//                subject = message.subject ?: "",
-//                body = getEmailBody(message),
-//                to_user = "",
-//                cc = null,
-//                bcc = null,
-//                account = account[0]
-//            )
+            emailCount++
         }
 
         folder.close(false)
@@ -170,6 +168,25 @@ actual class EmailService {
             }
         }
         return result.toString()
+    }
+
+    actual fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email> {
+        val listOfEmails = emailTableQueries.selectAllEmails().executeAsList()
+        listOfEmails.forEach { email ->
+            emails.add(
+                Email(
+                    id = email.id,
+                    from = email.from_user,
+                    subject = email.subject,
+                    body = email.body,
+                    to = email.to_user,
+                    cc = email.cc,
+                    bcc = email.bcc,
+                    account = email.account
+                )
+            )
+        }
+        return emails
     }
 
     actual suspend fun deleteEmails(emailDataSource: EmailDataSource) {
