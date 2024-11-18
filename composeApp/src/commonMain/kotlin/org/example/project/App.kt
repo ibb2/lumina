@@ -85,6 +85,8 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         var password by remember { mutableStateOf("") }
         var loggedIn by remember { mutableStateOf(false) }
 
+        var emailCount by remember { mutableStateOf<Int>(emailService.getEmailCount(emailDataSource))}
+
         val observableSettings: ObservableSettings = settings.makeObservable()
 
         observableSettings.putString("emailAddress", "")
@@ -116,6 +118,9 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
+                        "Email Count: $emailCount"
+                    )
+                    Text(
                         "Login",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
@@ -138,6 +143,13 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                         login(observableSettings, accountQueries, emailAddress, password)
                     }) {
                         Text("Login")
+                    }
+                    Button(onClick = {
+                        GlobalScope.launch(Dispatchers.IO) {
+                            emailService.deleteEmails(emailDataSource)
+                        }
+                    }) {
+                        Text("Delete Emails")
                     }
                 }
 
@@ -247,7 +259,6 @@ fun displayEmails(
         var isLoading by remember { mutableStateOf(false) }
         var emails by remember { mutableStateOf<List<Email>>(emptyList()) } // Store emails
 
-
         LaunchedEffect(Unit) { // Trigger once
             isLoading = true
             try {
@@ -262,10 +273,6 @@ fun displayEmails(
                     )
                 }
 
-//                emails = returnedEmails
-//                println("Fetched Emails $returnedEmails")
-//                // Process emails
-//
                 withContext(Dispatchers.Main) {
                     emails = returnedEmails
                     isLoading = false // Hide loading indicator after updating emails
@@ -446,6 +453,10 @@ expect class EmailService {
         emailAddress: String,
         password: String
     ): List<Email>
+
+    suspend fun deleteEmails(emailDataSource: EmailDataSource)
+
+    fun getEmailCount(emailDataSource: EmailDataSource): Int
 }
 
 data class Email(

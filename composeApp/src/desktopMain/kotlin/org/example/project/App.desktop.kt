@@ -18,6 +18,7 @@ import java.util.*
 actual class EmailService {
 
     private val emails = mutableListOf<Email>()
+    private var emailCount = 0
 
     actual suspend  fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
 
@@ -121,6 +122,15 @@ actual class EmailService {
             }
         }
         return result.toString()
+    }
+
+    actual suspend fun deleteEmails(emailDataSource: EmailDataSource) {
+        emailDataSource.remove()
+    }
+
+    actual fun getEmailCount(emailDataSource: EmailDataSource) : Int {
+        emailCount = emailDataSource.selectAllEmails().size
+        return emailCount
     }
 
 }

@@ -12,7 +12,6 @@ class EmailDataSource(db: LuminaDatabase) {
 
     fun remove() = queries.removeAllEmails()
 
-
     fun selectAllEmails(): List<Email> = queries.selectAllEmails(
         mapper = { id, fromUser, toUser, cc, bcc, subject, body, account -> Email( from = fromUser, subject = subject, body = body, to = toUser, cc = cc, bcc= bcc, account = account) }
     ).executeAsList()
