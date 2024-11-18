@@ -46,9 +46,7 @@ actual class EmailService {
 //            return emails
 //        }
 
-        val email = fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
-
-        emails.addAll(email)
+        fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
 
         return emails
     }
@@ -59,12 +57,7 @@ actual class EmailService {
         return emailsExist.isNotEmpty()
     }
 
-    fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email> {
-        val emails = emailDataSource.selectAllEmails()
-        return emails
-    }
-
-    fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries,emailDataSource: EmailDataSource, accountQueries: AccountTableQueries, store: Store): List<Email> {
+    fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries,emailDataSource: EmailDataSource, accountQueries: AccountTableQueries, store: Store) {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         println("Number of messages: ${folder.messageCount}")
         val messages: List<Message> = folder.messages.takeLast(10)
@@ -78,9 +71,6 @@ actual class EmailService {
             emails.add(Email(
                from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message), to = "", cc = null, bcc = null, account = account[0]
             ))
-//            emails += (Email(
-//               from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message), to = "", cc = null, bcc = null, account = account[0]
-//            ))
 
 //            emailTableQueries.insertEmail(
 //                from_user = message.from?.joinToString() ?: "",
@@ -95,7 +85,6 @@ actual class EmailService {
 
         folder.close(false)
         store.close()
-        return emails
     }
 
     fun getEmailBody(message: Message): String {
