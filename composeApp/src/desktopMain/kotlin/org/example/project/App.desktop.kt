@@ -16,7 +16,7 @@ import java.util.*
 
 
 actual class EmailService {
-    actual suspend fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
+    actual fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
