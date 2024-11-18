@@ -58,6 +58,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 import org.example.project.sqldelight.EmailDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import kotlin.properties.Delegates
@@ -274,8 +275,8 @@ fun displayEmails(
             try {
                 // Replace with your actual email retrieval logic
 
-
-                val returnedEmails = withContext(Dispatchers.IO) {
+                val startTime = Clock.System.now()
+                withContext(Dispatchers.IO) {
                     emailService.getEmails(
                         emailDataSource,
                         emailTableQueries,
@@ -284,11 +285,14 @@ fun displayEmails(
                         password
                     )
                 }
+                val endTime = Clock.System.now()
+                val duration = endTime - startTime
+                println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
 
-                withContext(Dispatchers.Main) {
-                    emails = returnedEmails
-                    isLoading = false // Hide loading indicator after updating emails
-                }
+//                withContext(Dispatchers.Main) {
+//                    emails = returnedEmails
+//                    isLoading = false // Hide loading indicator after updating emails
+//                }
 
             } catch (e: Exception) {
                 // Handle error, e.g., show an error message

@@ -3,17 +3,13 @@ package org.example.project
 import com.example.Account
 import com.example.AccountTableQueries
 import com.example.EmailTableQueries
-import jakarta.mail.Folder
-import jakarta.mail.Message
-import jakarta.mail.Session
-import jakarta.mail.Store
-import jakarta.mail.UIDFolder
+import jakarta.mail.*
 import jakarta.mail.internet.MimeMultipart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.example.project.sqldelight.DesktopAppModule
+import org.eclipse.angus.mail.imap.IMAPFolder
+import org.example.project.mail.JavaMail
 import org.example.project.sqldelight.EmailDataSource
-import org.koin.core.component.KoinComponent
 import java.util.*
 import kotlin.properties.Delegates
 
@@ -62,14 +58,32 @@ actual class EmailService {
         }
 
         // Check if emails exist in db
-        val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
+//        val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
 
-        if (emailsExist) {
-            val emails = returnEmails(emailTableQueries, emailDataSource)
-            return emails
-        }
+//        if (emailsExist) {
+//            val emails = returnEmails(emailTableQueries, emailDataSource)
+//            return emails
+//        }
 
-        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
+//        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
+
+        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
+        val messages = inbox.getMessages()
+        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
+
+        efficientGetContents(
+            emailAddress,
+            emailTableQueries,
+            emailDataSource,
+            accountQueries,
+            store,
+            emails,
+            account,
+            inbox,
+            inbox,
+            messages,
+            properties
+        )
 
         return emails
     }
@@ -101,9 +115,17 @@ actual class EmailService {
          * @param store The JavaMail store object.
          */
 
-        val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
-        val messages: List<Message> = folder.messages.takeLast(10)
+        val fp = FetchProfile()
+        fp.add(FetchProfile.Item.ENVELOPE)
+        fp.add(IMAPFolder.FetchProfileItem.FLAGS)
+        fp.add(IMAPFolder.FetchProfileItem.CONTENT_INFO)
 
+
+        val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
+        val msgs = folder.messages
+
+        val messages: List<Message> = folder.messages.takeLast(10)
+        folder.fetch(msgs, fp)
         // Email UIDs
         val uf: UIDFolder = folder as UIDFolder
 
@@ -111,8 +133,9 @@ actual class EmailService {
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
 
-        for ( message in messages) {
+        for (message in folder.getMessages().takeLast(10)) {
             val emailUID = uf.getUID(message)
+            println("Message: ${message.from}")
             emails.add(
                 Email(
                     id = emailUID,
@@ -126,16 +149,16 @@ actual class EmailService {
                 )
             )
 
-            emailTableQueries.insertEmail(
-                id = emailUID,
-                from_user = message.from?.joinToString() ?: "",
-                subject = message.subject ?: "",
-                body = getEmailBody(message),
-                to_user = "",
-                cc = null,
-                bcc = null,
-                account = account[0]
-            )
+//            emailTableQueries.insertEmail(
+//                id = emailUID,
+//                from_user = message.from?.joinToString() ?: "",
+//                subject = message.subject ?: "",
+//                body = getEmailBody(message),
+//                to_user = "",
+//                cc = null,
+//                bcc = null,
+//                account = account[0]
+//            )
 
             emailCount++
         }
@@ -143,6 +166,69 @@ actual class EmailService {
         folder.close(false)
         store.close()
     }
+
+    @Throws(MessagingException::class)
+    fun efficientGetContents(
+        emailAddress: String,
+        emailTableQueries: EmailTableQueries,
+        emailDataSource: EmailDataSource,
+        accountQueries: AccountTableQueries,
+        store: Store,
+        emails: MutableList<Email>,
+        account: List<String>,
+        folder: Folder,
+        inbox: IMAPFolder,
+        messages: Array<Message>,
+        properties: Properties
+    ): Int {
+        val fp = FetchProfile()
+        fp.add(FetchProfile.Item.FLAGS)
+        fp.add(FetchProfile.Item.ENVELOPE)
+        inbox.fetch(messages, fp)
+        var index = 0
+        val nbMessages = messages.takeLast(10).size
+        val maxDoc = 5000
+        val maxSize: Long = 100000000 // 100Mo
+
+        // Email UIDs
+        val uf: UIDFolder = folder as UIDFolder
+
+
+        // Message numbers limit to fetch
+        var start: Int
+        var end: Int
+
+        while (index < nbMessages) {
+            start = messages[index].messageNumber
+            var docs = 0
+            var totalSize = 0
+            var noskip = true // There are no jumps in the message numbers
+            // list
+            var notend = true
+            // Until we reach one of the limits
+            while (docs < maxDoc && totalSize < maxSize && noskip && notend) {
+                docs++
+                totalSize += messages[index].size
+                index++
+                if ((index < nbMessages).also { notend = it }) {
+                    noskip = (messages[index - 1].messageNumber + 1 === messages[index]
+                        .messageNumber)
+                }
+            }
+
+            end = messages[index - 1].messageNumber
+            inbox.doCommand(JavaMail(start, end, emails, uf, properties, account, messages))
+
+            println("Fetching contents for $start:$end")
+            println(
+                ("Size fetched = " + (totalSize / 1000000)
+                        + " Mo")
+            )
+        }
+
+        return nbMessages
+    }
+
 
     fun getEmailBody(message: Message): String {
         return when (val content = message.content) {
