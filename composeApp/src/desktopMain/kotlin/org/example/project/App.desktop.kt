@@ -7,20 +7,37 @@ import jakarta.mail.Folder
 import jakarta.mail.Message
 import jakarta.mail.Session
 import jakarta.mail.Store
+import jakarta.mail.UIDFolder
 import jakarta.mail.internet.MimeMultipart
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.example.project.sqldelight.DesktopAppModule
 import org.example.project.sqldelight.EmailDataSource
 import org.koin.core.component.KoinComponent
 import java.util.*
-
+import kotlin.properties.Delegates
 
 
 actual class EmailService {
 
     private val emails = mutableListOf<Email>()
-    private var emailCount = 0
+    private var totalEmailCount = 0
+    private val _emailsRead = MutableStateFlow(0)
+    actual val emailsRead: StateFlow<Int> = _emailsRead
+    actual var emailCount by Delegates.observable(0) { property, oldValue, newValue ->
+        println("Value changed ${property.name} from $oldValue to $newValue")
+        _emailsRead.value = newValue
+        println("Emails read: $emailsRead")
+    }
 
-    actual suspend  fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
+
+    actual suspend fun getEmails(
+        emailDataSource: EmailDataSource,
+        emailTableQueries: EmailTableQueries,
+        accountQueries: AccountTableQueries,
+        emailAddress: String,
+        password: String
+    ): List<Email> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
@@ -36,7 +53,13 @@ actual class EmailService {
         }
 
         val session = Session.getInstance(properties)
-        val store: Store = session.getStore("imap").apply { connect(properties.getProperty("mail.imap.host"),properties.getProperty("mail.imap.username"), properties.getProperty("mail.imap.password")) }
+        val store: Store = session.getStore("imap").apply {
+            connect(
+                properties.getProperty("mail.imap.host"),
+                properties.getProperty("mail.imap.username"),
+                properties.getProperty("mail.imap.password")
+            )
+        }
 
         // Check if emails exist in db
         val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
@@ -46,7 +69,7 @@ actual class EmailService {
 //            return emails
 //        }
 
-        fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
+        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
 
         return emails
     }
@@ -57,22 +80,58 @@ actual class EmailService {
         return emailsExist.isNotEmpty()
     }
 
-    fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries,emailDataSource: EmailDataSource, accountQueries: AccountTableQueries, store: Store) {
+    fun fetchEmailBodies(
+        emailAddress: String,
+        emailTableQueries: EmailTableQueries,
+        emailDataSource: EmailDataSource,
+        accountQueries: AccountTableQueries,
+        store: Store
+    ) {
+        /**
+         * Fetches the bodies of the emails in the INBOX folder.
+         *
+         * This uses the JavaMail API to connect to the IMAP server and fetch the emails.
+         * It then uses the sqldelight library to insert the emails into the sqlite database.
+         * This should only be run on initial setup of the app.
+         *
+         * @param emailAddress The email address to use for the imap connection.
+         * @param emailTableQueries The sqldelight query object for the email table.
+         * @param emailDataSource The sqldelight data source for the email table.
+         * @param accountQueries The sqldelight query object for the account table.
+         * @param store The JavaMail store object.
+         */
+
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         println("Number of messages: ${folder.messageCount}")
         val messages: List<Message> = folder.messages.takeLast(10)
+
+        // Email UIDs
+        val uf: UIDFolder = folder as UIDFolder
 
         // Account
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
 
         for ((index, message) in messages.withIndex()) {
-            println(message.subject)
-            emails.add(Email(
-               from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message), to = "", cc = null, bcc = null, account = account[0]
-            ))
+            val emailUID = uf.getUID(message)
+            println(message)
+            emails.add(
+                Email(
+                    id = emailUID,
+                    from = message.from?.joinToString(),
+                    subject = message.subject ?: "",
+                    body = getEmailBody(message),
+                    to = "",
+                    cc = null,
+                    bcc = null,
+                    account = account[0]
+                )
+            )
+
+            emailCount++
 
 //            emailTableQueries.insertEmail(
+//                id = emailUID,
 //                from_user = message.from?.joinToString() ?: "",
 //                subject = message.subject ?: "",
 //                body = getEmailBody(message),
@@ -117,9 +176,9 @@ actual class EmailService {
         emailDataSource.remove()
     }
 
-    actual fun getEmailCount(emailDataSource: EmailDataSource) : Int {
-        emailCount = emailDataSource.selectAllEmails().size
-        return emailCount
+    actual fun getEmailCount(emailDataSource: EmailDataSource): Int {
+        totalEmailCount = emailDataSource.selectAllEmails().size
+        return totalEmailCount
     }
 
 }

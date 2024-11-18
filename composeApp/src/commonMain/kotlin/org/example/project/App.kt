@@ -29,12 +29,7 @@ import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,10 +55,12 @@ import com.russhwolf.settings.observable.makeObservable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.example.project.sqldelight.EmailDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.properties.Delegates
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
@@ -218,6 +215,11 @@ fun displayEmails(
     var emailSubject: String by remember { mutableStateOf("") }
     var emailContet: String by remember { mutableStateOf("") }
 
+    // Coroutine Scope
+    var currentProgress by remember { mutableStateOf(0f) }
+    var loading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope() // Create a coroutine scope
+
     fun displayEmailBody(show: Boolean, email: Email) {
 
         emailFromUser = ""
@@ -259,10 +261,20 @@ fun displayEmails(
         var isLoading by remember { mutableStateOf(false) }
         var emails by remember { mutableStateOf<List<Email>>(emptyList()) } // Store emails
 
+        val emailsReadCount by emailService.emailsRead.collectAsState()
+
+        LaunchedEffect(emailsReadCount) {
+            loadProgress(emailsReadCount, emailService.getEmailCount(emailDataSource)) { progress ->
+                currentProgress = progress
+            }
+        }
+
         LaunchedEffect(Unit) { // Trigger once
             isLoading = true
             try {
                 // Replace with your actual email retrieval logic
+
+
                 val returnedEmails = withContext(Dispatchers.IO) {
                     emailService.getEmails(
                         emailDataSource,
@@ -296,7 +308,12 @@ fun displayEmails(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Loading emails...")
-                LinearProgressIndicator()
+                Text("Emails count: ${emailService.emailCount}")
+                Text("Emails read: ${emailsReadCount}")
+                LinearProgressIndicator(
+                    progress = currentProgress,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         } else {
             // Display email content
@@ -443,8 +460,15 @@ fun displayEmails(
 
 }
 
+suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Float) -> Unit) {
+    updateProgress(emailsRead.toFloat() / 10)
+}
+
 
 expect class EmailService {
+
+    val emailsRead: StateFlow<Int>
+    var emailCount : Int
 
     suspend fun getEmails(
         emailDataSource: EmailDataSource,
@@ -460,6 +484,7 @@ expect class EmailService {
 }
 
 data class Email(
+    val id: Long,
     val from: String?,
     val subject: String?,
     val body: String,

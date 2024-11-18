@@ -1,5 +1,5 @@
 CREATE TABLE Email(
-    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    id INTEGER NOT NULL PRIMARY KEY,
     from_user TEXT NOT NULL,
     to_user TEXT,
     cc TEXT,
@@ -11,7 +11,7 @@ CREATE TABLE Email(
 );
 
 insertEmail:
-INSERT INTO Email(from_user, to_user, cc, bcc, subject, body, account) VALUES(?, ?, ?, ?, ?, ?, ?);
+INSERT INTO Email(id, from_user, to_user, cc, bcc, subject, body, account) VALUES(?, ?, ?, ?, ?, ?, ?, ?);
 
 removeAllEmails:
 DELETE FROM Email;
