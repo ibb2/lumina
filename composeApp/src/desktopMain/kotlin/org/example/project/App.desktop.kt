@@ -64,7 +64,7 @@ actual class EmailService {
     fun fetchEmailBodies(emailAddress: String, emailTableQueries: EmailTableQueries,emailDataSource: EmailDataSource, accountQueries: AccountTableQueries, store: Store): List<Email> {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         println("Number of messages: ${folder.messageCount}")
-        val messages: List<Message> = folder.messages.toList()
+        val messages: List<Message> = folder.messages.takeLast(10)
         var emails: List<Email> = emptyList()
 
         // Account
