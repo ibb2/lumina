@@ -1,20 +1,44 @@
 package org.example.project
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Button
+import androidx.compose.material.Card
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
+import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,20 +49,21 @@ import com.example.AccountTableQueries
 import com.example.EmailTableQueries
 import com.example.project.database.LuminaDatabase
 import com.multiplatform.webview.util.KLogSeverity
-import com.multiplatform.webview.web.*
+import com.multiplatform.webview.web.LoadingState
+import com.multiplatform.webview.web.WebView
+import com.multiplatform.webview.web.rememberWebViewNavigator
+import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
-import com.russhwolf.settings.SettingsListener
 import com.russhwolf.settings.observable.makeObservable
-import io.ktor.http.ContentType.Text.Html
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
-import lumina.composeapp.generated.resources.Res
-import lumina.composeapp.generated.resources.compose_multiplatform
-import org.example.project.shared.AppModule
-import org.example.project.sqldelight.AccountDataSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.example.project.sqldelight.EmailDataSource
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
@@ -66,20 +91,29 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         observableSettings.putString("password", "")
         observableSettings.putBoolean("login", false)
 
-        observableSettings.addBooleanListener("login", defaultValue = false) { value -> loggedIn = value }
-        observableSettings.addStringListener("emailAddress", defaultValue = "") { value -> emailAddress = value }
-        observableSettings.addStringListener("password", defaultValue = "") { value -> password = value }
+        observableSettings.addBooleanListener("login", defaultValue = false) { value ->
+            loggedIn = value
+        }
+        observableSettings.addStringListener(
+            "emailAddress",
+            defaultValue = ""
+        ) { value -> emailAddress = value }
+        observableSettings.addStringListener("password", defaultValue = "") { value ->
+            password = value
+        }
 
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(
                 rememberScrollState()
-            ).padding(32.dp)
+            ).padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
 
             if (!loggedIn) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
                         "Login",
@@ -208,49 +242,96 @@ fun displayEmails(
         )
     }
 
-
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
-        val emailMessages: List<Email> =
-            emailService.getEmails(emailDataSource, emailTableQueries, accountQueries, emailAddress, password)
 
-        Column {
-            emailMessages.forEach { email: Email ->
-                Column(
-                    modifier = Modifier.border(
-                        width = 1.dp,
-                        color = Color.DarkGray,
-                        shape = RoundedCornerShape(4.dp)
-                    ).background(
-                        color = Color.LightGray
-                    ).fillMaxSize()
-                ) {
-                    Text(
-                        text = email.from ?: "No from",
+        var isLoading by remember { mutableStateOf(false) }
+        var emails by remember { mutableStateOf<List<Email>>(emptyList()) } // Store emails
+
+
+        LaunchedEffect(Unit) { // Trigger once
+            isLoading = true
+            try {
+                // Replace with your actual email retrieval logic
+                val returnedEmails = withContext(Dispatchers.IO) {
+                    emailService.getEmails(
+                        emailDataSource,
+                        emailTableQueries,
+                        accountQueries,
+                        emailAddress,
+                        password
                     )
-                    Text(
-                        text = email.subject ?: "No subject"
-                    )
-                    Button(
-                        onClick = {
-                            displayEmailBody(!display, email)
-                        },
+                }
+
+//                emails = returnedEmails
+//                println("Fetched Emails $returnedEmails")
+//                // Process emails
+//
+                withContext(Dispatchers.Main) {
+                    emails = returnedEmails
+                    isLoading = false // Hide loading indicator after updating emails
+                }
+
+            } catch (e: Exception) {
+                // Handle error, e.g., show an error message
+                println("Error ${e.message}")
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                }
+            } finally {
+                isLoading = false
+            }
+        }
+
+        if (isLoading) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Loading emails...")
+                LinearProgressIndicator()
+            }
+        } else {
+            // Display email content
+            Column {
+                emails.forEach { email: Email ->
+                    Column(
+                        modifier = Modifier.border(
+                            width = 1.dp,
+                            color = Color.DarkGray,
+                            shape = RoundedCornerShape(4.dp)
+                        ).background(
+                            color = Color.LightGray
+                        ).fillMaxSize()
                     ) {
-                        Text("View Email")
+                        Text(
+                            text = email.from ?: "No from",
+                        )
+                        Text(
+                            text = email.subject ?: "No subject"
+                        )
+                        Button(
+                            onClick = {
+                                displayEmailBody(!display, email)
+                            },
+                        ) {
+                            Text("View Email")
+                        }
                     }
                 }
             }
         }
 
-    } else {
-        Text(
-            text = "Please log in."
-        )
     }
 
     if (display) {
         Dialog(
             onDismissRequest = { display = false },
-            properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true, usePlatformDefaultWidth = false),
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false
+            ),
         ) {
             // Draw a rectangle shape with rounded corners inside the dialog
             Surface(modifier = Modifier.fillMaxSize(0.6f)) {
@@ -284,9 +365,9 @@ fun displayEmails(
                                         contentDescription = "Error",
                                         colorFilter = ColorFilter.tint(Color.Red),
                                         modifier =
-                                            Modifier
-                                                .align(Alignment.CenterEnd)
-                                                .padding(8.dp),
+                                        Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .padding(8.dp),
                                     )
                                 }
 
@@ -313,8 +394,8 @@ fun displayEmails(
                     WebView(
                         state = state,
                         modifier =
-                            Modifier
-                                .fillMaxSize(),
+                        Modifier
+                            .fillMaxSize(),
                         navigator = navigator,
                     )
 
@@ -358,7 +439,9 @@ fun displayEmails(
 
 expect class EmailService {
 
-    fun getEmails(
+    fun returnEmails() : List<Email>
+
+    suspend fun getEmails(
         emailDataSource: EmailDataSource,
         emailTableQueries: EmailTableQueries,
         accountQueries: AccountTableQueries,

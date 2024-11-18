@@ -16,7 +16,10 @@ import java.util.*
 
 
 actual class EmailService {
-    actual fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
+
+    private val emails = mutableListOf<Email>()
+
+    actual suspend  fun getEmails(emailDataSource: EmailDataSource, emailTableQueries: EmailTableQueries, accountQueries: AccountTableQueries, emailAddress: String, password: String): List<Email> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
@@ -42,12 +45,11 @@ actual class EmailService {
 //            return emails
 //        }
 
-        val email: List<Email> = fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
+        val email = fetchEmailBodies(emailAddress,emailTableQueries,emailDataSource, accountQueries, store)
 
+        emails.addAll(email)
 
-
-
-        return email
+        return emails
     }
 
     fun doEmailsExist(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): Boolean {
@@ -65,14 +67,16 @@ actual class EmailService {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         println("Number of messages: ${folder.messageCount}")
         val messages: List<Message> = folder.messages.takeLast(10)
-        var emails: List<Email> = emptyList()
 
         // Account
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
 
         for ((index, message) in messages.withIndex()) {
-            print(message.subject)
+            println(message.subject)
+            emails.add(Email(
+               from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message), to = "", cc = null, bcc = null, account = account[0]
+            ))
 //            emails += (Email(
 //               from = message.from?.joinToString(), subject = message.subject?: "", body = getEmailBody(message), to = "", cc = null, bcc = null, account = account[0]
 //            ))
@@ -90,7 +94,6 @@ actual class EmailService {
 
         folder.close(false)
         store.close()
-
         return emails
     }
 
