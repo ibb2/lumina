@@ -439,8 +439,6 @@ fun displayEmails(
 
 expect class EmailService {
 
-    fun returnEmails() : List<Email>
-
     suspend fun getEmails(
         emailDataSource: EmailDataSource,
         emailTableQueries: EmailTableQueries,
