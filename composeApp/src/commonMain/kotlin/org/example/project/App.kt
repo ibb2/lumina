@@ -41,8 +41,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
-import com.example.AccountTableQueries
-import com.example.EmailTableQueries
+import com.example.AccountsTableQueries
+import com.example.EmailsTableQueries
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import com.multiplatform.webview.util.KLogSeverity
@@ -61,8 +61,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
-import org.example.project.shared.data.EmailDAO
-import org.example.project.sqldelight.EmailDataSource
+import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalSettingsApi::class)
@@ -78,12 +78,15 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                 attachments_countAdapter = IntColumnAdapter
             ),
         )
-        val accountQueries = database.accountTableQueries
 
-        // Email db stuff
-        val emailQueries = database.emailTableQueries
-        val emailDataSource: EmailDataSource = EmailDataSource(database)
+        // Queries
+        val accountQueries = database.accountsTableQueries
+        val emailQueries = database.emailsTableQueries
 
+        // Data Sources
+        val emailDataSource: EmailsDataSource = EmailsDataSource(database)
+
+        // Basic Auth
         val settings = Settings()
         var showContent by remember { mutableStateOf(false) }
         var emailAddress by remember { mutableStateOf("") }
@@ -109,6 +112,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
             password = value
         }
 
+        // Ui
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(
                 rememberScrollState()
@@ -180,7 +184,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
 
 fun login(
     observableSettings: ObservableSettings,
-    accountQueries: AccountTableQueries,
+    accountQueries: AccountsTableQueries,
     emailAddress: String,
     password: String
 ): Unit {
@@ -188,14 +192,14 @@ fun login(
     observableSettings.putString("password", password)
     observableSettings.putBoolean("login", true)
 
-    val accountExists: String? = accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
-
-    if (accountExists == null) {
+    try {
+        accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
+            ?: throw NullPointerException()
+    } catch (e: NullPointerException) {
         accountQueries.insertAccount(emailAddress)
     }
 
     println("Logged in as $emailAddress")
-
 }
 
 fun logout(observableSettings: ObservableSettings): Unit {
@@ -207,10 +211,10 @@ fun logout(observableSettings: ObservableSettings): Unit {
 
 @Composable
 fun displayEmails(
-    emailDataSource: EmailDataSource,
+    emailDataSource: EmailsDataSource,
     observableSettings: ObservableSettings,
-    emailTableQueries: EmailTableQueries,
-    accountQueries: AccountTableQueries,
+    emailTableQueries: EmailsTableQueries,
+    accountQueries: AccountsTableQueries,
     emailService: EmailService,
     loggedIn: Boolean,
     emailAddress: String,
@@ -226,7 +230,7 @@ fun displayEmails(
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope() // Create a coroutine scope
 
-    fun displayEmailBody(show: Boolean, email: EmailDAO) {
+    fun displayEmailBody(show: Boolean, email: EmailsDAO) {
 
         emailFromUser = ""
         emailSubject = ""
@@ -265,7 +269,7 @@ fun displayEmails(
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
 
         var isLoading by remember { mutableStateOf(false) }
-        var emails by remember { mutableStateOf<List<EmailDAO>>(emptyList()) } // Store emails
+        var emails by remember { mutableStateOf<List<EmailsDAO>>(emptyList()) } // Store emails
 
         val emailsReadCount by emailService.emailsRead.collectAsState()
 
@@ -327,7 +331,7 @@ fun displayEmails(
         } else {
             // Display email content
             Column {
-                emails.forEach { email: EmailDAO ->
+                emails.forEach { email: EmailsDAO ->
                     Column(
                         modifier = Modifier.border(
                             width = 1.dp,
@@ -480,16 +484,15 @@ expect class EmailService {
     var emailCount: Int
 
     suspend fun getEmails(
-        emailDataSource: EmailDataSource,
-        emailTableQueries: EmailTableQueries,
-        accountQueries: AccountTableQueries,
+        emailDataSource: EmailsDataSource,
+        emailTableQueries: EmailsTableQueries,
+        accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): List<EmailDAO>
+    ): List<EmailsDAO>
 
-    suspend fun deleteEmails(emailDataSource: EmailDataSource)
+    suspend fun deleteEmails(emailDataSource: EmailsDataSource)
 
-    fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<EmailDAO>
-    fun getEmailCount(emailDataSource: EmailDataSource): Int
-
+    fun returnEmails(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): List<EmailsDAO>
+    fun getEmailCount(emailDataSource: EmailsDataSource): Int
 }

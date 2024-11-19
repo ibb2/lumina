@@ -1,6 +1,6 @@
 package org.example.project.shared.data
 
-data class EmailDAO(
+data class EmailsDAO(
     val id: Long,
     val compositeKey: String,
     val folderName: String,
@@ -22,7 +22,7 @@ data class EmailDAO(
         if (this === other) return true
         if (other == null || this::class != other::class) return false
 
-        other as EmailDAO
+        other as EmailsDAO
 
         if (id != other.id) return false
         if (size != other.size) return false
@@ -63,4 +63,5 @@ data class EmailDAO(
         result = 31 * result + account.hashCode()
         return result
     }
+
 }

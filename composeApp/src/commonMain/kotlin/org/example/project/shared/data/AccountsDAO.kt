@@ -1,6 +1,6 @@
 package org.example.project.shared.data
 
-data class AccountDAO(
+data class AccountsDAO(
     val id: Long,
     val emailAddress: String
 )

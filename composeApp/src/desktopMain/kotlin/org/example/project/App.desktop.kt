@@ -1,22 +1,22 @@
 package org.example.project
 
-import com.example.AccountTableQueries
-import com.example.EmailTableQueries
+import com.example.AccountsTableQueries
+import com.example.EmailsTableQueries
 import jakarta.mail.*
 import jakarta.mail.internet.MimeMultipart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.mail.JavaMail
-import org.example.project.shared.data.EmailDAO
-import org.example.project.sqldelight.EmailDataSource
+import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.EmailsDataSource
 import java.util.*
 import kotlin.properties.Delegates
 
 
 actual class EmailService {
 
-    private val emails = mutableListOf<EmailDAO>()
+    private val emails = mutableListOf<EmailsDAO>()
     private var totalEmailCount = 0
     private val _emailsRead = MutableStateFlow(0)
     actual val emailsRead: StateFlow<Int> = _emailsRead
@@ -28,12 +28,12 @@ actual class EmailService {
 
 
     actual suspend fun getEmails(
-        emailDataSource: EmailDataSource,
-        emailTableQueries: EmailTableQueries,
-        accountQueries: AccountTableQueries,
+        emailDataSource: EmailsDataSource,
+        emailTableQueries: EmailsTableQueries,
+        accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): List<EmailDAO> {
+    ): List<EmailsDAO> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
@@ -88,7 +88,7 @@ actual class EmailService {
         return emails
     }
 
-    fun doEmailsExist(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): Boolean {
+    fun doEmailsExist(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): Boolean {
         val emailsExist = emailTableQueries.selectAllEmails().executeAsList()
 
         return emailsExist.isNotEmpty()
@@ -96,9 +96,9 @@ actual class EmailService {
 
     fun fetchEmailBodies(
         emailAddress: String,
-        emailTableQueries: EmailTableQueries,
-        emailDataSource: EmailDataSource,
-        accountQueries: AccountTableQueries,
+        emailTableQueries: EmailsTableQueries,
+        emailDataSource: EmailsDataSource,
+        accountQueries: AccountsTableQueries,
         store: Store
     ) {
         /**
@@ -200,11 +200,11 @@ actual class EmailService {
     @Throws(MessagingException::class)
     fun efficientGetContents(
         emailAddress: String,
-        emailTableQueries: EmailTableQueries,
-        emailDataSource: EmailDataSource,
-        accountQueries: AccountTableQueries,
+        emailTableQueries: EmailsTableQueries,
+        emailDataSource: EmailsDataSource,
+        accountQueries: AccountsTableQueries,
         store: Store,
-        emails: MutableList<EmailDAO>,
+        emails: MutableList<EmailsDAO>,
         account: List<String>,
         folder: Folder,
         inbox: IMAPFolder,
@@ -286,32 +286,21 @@ actual class EmailService {
         return result.toString()
     }
 
-    actual fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<EmailDAO> {
-        val listOfEmails = emailTableQueries.selectAllEmails().executeAsList()
-        listOfEmails.forEach { email ->
-//            emails.add(
-//                Email(
-//                    id = email.id,
-//                    from = email.from_user,
-//                    subject = email.subject,
-//                    body = email.body,
-//                    to = email.to_user,
-//                    cc = email.cc,
-//                    bcc = email.bcc,
-//                    account = email.account
-//                )
-//            )
-        }
-        return emails
-    }
-
-    actual suspend fun deleteEmails(emailDataSource: EmailDataSource) {
+    actual suspend fun deleteEmails(emailDataSource: EmailsDataSource) {
         emailDataSource.remove()
     }
 
-    actual fun getEmailCount(emailDataSource: EmailDataSource): Int {
+    actual fun getEmailCount(emailDataSource: EmailsDataSource): Int {
 //        totalEmailCount = emailDataSource.selectAllEmails().size
         return totalEmailCount
+    }
+
+
+    actual fun returnEmails(
+        emailTableQueries: EmailsTableQueries,
+        emailDataSource: EmailsDataSource
+    ): List<EmailsDAO> {
+        TODO("Not yet implemented")
     }
 
 }

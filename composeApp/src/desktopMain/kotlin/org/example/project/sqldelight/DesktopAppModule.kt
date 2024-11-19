@@ -1,12 +1,9 @@
 package org.example.project.sqldelight
 
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
-import com.example.Attachments
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import org.example.project.shared.AppModule
-import org.example.project.shared.data.AttachmentDAO
-import org.example.project.shared.data.EmailDAO
 
 class DesktopAppModule : AppModule {
 
@@ -19,15 +16,15 @@ class DesktopAppModule : AppModule {
         )
     }
 
-    override fun provideAccountDataSource(): AccountDataSource {
-        return AccountDataSource(db)
+    override fun provideAccountsDataSource(): AccountsDataSource {
+        return AccountsDataSource(db)
     }
 
-    override fun provideEmailDataSource(): EmailDataSource {
-        return EmailDataSource(db)
+    override fun provideEmailsDataSource(): EmailsDataSource {
+        return EmailsDataSource(db)
     }
 
-    override fun provideAttachmentDataSource(): AttachmentDataSource {
-        return AttachmentDataSource(db)
+    override fun provideAttachmentsDataSource(): AttachmentsDataSource {
+        return AttachmentsDataSource(db)
     }
 }

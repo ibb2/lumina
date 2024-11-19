@@ -2,9 +2,9 @@ package org.example.project.sqldelight
 
 import com.example.project.database.LuminaDatabase
 
-class AttachmentDataSource(db: LuminaDatabase) {
+class AttachmentsDataSource(db: LuminaDatabase) {
 
-    private val queries = db.attachmentTableQueries
+    private val queries = db.attachmentsTableQueries
 
     fun insertAttachment(
         emailId: Long,

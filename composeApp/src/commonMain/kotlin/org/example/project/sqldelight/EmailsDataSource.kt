@@ -1,14 +1,13 @@
 package org.example.project.sqldelight
 
 import com.example.project.database.LuminaDatabase
-import org.example.project.shared.data.EmailDAO
+import org.example.project.shared.data.EmailsDAO
 
-class EmailDataSource(db: LuminaDatabase) {
+class EmailsDataSource(db: LuminaDatabase) {
 
-    private val queries = db.emailTableQueries
+    private val queries = db.emailsTableQueries
 
     fun insertEmail(
-        id: Long,
         compositeKey: String,
         folderName: String,
         subject: String,
@@ -24,13 +23,13 @@ class EmailDataSource(db: LuminaDatabase) {
         attachmentsCount: Int,
         hasAttachments: Boolean,
         account: String
-    ): Unit = queries.insertEmail(id, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account)
+    ): Unit = queries.insertEmail(compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account)
 
     fun remove() = queries.removeAllEmails()
 
-    fun selectAllEmails(): List<EmailDAO> = queries.selectAllEmails(
+    fun selectAllEmails(): List<EmailsDAO> = queries.selectAllEmails(
         mapper = { id, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
-            EmailDAO(
+            EmailsDAO(
                 id = id,
                 compositeKey = compositeKey,
                 folderName = folderName,

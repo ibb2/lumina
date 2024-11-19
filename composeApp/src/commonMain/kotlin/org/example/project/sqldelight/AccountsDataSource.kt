@@ -3,9 +3,9 @@ package org.example.project.sqldelight
 import com.example.project.database.LuminaDatabase
 
 
-class AccountDataSource(db: LuminaDatabase) {
+class AccountsDataSource(db: LuminaDatabase) {
 
-    private val queries = db.accountTableQueries
+    private val queries = db.accountsTableQueries
 
     fun insert(emailAddress: String) = queries.insertAccount(emailAddress)
 

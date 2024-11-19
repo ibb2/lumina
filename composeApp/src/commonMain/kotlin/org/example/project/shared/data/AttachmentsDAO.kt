@@ -1,6 +1,6 @@
 package org.example.project.shared.data
 
-data class AttachmentDAO(
+data class AttachmentsDAO(
     val id: Long,
     val emailId: Long,
     val fileName: String,

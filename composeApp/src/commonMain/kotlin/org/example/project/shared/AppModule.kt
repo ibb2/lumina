@@ -1,14 +1,14 @@
 package org.example.project.shared
 
-import org.example.project.sqldelight.AccountDataSource
-import org.example.project.sqldelight.AttachmentDataSource
-import org.example.project.sqldelight.EmailDataSource
+import org.example.project.sqldelight.AccountsDataSource
+import org.example.project.sqldelight.AttachmentsDataSource
+import org.example.project.sqldelight.EmailsDataSource
 
 interface AppModule {
 
-    fun provideAccountDataSource(): AccountDataSource
+    fun provideAccountsDataSource(): AccountsDataSource
 
-    fun provideEmailDataSource(): EmailDataSource
+    fun provideEmailsDataSource(): EmailsDataSource
 
-    fun provideAttachmentDataSource(): AttachmentDataSource
+    fun provideAttachmentsDataSource(): AttachmentsDataSource
 }

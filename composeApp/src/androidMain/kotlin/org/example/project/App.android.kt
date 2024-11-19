@@ -1,20 +1,20 @@
 package org.example.project
 
-import com.example.AccountTableQueries
-import com.example.EmailTableQueries
+import com.example.AccountsTableQueries
+import com.example.EmailsTableQueries
 import kotlinx.coroutines.flow.StateFlow
-import org.example.project.shared.data.EmailDAO
-import org.example.project.sqldelight.EmailDataSource
+import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.EmailsDataSource
 
 actual class EmailService {
 
     actual suspend fun getEmails(
-        emailDataSource: EmailDataSource,
-        emailTableQueries: EmailTableQueries,
-        accountQueries: AccountTableQueries,
+        emailDataSource: EmailsDataSource,
+        emailTableQueries: EmailsTableQueries,
+        accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): List<EmailDAO> {
+    ): List<EmailsDAO> {
         TODO("Not yet implemented")
     }
 
@@ -24,17 +24,17 @@ actual class EmailService {
         get() = TODO("Not yet implemented")
         set(value) {}
 
-    actual suspend fun deleteEmails(emailDataSource: EmailDataSource) {
+    actual suspend fun deleteEmails(emailDataSource: EmailsDataSource) {
     }
 
     actual fun returnEmails(
-        emailTableQueries: EmailTableQueries,
-        emailDataSource: EmailDataSource
-    ): List<EmailDAO> {
+        emailTableQueries: EmailsTableQueries,
+        emailDataSource: EmailsDataSource
+    ): List<EmailsDAO> {
         TODO("Not yet implemented")
     }
 
-    actual fun getEmailCount(emailDataSource: EmailDataSource): Int {
+    actual fun getEmailCount(emailDataSource: EmailsDataSource): Int {
         TODO("Not yet implemented")
     }
 }

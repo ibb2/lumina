@@ -14,7 +14,7 @@ import org.eclipse.angus.mail.imap.protocol.BODY
 import org.eclipse.angus.mail.imap.protocol.FetchResponse
 import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
-import org.example.project.shared.data.EmailDAO
+import org.example.project.shared.data.EmailsDAO
 import java.io.ByteArrayInputStream
 import java.util.*
 import javax.management.remote.JMXConnectorFactory.connect
@@ -24,7 +24,7 @@ class JavaMail(
     var start: Int,
     /** Index on server of last mail to fetch  */
     var end: Int,
-    var emails: MutableList<EmailDAO>,
+    var emails: MutableList<EmailsDAO>,
     var uf: UIDFolder,
     var properties: Properties,
     var account: List<String>,

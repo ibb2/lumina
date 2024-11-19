@@ -23,7 +23,6 @@ CREATE TABLE Emails (
 
 insertEmail:
 INSERT INTO Emails(
-    id,
     composite_key,
     folder_name,
     subject,
@@ -39,7 +38,7 @@ INSERT INTO Emails(
     attachments_count,
     has_attachments,
     account
-) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 removeAllEmails:
 DELETE FROM Emails;
