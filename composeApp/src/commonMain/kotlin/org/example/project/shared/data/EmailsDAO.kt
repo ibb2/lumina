@@ -1,7 +1,7 @@
 package org.example.project.shared.data
 
 data class EmailsDAO(
-    val id: Long,
+    val id: Long?,
     val compositeKey: String,
     val folderName: String,
     val subject: String,
