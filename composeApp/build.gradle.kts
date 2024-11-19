@@ -63,6 +63,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.koin.core)
             api("io.github.kevinnzou:compose-webview-multiplatform:1.8.4")
+            implementation("app.cash.sqldelight:primitive-adapters:2.0.2")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
