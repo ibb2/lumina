@@ -1,20 +1,29 @@
 package org.example.project
 
+import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.AccountsTableQueries
+import com.example.Emails
 import com.example.EmailsTableQueries
+import com.example.project.database.LuminaDatabase
 import jakarta.mail.*
 import jakarta.mail.internet.MimeMultipart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.mail.JavaMail
+import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.AttachmentsDataSource
+import org.example.project.sqldelight.DatabaseDriverFactory
 import org.example.project.sqldelight.EmailsDataSource
 import java.util.*
 import kotlin.properties.Delegates
 
 
 actual class EmailService {
+
+    // Database
+    private lateinit var db: LuminaDatabase
 
     private val emails = mutableListOf<EmailsDAO>()
     private var totalEmailCount = 0
@@ -25,7 +34,21 @@ actual class EmailService {
         _emailsRead.value = newValue
         println("Emails read: $emailsRead")
     }
+    private val attachments: MutableList<AttachmentsDAO> = mutableListOf()
+    private val totalAttachments = 0
 
+    // Initialise
+    actual suspend fun initDatabase() {
+
+        val driver =  DatabaseDriverFactory().create()
+        db = LuminaDatabase(
+            driver,
+            EmailsAdapter = Emails.Adapter(
+                attachments_countAdapter = IntColumnAdapter
+            ),
+        )
+
+    }
 
     actual suspend fun getEmails(
         emailDataSource: EmailsDataSource,
@@ -223,6 +246,15 @@ actual class EmailService {
 
         // Email UIDs
         val uf: UIDFolder = inbox
+
+        // Attachments
+        val database = LuminaDatabase(
+            DatabaseDriverFactory().create(),
+            EmailsAdapter = Emails.Adapter(
+                attachments_countAdapter = IntColumnAdapter
+            ),
+        )
+        val atch = AttachmentsDataSource
 
         // Message numbers limit to fetch
         var start: Int

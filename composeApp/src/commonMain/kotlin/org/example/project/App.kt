@@ -483,6 +483,8 @@ expect class EmailService {
     val emailsRead: StateFlow<Int>
     var emailCount: Int
 
+    suspend fun initDatabase()
+
     suspend fun getEmails(
         emailDataSource: EmailsDataSource,
         emailTableQueries: EmailsTableQueries,
@@ -495,4 +497,5 @@ expect class EmailService {
 
     fun returnEmails(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): List<EmailsDAO>
     fun getEmailCount(emailDataSource: EmailsDataSource): Int
+
 }
