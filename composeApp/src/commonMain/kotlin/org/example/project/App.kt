@@ -276,7 +276,7 @@ fun displayEmails(
                 // Replace with your actual email retrieval logic
 
                 val startTime = Clock.System.now()
-                withContext(Dispatchers.IO) {
+                val returnedEmails = withContext(Dispatchers.IO) {
                     emailService.getEmails(
                         emailDataSource,
                         emailTableQueries,
@@ -289,10 +289,10 @@ fun displayEmails(
                 val duration = endTime - startTime
                 println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
 
-//                withContext(Dispatchers.Main) {
-//                    emails = returnedEmails
-//                    isLoading = false // Hide loading indicator after updating emails
-//                }
+                withContext(Dispatchers.Main) {
+                    emails = returnedEmails
+                    isLoading = false // Hide loading indicator after updating emails
+                }
 
             } catch (e: Exception) {
                 // Handle error, e.g., show an error message
@@ -487,15 +487,3 @@ expect class EmailService {
     fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email>
     fun getEmailCount(emailDataSource: EmailDataSource): Int
 }
-
-data class Email(
-    val id: Long,
-    val from: String?,
-    val subject: String?,
-    val body: String,
-    val to: String?,
-    val cc: String?,
-    val bcc: String?,
-    val account: String
-)
-
