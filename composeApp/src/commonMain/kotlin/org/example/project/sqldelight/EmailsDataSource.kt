@@ -49,4 +49,6 @@ class EmailsDataSource(db: LuminaDatabase) {
             )
         }
     ).executeAsList()
+
+    fun lastInsertedRowId(): Long = queries.lastInsertedRowId().executeAsOne()
 }
