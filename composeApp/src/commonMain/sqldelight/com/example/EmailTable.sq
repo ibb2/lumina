@@ -18,7 +18,7 @@ CREATE TABLE Email (
     FOREIGN KEY(account) REFERENCES Account(emailAddress) ON DELETE CASCADE -- Foreign key to the Account table
 );
 
-insetEmail:
+insertEmail:
 INSERT INTO Email(
     id,
     composite_key,
