@@ -120,7 +120,6 @@ actual class EmailService {
         fp.add(IMAPFolder.FetchProfileItem.FLAGS)
         fp.add(IMAPFolder.FetchProfileItem.CONTENT_INFO)
 
-
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         val msgs = folder.messages
 
