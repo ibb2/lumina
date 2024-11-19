@@ -69,7 +69,8 @@ class JavaMail(
 
                         emails.add(
                             Email(
-                                id = uf.getUID(message),
+//                                id = uf.getUID(message),
+                                id = 1,
                                 from = mm.from.toString(),
                                 subject = mm.subject,
                                 body = getEmailBody(mm, i),

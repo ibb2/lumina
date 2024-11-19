@@ -465,7 +465,7 @@ fun displayEmails(
 }
 
 suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Float) -> Unit) {
-    updateProgress(emailsRead.toFloat() / 10)
+    updateProgress(emailsRead.toFloat() / totalEmails)
 }
 
 

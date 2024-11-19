@@ -124,16 +124,47 @@ actual class EmailService {
         val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
         val msgs = folder.messages
 
-        val messages: List<Message> = folder.messages.takeLast(10)
-        folder.fetch(msgs, fp)
+        val messages: List<Message> = folder.messages.takeLast(50)
+//        folder.fetch(msgs, fp)
         // Email UIDs
         val uf: UIDFolder = folder as UIDFolder
 
         // Account
         val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
+//        totalEmailCount = 50
 
-        for (message in folder.getMessages().takeLast(10)) {
+//        for (message in messages) {
+//            val emailUID = uf.getUID(message)
+//            println("Message: ${message.from}")
+//            emails.add(
+//                Email(
+//                    id = emailUID,
+//                    from = message.from?.joinToString(),
+//                    subject = message.subject ?: "",
+//                    body = getEmailBody(message),
+//                    to = "",
+//                    cc = null,
+//                    bcc = null,
+//                    account = account[0]
+//                )
+//            )
+//
+////            emailTableQueries.insertEmail(
+////                id = emailUID,
+////                from_user = message.from?.joinToString() ?: "",
+////                subject = message.subject ?: "",
+////                body = getEmailBody(message),
+////                to_user = "",
+////                cc = null,
+////                bcc = null,
+////                account = account[0]
+////            )
+//
+//            emailCount++
+//        }
+
+        for (message in folder.getMessages().takeLast(50)) {
             val emailUID = uf.getUID(message)
             println("Message: ${message.from}")
             emails.add(
@@ -186,13 +217,13 @@ actual class EmailService {
         fp.add(FetchProfile.Item.ENVELOPE)
         inbox.fetch(messages, fp)
         var index = 0
-        val nbMessages = messages.takeLast(10).size
+        val nbMessages = inbox.getMessages().takeLast(50).size
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
+        totalEmailCount = nbMessages
 
         // Email UIDs
-        val uf: UIDFolder = folder as UIDFolder
-
+        val uf: UIDFolder = inbox
 
         // Message numbers limit to fetch
         var start: Int
@@ -217,7 +248,7 @@ actual class EmailService {
             }
 
             end = messages[index - 1].messageNumber
-            inbox.doCommand(JavaMail(start, end, emails, uf, properties, account, messages))
+            inbox.doCommand(JavaMail(start, end, emails, uf, properties, account, inbox.getMessages().takeLast(50).toTypedArray()))
 
             println("Fetching contents for $start:$end")
             println(
@@ -280,7 +311,7 @@ actual class EmailService {
     }
 
     actual fun getEmailCount(emailDataSource: EmailDataSource): Int {
-        totalEmailCount = emailDataSource.selectAllEmails().size
+//        totalEmailCount = emailDataSource.selectAllEmails().size
         return totalEmailCount
     }
 
