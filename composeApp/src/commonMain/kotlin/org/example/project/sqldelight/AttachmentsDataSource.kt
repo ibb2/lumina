@@ -11,8 +11,8 @@ class AttachmentsDataSource(db: LuminaDatabase) {
         fileName: String,
         mimeType: String,
         size: Long,
-        downloadPath: String,
-        downloaded: Boolean
+        downloadPath: String = "",
+        downloaded: Boolean = false
     ) = queries.insertAttachment(emailId, fileName, mimeType, size, downloadPath, downloaded)
 
     fun selectAttachments(emailId: Long) = queries.selectAttachment(emailId)

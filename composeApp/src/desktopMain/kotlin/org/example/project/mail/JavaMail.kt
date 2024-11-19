@@ -16,6 +16,8 @@ import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.AttachmentsDataSource
+import org.example.project.sqldelight.EmailsDataSource
 import java.io.ByteArrayInputStream
 import java.text.SimpleDateFormat
 import java.util.*
@@ -26,10 +28,11 @@ class JavaMail(
     /** Index on server of last mail to fetch  */
     var end: Int,
     var emails: MutableList<EmailsDAO>,
-    var uf: UIDFolder,
-    var properties: Properties,
     var account: List<String>,
-    var messages: Array<Message>
+    var messages: Array<Message>,
+    var attachmentsArray: MutableList<AttachmentsDAO>,
+    var emailsDataSource: EmailsDataSource,
+    var attachmentsDataSource: AttachmentsDataSource,
 ) : IMAPFolder.ProtocolCommand {
     //    @Throws(ProtocolException::class)
     override fun doCommand(protocol: IMAPProtocol): Any {
@@ -73,19 +76,39 @@ class JavaMail(
                             ?: getFallbackReceivedDate(mm)?.toInstant()?.toString()
                             ?: Clock.System.now().toString() // Fallback to current time
 
-                        val sentDate =  mm.sentDate?.toInstant()?.toString()
+                        val sentDate = mm.sentDate?.toInstant()?.toString()
                             ?: getFallbackReceivedDate(mm)?.toInstant()?.toString()
                             ?: Clock.System.now().toString()
 
-                        emails.add(EmailsDAO(
-                            id = null,
+                        emails.add(
+                            EmailsDAO(
+                                id = null,
+                                compositeKey = mm.subject + sentDate + mm.from.toString(),
+                                folderName = message.folder.fullName,
+                                subject = mm.subject,
+                                sender = mm.from[0].toString(),
+                                recipients = getAllRecipients(mm).toString().toByteArray(),
+                                sentDate = sentDate,
+                                receivedDate = receivedDate,
+                                body = emailBody,
+                                snippet = generateSnippet(emailBody),
+                                size = mm.size.toLong(),
+                                isRead = message.isSet(Flags.Flag.SEEN),
+                                isFlagged = message.isSet(Flags.Flag.FLAGGED),
+                                attachmentsCount = attachments.size,
+                                hasAttachments = attachments.isNotEmpty(),
+                                account = account[0],
+                            )
+                        )
+
+                        emailsDataSource.insertEmail(
                             compositeKey = mm.subject + sentDate + mm.from.toString(),
                             folderName = message.folder.fullName,
                             subject = mm.subject,
                             sender = mm.from[0].toString(),
                             recipients = getAllRecipients(mm).toString().toByteArray(),
                             sentDate = sentDate,
-                            receivedDate =  receivedDate,
+                            receivedDate = receivedDate,
                             body = emailBody,
                             snippet = generateSnippet(emailBody),
                             size = mm.size.toLong(),
@@ -94,7 +117,27 @@ class JavaMail(
                             attachmentsCount = attachments.size,
                             hasAttachments = attachments.isNotEmpty(),
                             account = account[0],
-                        ))
+                        )
+
+                        for (attachment in attachments) {
+                            attachmentsArray.add(
+                                AttachmentsDAO(
+                                    id = null,
+                                    emailId = emailsDataSource.lastInsertedRowId(),
+                                    fileName = attachment.fileName,
+                                    mimeType = attachment.mimeType,
+                                    size = attachment.size,
+                                    downloadPath = "",
+                                    downloaded = false
+                                )
+                            )
+                            attachmentsDataSource.insertAttachment(
+                                emailId = emailsDataSource.lastInsertedRowId(),
+                                fileName = attachment.fileName,
+                                mimeType = attachment.mimeType,
+                                size = attachment.size,
+                            )
+                        }
                     } catch (e: MessagingException) {
                         print("Errored out")
                         e.printStackTrace()

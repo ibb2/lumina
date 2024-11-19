@@ -20,7 +20,7 @@ import java.util.*
 import kotlin.properties.Delegates
 
 
-actual class EmailService {
+actual class EmailService() {
 
     // Database
     private lateinit var db: LuminaDatabase
@@ -37,17 +37,14 @@ actual class EmailService {
     private val attachments: MutableList<AttachmentsDAO> = mutableListOf()
     private val totalAttachments = 0
 
-    // Initialise
-    actual suspend fun initDatabase() {
-
-        val driver =  DatabaseDriverFactory().create()
+    init {
+        val driver = DatabaseDriverFactory().create()
         db = LuminaDatabase(
             driver,
             EmailsAdapter = Emails.Adapter(
                 attachments_countAdapter = IntColumnAdapter
             ),
         )
-
     }
 
     actual suspend fun getEmails(
@@ -248,13 +245,9 @@ actual class EmailService {
         val uf: UIDFolder = inbox
 
         // Attachments
-        val database = LuminaDatabase(
-            DatabaseDriverFactory().create(),
-            EmailsAdapter = Emails.Adapter(
-                attachments_countAdapter = IntColumnAdapter
-            ),
-        )
-        val atch = AttachmentsDataSource
+        val attachmentDataSource: AttachmentsDataSource = AttachmentsDataSource(db)
+
+        // Emails
 
         // Message numbers limit to fetch
         var start: Int
@@ -279,7 +272,18 @@ actual class EmailService {
             }
 
             end = messages[index - 1].messageNumber
-            inbox.doCommand(JavaMail(start, end, emails, uf, properties, account, inbox.getMessages().takeLast(50).toTypedArray()))
+            inbox.doCommand(
+                JavaMail(
+                    start,
+                    end,
+                    emails,
+                    account,
+                    inbox.getMessages().takeLast(50).toTypedArray(),
+                    attachments,
+                    emailDataSource,
+                    attachmentDataSource
+                )
+            )
 
             println("Fetching contents for $start:$end")
             println(
