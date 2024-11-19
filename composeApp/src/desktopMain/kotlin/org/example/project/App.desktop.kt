@@ -2,6 +2,7 @@ package org.example.project
 
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.AccountsTableQueries
+import com.example.Attachments
 import com.example.Emails
 import com.example.EmailsTableQueries
 import com.example.project.database.LuminaDatabase
@@ -331,6 +332,9 @@ actual class EmailService() {
         return totalEmailCount
     }
 
+    actual fun returnAttachments(): MutableList<AttachmentsDAO> {
+        return attachments
+    }
 
     actual fun returnEmails(
         emailTableQueries: EmailsTableQueries,

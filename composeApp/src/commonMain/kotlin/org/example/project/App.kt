@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -270,6 +271,8 @@ fun displayEmails(
 
         var isLoading by remember { mutableStateOf(false) }
         var emails by remember { mutableStateOf<List<EmailsDAO>>(emptyList()) } // Store emails
+        var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
+
 
         val emailsReadCount by emailService.emailsRead.collectAsState()
 
@@ -294,12 +297,16 @@ fun displayEmails(
                         password
                     )
                 }
+                val returnedAttachments = withContext(Dispatchers.IO) {
+                    emailService.returnAttachments()
+                }
                 val endTime = Clock.System.now()
                 val duration = endTime - startTime
                 println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
 
                 withContext(Dispatchers.Main) {
                     emails = returnedEmails
+                    attachments = returnedAttachments
                     isLoading = false // Hide loading indicator after updating emails
                 }
 
@@ -353,6 +360,32 @@ fun displayEmails(
                             },
                         ) {
                             Text("View Email")
+                        }
+                        if (attachments.any { it.emailId === email.id }){
+                        Row {
+                            attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                Row {
+                                    Text(
+                                        text = attachment.fileName,
+                                        modifier = Modifier
+                                            .padding(8.dp)
+                                    )
+                                    Text(
+                                        text = attachment.size.toString(), modifier = Modifier
+                                            .padding(8.dp)
+
+                                    )
+                                    Text(
+                                        text = attachment.mimeType, modifier = Modifier
+                                            .padding(8.dp)
+                                    )
+                                }
+
+                            }
+                        } } else {
+                            Text(
+                                text = "No attachments",
+                            )
                         }
                     }
                 }
@@ -495,5 +528,7 @@ expect class EmailService {
 
     fun returnEmails(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): List<EmailsDAO>
     fun getEmailCount(emailDataSource: EmailsDataSource): Int
+
+    fun returnAttachments(): MutableList<AttachmentsDAO>
 
 }

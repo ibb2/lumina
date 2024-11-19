@@ -101,23 +101,23 @@ class JavaMail(
                             )
                         )
 
-                        emailsDataSource.insertEmail(
-                            compositeKey = mm.subject + sentDate + mm.from.toString(),
-                            folderName = message.folder.fullName,
-                            subject = mm.subject,
-                            sender = mm.from[0].toString(),
-                            recipients = getAllRecipients(mm).toString().toByteArray(),
-                            sentDate = sentDate,
-                            receivedDate = receivedDate,
-                            body = emailBody,
-                            snippet = generateSnippet(emailBody),
-                            size = mm.size.toLong(),
-                            isRead = message.isSet(Flags.Flag.SEEN),
-                            isFlagged = message.isSet(Flags.Flag.FLAGGED),
-                            attachmentsCount = attachments.size,
-                            hasAttachments = attachments.isNotEmpty(),
-                            account = account[0],
-                        )
+//                        emailsDataSource.insertEmail(
+//                            compositeKey = mm.subject + sentDate + mm.from.toString(),
+//                            folderName = message.folder.fullName,
+//                            subject = mm.subject,
+//                            sender = mm.from[0].toString(),
+//                            recipients = getAllRecipients(mm).toString().toByteArray(),
+//                            sentDate = sentDate,
+//                            receivedDate = receivedDate,
+//                            body = emailBody,
+//                            snippet = generateSnippet(emailBody),
+//                            size = mm.size.toLong(),
+//                            isRead = message.isSet(Flags.Flag.SEEN),
+//                            isFlagged = message.isSet(Flags.Flag.FLAGGED),
+//                            attachmentsCount = attachments.size,
+//                            hasAttachments = attachments.isNotEmpty(),
+//                            account = account[0],
+//                        )
 
                         for (attachment in attachments) {
                             attachmentsArray.add(
@@ -131,12 +131,12 @@ class JavaMail(
                                     downloaded = false
                                 )
                             )
-                            attachmentsDataSource.insertAttachment(
-                                emailId = emailsDataSource.lastInsertedRowId(),
-                                fileName = attachment.fileName,
-                                mimeType = attachment.mimeType,
-                                size = attachment.size,
-                            )
+//                            attachmentsDataSource.insertAttachment(
+//                                emailId = emailsDataSource.lastInsertedRowId(),
+//                                fileName = attachment.fileName,
+//                                mimeType = attachment.mimeType,
+//                                size = attachment.size,
+//                            )
                         }
                     } catch (e: MessagingException) {
                         print("Errored out")
