@@ -1,0 +1,18 @@
+CREATE TABLE Attachment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, -- Unique ID for the attachment
+    email_id INTEGER NOT NULL,            -- Foreign key to the Email table
+    file_name TEXT NOT NULL,              -- Name of the attachment file
+    mime_type TEXT,                       -- MIME type of the attachment
+    size INTEGER,                         -- Size of the attachment in bytes
+    file_path TEXT,                       -- File path or reference to the stored attachment
+    FOREIGN KEY (email_id) REFERENCES Email (id) ON DELETE CASCADE
+);
+
+insertAttachment:
+INSERT INTO Attachment(email_id, file_name, mime_type, size, file_path) VALUES(?,?,?,?,?);
+
+removeAllAttachments:
+DELETE FROM Attachment;
+
+selectAttachments:
+SELECT * FROM Attachment WHERE email_id = ?;
