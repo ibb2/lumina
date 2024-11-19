@@ -1,24 +1,21 @@
 package org.example.project.sqldelight
 
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
-import com.example.Attachment
-import com.example.Email
+import com.example.Attachments
+import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import org.example.project.shared.AppModule
+import org.example.project.shared.data.AttachmentDAO
+import org.example.project.shared.data.EmailDAO
 
 class DesktopAppModule : AppModule {
 
     private val db by lazy {
         LuminaDatabase(
             driver = DatabaseDriverFactory().create(),
-            AttachmentAdapter = Attachment.Adapter(IntColumnAdapter),
-            EmailAdapter = Email.Adapter(
-                is_readAdapter = IntColumnAdapter,
-                is_flaggedAdapter = IntColumnAdapter,
+            EmailsAdapter = Emails.Adapter(
                 attachments_countAdapter = IntColumnAdapter,
-                has_attachmentsAdapter = IntColumnAdapter,
-
-            )
+            ),
         )
     }
 

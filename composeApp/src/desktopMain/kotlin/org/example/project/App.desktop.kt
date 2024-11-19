@@ -1,6 +1,5 @@
 package org.example.project
 
-import com.example.Account
 import com.example.AccountTableQueries
 import com.example.EmailTableQueries
 import jakarta.mail.*
@@ -9,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.mail.JavaMail
-import org.example.project.shared.data.Email
+import org.example.project.shared.data.EmailDAO
 import org.example.project.sqldelight.EmailDataSource
 import java.util.*
 import kotlin.properties.Delegates
@@ -17,7 +16,7 @@ import kotlin.properties.Delegates
 
 actual class EmailService {
 
-    private val emails = mutableListOf<Email>()
+    private val emails = mutableListOf<EmailDAO>()
     private var totalEmailCount = 0
     private val _emailsRead = MutableStateFlow(0)
     actual val emailsRead: StateFlow<Int> = _emailsRead
@@ -34,7 +33,7 @@ actual class EmailService {
         accountQueries: AccountTableQueries,
         emailAddress: String,
         password: String
-    ): List<Email> {
+    ): List<EmailDAO> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
@@ -205,7 +204,7 @@ actual class EmailService {
         emailDataSource: EmailDataSource,
         accountQueries: AccountTableQueries,
         store: Store,
-        emails: MutableList<Email>,
+        emails: MutableList<EmailDAO>,
         account: List<String>,
         folder: Folder,
         inbox: IMAPFolder,
@@ -287,7 +286,7 @@ actual class EmailService {
         return result.toString()
     }
 
-    actual fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email> {
+    actual fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<EmailDAO> {
         val listOfEmails = emailTableQueries.selectAllEmails().executeAsList()
         listOfEmails.forEach { email ->
 //            emails.add(

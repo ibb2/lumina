@@ -1,25 +1,28 @@
-CREATE TABLE Email (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,       -- Unique ID for internal use
-    composite_key TEXT NOT NULL,                -- Composite key for uniqueness
-    folder_name TEXT NOT NULL,                  -- Folder where the email is located
-    subject TEXT,                               -- Email subject
-    sender TEXT,                                -- Sender's email address
-    recipients BLOB,                            -- Recipients' email addresses (comma-separated or JSON array)
-    sent_date TEXT,                             -- Sent date in ISO 8601 format
-    received_date TEXT,                         -- Received date in ISO 8601 format
-    body TEXT,                                  -- Email body (plain text)
-    snippet TEXT,                               -- Short preview/snippet of the body
-    size INTEGER,                               -- Email size in bytes
-    is_read INTEGER AS Int DEFAULT 0,           -- Read/unread status
-    is_flagged INTEGER AS Int DEFAULT 0,        -- Flagged/important status
-    attachments_count INTEGER AS Int DEFAULT 0, -- Number of attachments
-    has_attachments INTEGER AS Int DEFAULT 0,   -- Whether the email has attachments
-    account TEXT NOT NULL,                      -- Email account
-    FOREIGN KEY(account) REFERENCES Account(emailAddress) ON DELETE CASCADE -- Foreign key to the Account table
+import kotlin.Boolean;
+import kotlin.Int;
+
+CREATE TABLE Emails (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,               -- Unique ID for internal use
+    composite_key TEXT NOT NULL,                        -- Composite key for uniqueness
+    folder_name TEXT NOT NULL,                          -- Folder where the email is located
+    subject TEXT,                                       -- Email subject
+    sender TEXT,                                        -- Sender's email address
+    recipients BLOB,                                    -- Recipients' email addresses (comma-separated or JSON array)
+    sent_date TEXT,                                     -- Sent date in ISO 8601 format
+    received_date TEXT,                                 -- Received date in ISO 8601 format
+    body TEXT,                                          -- Email body (plain text)
+    snippet TEXT,                                       -- Short preview/snippet of the body
+    size INTEGER,                                       -- Email size in bytes
+    is_read INTEGER AS Boolean DEFAULT NULL,            -- Read/unread status
+    is_flagged INTEGER AS Boolean DEFAULT NULL,         -- Flagged/important status
+    attachments_count INTEGER AS Int DEFAULT 0,         -- Number of attachments
+    has_attachments INTEGER AS Boolean DEFAULT NULL,    -- Whether the email has attachments
+    account TEXT NOT NULL,                              -- Email account
+    FOREIGN KEY(account) REFERENCES Accounts(emailAddress) ON DELETE CASCADE -- Foreign key to the Account table
 );
 
 insertEmail:
-INSERT INTO Email(
+INSERT INTO Emails(
     id,
     composite_key,
     folder_name,
@@ -39,7 +42,7 @@ INSERT INTO Email(
 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 removeAllEmails:
-DELETE FROM Email;
+DELETE FROM Emails;
 
 selectAllEmails:
-SELECT * FROM Email;
+SELECT * FROM Emails;

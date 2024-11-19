@@ -42,9 +42,8 @@ import androidx.compose.ui.window.DialogProperties
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
 import com.example.AccountTableQueries
-import com.example.Attachment
-import com.example.Email
 import com.example.EmailTableQueries
+import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import com.multiplatform.webview.util.KLogSeverity
 import com.multiplatform.webview.web.LoadingState
@@ -62,9 +61,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import org.example.project.shared.data.EmailDAO
 import org.example.project.sqldelight.EmailDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import kotlin.properties.Delegates
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
@@ -74,14 +73,10 @@ fun App(emailService: EmailService, driver: SqlDriver) {
 
         // db related stuff
         val database = LuminaDatabase(
-            driver, Attachment.Adapter(
-                downloadedAdapter = IntColumnAdapter
-            ), Email.Adapter(
-                is_readAdapter = IntColumnAdapter,
-                is_flaggedAdapter = IntColumnAdapter,
-                attachments_countAdapter = IntColumnAdapter,
-                has_attachmentsAdapter = IntColumnAdapter
-            )
+            driver,
+            EmailsAdapter = Emails.Adapter(
+                attachments_countAdapter = IntColumnAdapter
+            ),
         )
         val accountQueries = database.accountTableQueries
 
@@ -120,8 +115,6 @@ fun App(emailService: EmailService, driver: SqlDriver) {
             ).padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-
             if (!loggedIn) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -233,7 +226,7 @@ fun displayEmails(
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope() // Create a coroutine scope
 
-    fun displayEmailBody(show: Boolean, email: Email) {
+    fun displayEmailBody(show: Boolean, email: EmailDAO) {
 
         emailFromUser = ""
         emailSubject = ""
@@ -272,7 +265,7 @@ fun displayEmails(
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
 
         var isLoading by remember { mutableStateOf(false) }
-        var emails by remember { mutableStateOf<List<Email>>(emptyList()) } // Store emails
+        var emails by remember { mutableStateOf<List<EmailDAO>>(emptyList()) } // Store emails
 
         val emailsReadCount by emailService.emailsRead.collectAsState()
 
@@ -334,7 +327,7 @@ fun displayEmails(
         } else {
             // Display email content
             Column {
-                emails.forEach { email: Email ->
+                emails.forEach { email: EmailDAO ->
                     Column(
                         modifier = Modifier.border(
                             width = 1.dp,
@@ -492,10 +485,11 @@ expect class EmailService {
         accountQueries: AccountTableQueries,
         emailAddress: String,
         password: String
-    ): List<Email>
+    ): List<EmailDAO>
 
     suspend fun deleteEmails(emailDataSource: EmailDataSource)
 
-    fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email>
+    fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<EmailDAO>
     fun getEmailCount(emailDataSource: EmailDataSource): Int
+
 }

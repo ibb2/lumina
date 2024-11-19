@@ -1,19 +1,21 @@
-CREATE TABLE Attachment (
+import kotlin.Boolean;
+
+CREATE TABLE Attachments (
     id INTEGER PRIMARY KEY AUTOINCREMENT, -- Unique ID for the attachment
     email_id INTEGER NOT NULL,            -- Foreign key to the Email table
     file_name TEXT NOT NULL,              -- Name of the attachment file
     mime_type TEXT,                       -- MIME type (e.g., "application/pdf")
     size INTEGER,                         -- Size in bytes
     download_path TEXT,                   -- Local path where file is saved (nullable)
-    downloaded INTEGER AS Int DEFAULT 0,  -- Whether the file is downloaded (0 = no, 1 = yes)
-    FOREIGN KEY (email_id) REFERENCES Email (id) ON DELETE CASCADE
+    downloaded INTEGER AS Boolean DEFAULT 0,  -- Whether the file is downloaded (0 = no, 1 = yes)
+    FOREIGN KEY (email_id) REFERENCES Emails (id) ON DELETE CASCADE
 );
 
 insertAttachment:
-INSERT INTO Attachment(email_id, file_name, mime_type, size, download_path, downloaded) VALUES(?,?,?,?,?,?);
+INSERT INTO Attachments(email_id, file_name, mime_type, size, download_path, downloaded) VALUES(?,?,?,?,?,?);
 
 removeAllAttachments:
-DELETE FROM Attachment;
+DELETE FROM Attachments;
 
 selectAttachment:
-SELECT * FROM Attachment WHERE email_id = ?;
+SELECT * FROM Attachments WHERE email_id = ?;

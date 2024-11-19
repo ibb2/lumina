@@ -1,11 +1,11 @@
 package org.example.project.shared.data
 
-data class Attachment(
-    val id: Int,
-    val emailId: Int,
+data class AttachmentDAO(
+    val id: Long,
+    val emailId: Long,
     val fileName: String,
     val mimeType: String,
-    val size: Int,
+    val size: Long,
     val downloadPath: String,
     val downloaded: Int
 )

@@ -1,6 +1,5 @@
 package org.example.project.mail
 
-import com.example.Account
 import jakarta.mail.Message
 import jakarta.mail.MessagingException
 import jakarta.mail.Session
@@ -15,7 +14,7 @@ import org.eclipse.angus.mail.imap.protocol.BODY
 import org.eclipse.angus.mail.imap.protocol.FetchResponse
 import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
-import org.example.project.shared.data.Email
+import org.example.project.shared.data.EmailDAO
 import java.io.ByteArrayInputStream
 import java.util.*
 import javax.management.remote.JMXConnectorFactory.connect
@@ -25,7 +24,7 @@ class JavaMail(
     var start: Int,
     /** Index on server of last mail to fetch  */
     var end: Int,
-    var emails: MutableList<Email>,
+    var emails: MutableList<EmailDAO>,
     var uf: UIDFolder,
     var properties: Properties,
     var account: List<String>,

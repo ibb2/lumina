@@ -1,6 +1,6 @@
 package org.example.project.shared.data
 
-data class Email(
+data class EmailDAO(
     val id: Long,
     val compositeKey: String,
     val folderName: String,
@@ -12,17 +12,17 @@ data class Email(
     val body: String,
     val snippet: String,
     val size: Long,
-    val isRead: Int,
-    val isFlagged: Int,
+    val isRead: Boolean,
+    val isFlagged: Boolean,
     val attachmentsCount: Int,
-    val hasAttachments: Int,
+    val hasAttachments: Boolean,
     val account: String
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
 
-        other as Email
+        other as EmailDAO
 
         if (id != other.id) return false
         if (size != other.size) return false
@@ -47,10 +47,10 @@ data class Email(
     override fun hashCode(): Int {
         var result = id.hashCode()
         result = 31 * result + size.hashCode()
-        result = 31 * result + isRead
-        result = 31 * result + isFlagged
+        result = 31 * result + isRead.hashCode()
+        result = 31 * result + isFlagged.hashCode()
         result = 31 * result + attachmentsCount
-        result = 31 * result + hasAttachments
+        result = 31 * result + hasAttachments.hashCode()
         result = 31 * result + compositeKey.hashCode()
         result = 31 * result + folderName.hashCode()
         result = 31 * result + subject.hashCode()
