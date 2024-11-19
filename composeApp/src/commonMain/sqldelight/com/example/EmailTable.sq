@@ -4,7 +4,7 @@ CREATE TABLE Email (
     folder_name TEXT NOT NULL,            -- Folder where the email is located
     subject TEXT,                         -- Email subject
     sender TEXT,                          -- Sender's email address
-    recipients TEXT,                      -- Recipients' email addresses (comma-separated or JSON array)
+    recipients BLOB,                      -- Recipients' email addresses (comma-separated or JSON array)
     sent_date TEXT,                       -- Sent date in ISO 8601 format
     received_date TEXT,                   -- Received date in ISO 8601 format
     body TEXT,                            -- Email body (plain text)

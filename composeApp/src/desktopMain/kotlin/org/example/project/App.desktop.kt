@@ -290,18 +290,18 @@ actual class EmailService {
     actual fun returnEmails(emailTableQueries: EmailTableQueries, emailDataSource: EmailDataSource): List<Email> {
         val listOfEmails = emailTableQueries.selectAllEmails().executeAsList()
         listOfEmails.forEach { email ->
-            emails.add(
-                Email(
-                    id = email.id,
-                    from = email.from_user,
-                    subject = email.subject,
-                    body = email.body,
-                    to = email.to_user,
-                    cc = email.cc,
-                    bcc = email.bcc,
-                    account = email.account
-                )
-            )
+//            emails.add(
+//                Email(
+//                    id = email.id,
+//                    from = email.from_user,
+//                    subject = email.subject,
+//                    body = email.body,
+//                    to = email.to_user,
+//                    cc = email.cc,
+//                    bcc = email.bcc,
+//                    account = email.account
+//                )
+//            )
         }
         return emails
     }
