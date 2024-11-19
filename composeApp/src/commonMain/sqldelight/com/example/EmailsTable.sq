@@ -45,3 +45,6 @@ DELETE FROM Emails;
 
 selectAllEmails:
 SELECT * FROM Emails;
+
+lastInsertedRowId:
+SELECT last_insert_rowid();

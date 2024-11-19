@@ -17,3 +17,7 @@ SELECT * FROM Accounts;
 selectAccount:
 SELECT * FROM Accounts WHERE emailAddress = ?;
 
+lastInsertedRowId:
+SELECT last_insert_rowid();
+
+
