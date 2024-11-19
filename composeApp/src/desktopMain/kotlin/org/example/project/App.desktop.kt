@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.mail.JavaMail
+import org.example.project.shared.data.Email
 import org.example.project.sqldelight.EmailDataSource
 import java.util.*
 import kotlin.properties.Delegates
@@ -163,21 +164,21 @@ actual class EmailService {
 //            emailCount++
 //        }
 
-        for (message in folder.getMessages().takeLast(50)) {
-            val emailUID = uf.getUID(message)
-            println("Message: ${message.from}")
-            emails.add(
-                Email(
-                    id = emailUID,
-                    from = message.from?.joinToString(),
-                    subject = message.subject ?: "",
-                    body = getEmailBody(message),
-                    to = "",
-                    cc = null,
-                    bcc = null,
-                    account = account[0]
-                )
-            )
+//        for (message in folder.getMessages().takeLast(50)) {
+//            val emailUID = uf.getUID(message)
+//            println("Message: ${message.from}")
+//            emails.add(
+//                Email(
+//                    id = emailUID,
+//                    from = message.from?.joinToString(),
+//                    subject = message.subject ?: "",
+//                    body = getEmailBody(message),
+//                    to = "",
+//                    cc = null,
+//                    bcc = null,
+//                    account = account[0]
+//                )
+//            )
 
 //            emailTableQueries.insertEmail(
 //                id = emailUID,
@@ -189,9 +190,9 @@ actual class EmailService {
 //                bcc = null,
 //                account = account[0]
 //            )
-
-            emailCount++
-        }
+//
+//            emailCount++
+//        }
 
         folder.close(false)
         store.close()

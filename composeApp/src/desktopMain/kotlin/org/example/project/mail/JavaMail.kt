@@ -15,7 +15,7 @@ import org.eclipse.angus.mail.imap.protocol.BODY
 import org.eclipse.angus.mail.imap.protocol.FetchResponse
 import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
-import org.example.project.Email
+import org.example.project.shared.data.Email
 import java.io.ByteArrayInputStream
 import java.util.*
 import javax.management.remote.JMXConnectorFactory.connect
@@ -67,19 +67,18 @@ class JavaMail(
                     try {
                         mm = MimeMessage(session, `is`)
 
-                        emails.add(
-                            Email(
-//                                id = uf.getUID(message),
-                                id = 1,
-                                from = mm.from.toString(),
-                                subject = mm.subject,
-                                body = getEmailBody(mm, i),
-                                to = mm.allRecipients[0].toString(),
-                                cc = if (mm.allRecipients.size > 1) mm.allRecipients[1].toString() else "",
-                                bcc = if (mm.allRecipients.size > 2) mm.allRecipients[2].toString() else "",
-                                account = account[0]
-                            )
-                        )
+//                        emails.add(
+//                            Email(
+//                                id = 1,
+//                                from = mm.from.toString(),
+//                                subject = mm.subject,
+//                                body = getEmailBody(mm, i),
+//                                to = mm.allRecipients[0].toString(),
+//                                cc = if (mm.allRecipients.size > 1) mm.allRecipients[1].toString() else "",
+//                                bcc = if (mm.allRecipients.size > 2) mm.allRecipients[2].toString() else "",
+//                                account = account[0]
+//                            )
+//                        )
 //                      getContents(mm, i, emails, uf)
                     } catch (e: MessagingException) {
                         print("Errored out")

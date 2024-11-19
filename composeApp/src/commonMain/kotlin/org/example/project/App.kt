@@ -39,8 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
 import com.example.AccountTableQueries
+import com.example.Attachment
+import com.example.Email
 import com.example.EmailTableQueries
 import com.example.project.database.LuminaDatabase
 import com.multiplatform.webview.util.KLogSeverity
@@ -70,7 +73,16 @@ fun App(emailService: EmailService, driver: SqlDriver) {
     MaterialTheme {
 
         // db related stuff
-        val database = LuminaDatabase(driver)
+        val database = LuminaDatabase(
+            driver, Attachment.Adapter(
+                downloadedAdapter = IntColumnAdapter
+            ), Email.Adapter(
+                is_readAdapter = IntColumnAdapter,
+                is_flaggedAdapter = IntColumnAdapter,
+                attachments_countAdapter = IntColumnAdapter,
+                has_attachmentsAdapter = IntColumnAdapter
+            )
+        )
         val accountQueries = database.accountTableQueries
 
         // Email db stuff
@@ -83,7 +95,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         var password by remember { mutableStateOf("") }
         var loggedIn by remember { mutableStateOf(false) }
 
-        var emailCount by remember { mutableStateOf<Int>(emailService.getEmailCount(emailDataSource))}
+        var emailCount by remember { mutableStateOf<Int>(emailService.getEmailCount(emailDataSource)) }
 
         val observableSettings: ObservableSettings = settings.makeObservable()
 
@@ -229,9 +241,9 @@ fun displayEmails(
 
         if (show) {
             display = true
-            emailFromUser = email.from ?: ""
+            emailFromUser = email.sender ?: ""
             emailSubject = email.subject ?: ""
-            emailContet = email.body
+            emailContet = email.body ?: ""
         }
     }
 
@@ -333,7 +345,7 @@ fun displayEmails(
                         ).fillMaxSize()
                     ) {
                         Text(
-                            text = email.from ?: "No from",
+                            text = email.sender ?: "No from",
                         )
                         Text(
                             text = email.subject ?: "No subject"
@@ -393,9 +405,9 @@ fun displayEmails(
                                         contentDescription = "Error",
                                         colorFilter = ColorFilter.tint(Color.Red),
                                         modifier =
-                                        Modifier
-                                            .align(Alignment.CenterEnd)
-                                            .padding(8.dp),
+                                            Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .padding(8.dp),
                                     )
                                 }
 
@@ -422,8 +434,8 @@ fun displayEmails(
                     WebView(
                         state = state,
                         modifier =
-                        Modifier
-                            .fillMaxSize(),
+                            Modifier
+                                .fillMaxSize(),
                         navigator = navigator,
                     )
 
@@ -472,7 +484,7 @@ suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Flo
 expect class EmailService {
 
     val emailsRead: StateFlow<Int>
-    var emailCount : Int
+    var emailCount: Int
 
     suspend fun getEmails(
         emailDataSource: EmailDataSource,
