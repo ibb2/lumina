@@ -1,7 +1,7 @@
 import kotlin.Boolean;
 
 CREATE TABLE Attachments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,           -- Unique ID for the attachment
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,  -- Unique ID for the attachment
     email_id INTEGER NOT NULL,                      -- Foreign key to the Email table
     file_name TEXT NOT NULL,                        -- Name of the attachment file
     mime_type TEXT,                                 -- MIME type (e.g., "application/pdf")
@@ -12,7 +12,7 @@ CREATE TABLE Attachments (
 );
 
 insertAttachment:
-INSERT INTO Attachments(email_id, file_name, mime_type, size, download_path, downloaded) VALUES(?,?,?,?,?,?);
+INSERT INTO Attachments(id, email_id, file_name, mime_type, size, download_path, downloaded) VALUES(?, ?,?,?,?,?,?);
 
 removeAllAttachments:
 DELETE FROM Attachments;

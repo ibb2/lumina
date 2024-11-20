@@ -46,6 +46,10 @@ actual class EmailService() {
                 attachments_countAdapter = IntColumnAdapter
             ),
         )
+
+        val emailDataSource = EmailsDataSource(db)
+
+        totalEmailCount = emailDataSource.selectAllEmails().size
     }
 
     actual suspend fun getEmails(
@@ -79,39 +83,41 @@ actual class EmailService() {
         }
 
         // Check if emails exist in db
-//        val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
+        doEmailsExist(emailTableQueries, emailDataSource)
 
-//        if (emailsExist) {
-//            val emails = returnEmails(emailTableQueries, emailDataSource)
-//            return emails
-//        }
+        val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
+
+        if (emailsExist) {
+            val emails = returnEmails(emailTableQueries, emailDataSource)
+            return emails
+        }
 
 //        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
 
-        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
-        val messages = inbox.getMessages()
-        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
-
-        efficientGetContents(
-            emailAddress,
-            emailTableQueries,
-            emailDataSource,
-            accountQueries,
-            store,
-            emails,
-            account,
-            inbox,
-            inbox,
-            messages,
-            properties
-        )
+//        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
+//        val messages = inbox.getMessages()
+//        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
+//
+//        efficientGetContents(
+//            emailAddress,
+//            emailTableQueries,
+//            emailDataSource,
+//            accountQueries,
+//            store,
+//            emails,
+//            account,
+//            inbox,
+//            inbox,
+//            messages,
+//            properties
+//        )
 
         return emails
     }
 
     fun doEmailsExist(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): Boolean {
-        val emailsExist = emailTableQueries.selectAllEmails().executeAsList()
-
+        val emailsExist = emailDataSource.selectAllEmails()
+        totalEmailCount = emailsExist.size
         return emailsExist.isNotEmpty()
     }
 
@@ -340,7 +346,8 @@ actual class EmailService() {
         emailTableQueries: EmailsTableQueries,
         emailDataSource: EmailsDataSource
     ): List<EmailsDAO> {
-        TODO("Not yet implemented")
+        println("Reading from database")
+        return emailDataSource.selectAllEmails()
     }
 
 }

@@ -2,7 +2,7 @@ import kotlin.Boolean;
 import kotlin.Int;
 
 CREATE TABLE Emails (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,               -- Unique ID for internal use
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,      -- Unique ID for internal use
     composite_key TEXT NOT NULL,                        -- Composite key for uniqueness
     folder_name TEXT NOT NULL,                          -- Folder where the email is located
     subject TEXT,                                       -- Email subject
@@ -23,6 +23,7 @@ CREATE TABLE Emails (
 
 insertEmail:
 INSERT INTO Emails(
+    id,
     composite_key,
     folder_name,
     subject,
@@ -38,7 +39,7 @@ INSERT INTO Emails(
     attachments_count,
     has_attachments,
     account
-) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 removeAllEmails:
 DELETE FROM Emails;

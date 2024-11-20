@@ -94,7 +94,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         var password by remember { mutableStateOf("") }
         var loggedIn by remember { mutableStateOf(false) }
 
-        var emailCount by remember { mutableStateOf<Int>(emailService.getEmailCount(emailDataSource)) }
+        val emailCount by remember { mutableStateOf<Int>(emailService.getEmailCount(emailDataSource)) }
 
         val observableSettings: ObservableSettings = settings.makeObservable()
 

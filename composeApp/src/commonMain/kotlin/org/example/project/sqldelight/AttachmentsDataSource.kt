@@ -7,13 +7,14 @@ class AttachmentsDataSource(db: LuminaDatabase) {
     private val queries = db.attachmentsTableQueries
 
     fun insertAttachment(
+        id: Long? = null,
         emailId: Long,
         fileName: String,
         mimeType: String,
         size: Long,
         downloadPath: String = "",
         downloaded: Boolean = false
-    ) = queries.insertAttachment(emailId, fileName, mimeType, size, downloadPath, downloaded)
+    ) = queries.insertAttachment(id, emailId, fileName, mimeType, size, downloadPath, downloaded)
 
     fun selectAttachments(emailId: Long) = queries.selectAttachment(emailId)
 

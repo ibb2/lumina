@@ -8,6 +8,7 @@ class EmailsDataSource(db: LuminaDatabase) {
     private val queries = db.emailsTableQueries
 
     fun insertEmail(
+        id: Long? = null,
         compositeKey: String,
         folderName: String,
         subject: String,
@@ -23,7 +24,7 @@ class EmailsDataSource(db: LuminaDatabase) {
         attachmentsCount: Int,
         hasAttachments: Boolean,
         account: String
-    ): Unit = queries.insertEmail(compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account)
+    ): Unit = queries.insertEmail(id, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account)
 
     fun remove() = queries.removeAllEmails()
 
