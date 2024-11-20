@@ -20,5 +20,8 @@ DELETE FROM Attachments;
 selectAttachment:
 SELECT * FROM Attachments WHERE email_id = ?;
 
+selectAllAttachments:
+SELECT * FROM Attachments;
+
 lastInsertedRowId:
 SELECT last_insert_rowid();

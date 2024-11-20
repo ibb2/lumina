@@ -1,6 +1,7 @@
 package org.example.project.sqldelight
 
 import com.example.project.database.LuminaDatabase
+import org.example.project.shared.data.AttachmentsDAO
 
 class AttachmentsDataSource(db: LuminaDatabase) {
 
@@ -20,4 +21,7 @@ class AttachmentsDataSource(db: LuminaDatabase) {
 
     fun removeAllAttachments() = queries.removeAllAttachments()
 
+    fun selectAllAttachments(): List<AttachmentsDAO> = queries.selectAllAttachments(
+        mapper = { id, emailId, fileName, mimeType, size, downloadPath, downloaded -> AttachmentsDAO(id, emailId, fileName, mimeType ?: "", size ?: 0, downloadPath ?:"", downloaded ?: false) }
+    ).executeAsList()
 }

@@ -63,6 +63,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -86,6 +87,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
 
         // Data Sources
         val emailDataSource: EmailsDataSource = EmailsDataSource(database)
+        val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
 
         // Basic Auth
         val settings = Settings()
@@ -169,6 +171,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                 }
                 displayEmails(
                     emailDataSource,
+                    attachmentsDataSource,
                     observableSettings,
                     emailQueries,
                     accountQueries,
@@ -213,6 +216,7 @@ fun logout(observableSettings: ObservableSettings): Unit {
 @Composable
 fun displayEmails(
     emailDataSource: EmailsDataSource,
+    attachmentsDataSource: AttachmentsDataSource,
     observableSettings: ObservableSettings,
     emailTableQueries: EmailsTableQueries,
     accountQueries: AccountsTableQueries,
@@ -288,7 +292,7 @@ fun displayEmails(
                 // Replace with your actual email retrieval logic
 
                 val startTime = Clock.System.now()
-                val returnedEmails = withContext(Dispatchers.IO) {
+                val returned = withContext(Dispatchers.IO) {
                     emailService.getEmails(
                         emailDataSource,
                         emailTableQueries,
@@ -297,16 +301,13 @@ fun displayEmails(
                         password
                     )
                 }
-                val returnedAttachments = withContext(Dispatchers.IO) {
-                    emailService.returnAttachments()
-                }
                 val endTime = Clock.System.now()
                 val duration = endTime - startTime
                 println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
 
                 withContext(Dispatchers.Main) {
-                    emails = returnedEmails
-                    attachments = returnedAttachments
+                    emails = returned.first
+                    attachments = returned.second
                     isLoading = false // Hide loading indicator after updating emails
                 }
 
@@ -522,13 +523,15 @@ expect class EmailService {
         accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): List<EmailsDAO>
+    ): Pair<List<EmailsDAO>, List<AttachmentsDAO>>
 
     suspend fun deleteEmails(emailDataSource: EmailsDataSource)
 
     fun returnEmails(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): List<EmailsDAO>
     fun getEmailCount(emailDataSource: EmailsDataSource): Int
 
-    fun returnAttachments(): MutableList<AttachmentsDAO>
+    fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO>
+
+    fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean
 
 }

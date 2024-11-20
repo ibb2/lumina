@@ -14,6 +14,7 @@ import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.mail.JavaMail
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.DatabaseDriverFactory
 import org.example.project.sqldelight.EmailsDataSource
@@ -25,6 +26,9 @@ actual class EmailService() {
 
     // Database
     private lateinit var db: LuminaDatabase
+    private lateinit var emailDataSource: EmailsDataSource
+    private lateinit var attachmentsDataSource: AttachmentsDataSource
+    private lateinit var accountsDataSource: AccountsDataSource
 
     private val emails = mutableListOf<EmailsDAO>()
     private var totalEmailCount = 0
@@ -36,7 +40,7 @@ actual class EmailService() {
         println("Emails read: $emailsRead")
     }
     private val attachments: MutableList<AttachmentsDAO> = mutableListOf()
-    private val totalAttachments = 0
+    private var totalAttachments = 0
 
     init {
         val driver = DatabaseDriverFactory().create()
@@ -47,9 +51,14 @@ actual class EmailService() {
             ),
         )
 
-        val emailDataSource = EmailsDataSource(db)
+        // Initialising the data sources
+        emailDataSource = EmailsDataSource(db)
+        attachmentsDataSource = AttachmentsDataSource(db)
+        accountsDataSource = AccountsDataSource(db)
 
+        // Setting counts for emails and attachments
         totalEmailCount = emailDataSource.selectAllEmails().size
+        totalAttachments = attachmentsDataSource.selectAllAttachments().size
     }
 
     actual suspend fun getEmails(
@@ -58,7 +67,7 @@ actual class EmailService() {
         accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): List<EmailsDAO> {
+    ): Pair<List<EmailsDAO>, List<AttachmentsDAO>> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
@@ -86,10 +95,17 @@ actual class EmailService() {
         doEmailsExist(emailTableQueries, emailDataSource)
 
         val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
+        val attachmentsExist = doAttachmentsExist(attachmentsDataSource)
+
+        lateinit var emails: List<EmailsDAO>
+        var attach: List<AttachmentsDAO> = emptyList()
 
         if (emailsExist) {
-            val emails = returnEmails(emailTableQueries, emailDataSource)
-            return emails
+            emails = returnEmails(emailTableQueries, emailDataSource)
+        }
+
+        if (attachmentsExist) {
+            attach = returnAttachments(attachmentsDataSource)
         }
 
 //        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
@@ -112,7 +128,7 @@ actual class EmailService() {
 //            properties
 //        )
 
-        return emails
+        return Pair(emails, attach)
     }
 
     fun doEmailsExist(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): Boolean {
@@ -338,7 +354,16 @@ actual class EmailService() {
         return totalEmailCount
     }
 
-    actual fun returnAttachments(): MutableList<AttachmentsDAO> {
+    actual fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean {
+        val attachments = attachmentsDataSource.selectAllAttachments()
+        return attachments.isNotEmpty()
+    }
+
+    actual fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO> {
+
+        val attach = attachmentsDataSource.selectAllAttachments()
+        attachments.addAll(attach)
+
         return attachments
     }
 
