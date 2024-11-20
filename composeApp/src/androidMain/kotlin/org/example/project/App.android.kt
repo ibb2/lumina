@@ -3,7 +3,9 @@ package org.example.project
 import com.example.AccountsTableQueries
 import com.example.EmailsTableQueries
 import kotlinx.coroutines.flow.StateFlow
+import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 
 actual class EmailService {
@@ -14,7 +16,7 @@ actual class EmailService {
         accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): List<EmailsDAO> {
+    ): Pair<List<EmailsDAO>, List<AttachmentsDAO>> {
         TODO("Not yet implemented")
     }
 
@@ -27,14 +29,15 @@ actual class EmailService {
     actual suspend fun deleteEmails(emailDataSource: EmailsDataSource) {
     }
 
-    actual fun returnEmails(
-        emailTableQueries: EmailsTableQueries,
-        emailDataSource: EmailsDataSource
-    ): List<EmailsDAO> {
+    actual fun getEmailCount(emailDataSource: EmailsDataSource): Int {
         TODO("Not yet implemented")
     }
 
-    actual fun getEmailCount(emailDataSource: EmailsDataSource): Int {
+    actual fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO> {
+        TODO("Not yet implemented")
+    }
+
+    actual fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean {
         TODO("Not yet implemented")
     }
 }

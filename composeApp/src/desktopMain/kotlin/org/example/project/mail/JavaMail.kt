@@ -101,7 +101,7 @@ class JavaMail(
                             )
                         )
 
-                        emailsDataSource.insertEmail(
+                        val emailId = emailsDataSource.insertEmail(
                             compositeKey = mm.subject + sentDate + mm.from.toString(),
                             folderName = message.folder.fullName,
                             subject = mm.subject,
@@ -131,7 +131,7 @@ class JavaMail(
                                     downloaded = false
                                 )
                             )
-                            println("${i} : ${emailsDataSource.lastInsertedRowId()}")
+                            println("${i} : ${emailId}")
 //                            attachmentsDataSource.insertAttachment(
 //                                emailId = emailsDataSource.lastInsertedRowId(),
 //                                fileName = attachment.fileName,

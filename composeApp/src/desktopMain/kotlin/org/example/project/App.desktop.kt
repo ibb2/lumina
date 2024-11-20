@@ -30,7 +30,7 @@ actual class EmailService() {
     private lateinit var attachmentsDataSource: AttachmentsDataSource
     private lateinit var accountsDataSource: AccountsDataSource
 
-    private val emails = mutableListOf<EmailsDAO>()
+    private var emails = mutableListOf<EmailsDAO>()
     private var totalEmailCount = 0
     private val _emailsRead = MutableStateFlow(0)
     actual val emailsRead: StateFlow<Int> = _emailsRead
@@ -67,7 +67,7 @@ actual class EmailService() {
         accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): Pair<List<EmailsDAO>, List<AttachmentsDAO>> {
+    ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
@@ -83,6 +83,7 @@ actual class EmailService() {
         }
 
         val session = Session.getInstance(properties)
+        println("Connecting...")
         val store: Store = session.getStore("imap").apply {
             connect(
                 properties.getProperty("mail.imap.host"),
@@ -90,45 +91,53 @@ actual class EmailService() {
                 properties.getProperty("mail.imap.password")
             )
         }
+        println("Connected")
 
         // Check if emails exist in db
+        println("Checking for emails and attachments...")
         doEmailsExist(emailTableQueries, emailDataSource)
 
         val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
         val attachmentsExist = doAttachmentsExist(attachmentsDataSource)
 
-        lateinit var emails: List<EmailsDAO>
-        var attach: List<AttachmentsDAO> = emptyList()
+        var attach: MutableList<AttachmentsDAO> = mutableListOf()
 
-        if (emailsExist) {
-            emails = returnEmails(emailTableQueries, emailDataSource)
-        }
 
         if (attachmentsExist) {
             attach = returnAttachments(attachmentsDataSource)
         }
 
+        if (emailsExist) {
+            emails = returnEmails(emailTableQueries, emailDataSource)
+
+            println("Found em")
+            return Pair(emails, attach)
+        }
+
+        println("Did not find any.")
 //        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
 
-//        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
-//        val messages = inbox.getMessages()
-//        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
-//
-//        efficientGetContents(
-//            emailAddress,
-//            emailTableQueries,
-//            emailDataSource,
-//            accountQueries,
-//            store,
-//            emails,
-//            account,
-//            inbox,
-//            inbox,
-//            messages,
-//            properties
-//        )
+        println("Settings up inbox...")
+        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
+        val messages = inbox.getMessages()
+        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
 
-        return Pair(emails, attach)
+        println("Manually getting emails now")
+        efficientGetContents(
+            emailAddress,
+            emailTableQueries,
+            emailDataSource,
+            accountQueries,
+            store,
+            emails,
+            account,
+            inbox,
+            inbox,
+            messages,
+            properties
+        )
+        println("Got them")
+        return Pair(emails, attachments)
     }
 
     fun doEmailsExist(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): Boolean {
@@ -367,12 +376,12 @@ actual class EmailService() {
         return attachments
     }
 
-    actual fun returnEmails(
+    fun returnEmails(
         emailTableQueries: EmailsTableQueries,
         emailDataSource: EmailsDataSource
-    ): List<EmailsDAO> {
-        println("Reading from database")
-        return emailDataSource.selectAllEmails()
+    ): MutableList<EmailsDAO> {
+        println("Return emails from database")
+        return emailDataSource.selectAllEmails() as MutableList<EmailsDAO>
     }
 
 }

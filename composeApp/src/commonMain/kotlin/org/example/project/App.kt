@@ -171,7 +171,6 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                 }
                 displayEmails(
                     emailDataSource,
-                    attachmentsDataSource,
                     observableSettings,
                     emailQueries,
                     accountQueries,
@@ -216,7 +215,6 @@ fun logout(observableSettings: ObservableSettings): Unit {
 @Composable
 fun displayEmails(
     emailDataSource: EmailsDataSource,
-    attachmentsDataSource: AttachmentsDataSource,
     observableSettings: ObservableSettings,
     emailTableQueries: EmailsTableQueries,
     accountQueries: AccountsTableQueries,
@@ -313,7 +311,7 @@ fun displayEmails(
 
             } catch (e: Exception) {
                 // Handle error, e.g., show an error message
-                println("Error ${e.message}")
+                println("Error in App ${e.message}")
                 withContext(Dispatchers.Main) {
                     isLoading = false
                 }
@@ -523,11 +521,10 @@ expect class EmailService {
         accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): Pair<List<EmailsDAO>, List<AttachmentsDAO>>
+    ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>>
 
     suspend fun deleteEmails(emailDataSource: EmailsDataSource)
 
-    fun returnEmails(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): List<EmailsDAO>
     fun getEmailCount(emailDataSource: EmailsDataSource): Int
 
     fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO>
