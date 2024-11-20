@@ -3,7 +3,7 @@ import kotlin.Int;
 
 CREATE TABLE Emails (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,      -- Unique ID for internal use
-    composite_key TEXT NOT NULL,                        -- Composite key for uniqueness
+    composite_key TEXT NOT NULL UNIQUE,                 -- Composite key for uniqueness
     folder_name TEXT NOT NULL,                          -- Folder where the email is located
     subject TEXT,                                       -- Email subject
     sender TEXT,                                        -- Sender's email address
