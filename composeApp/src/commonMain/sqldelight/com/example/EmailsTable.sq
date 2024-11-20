@@ -22,7 +22,7 @@ CREATE TABLE Emails (
 );
 
 insertEmail:
-INSERT INTO Emails(
+INSERT OR REPLACE INTO Emails(
     id,
     composite_key,
     folder_name,
