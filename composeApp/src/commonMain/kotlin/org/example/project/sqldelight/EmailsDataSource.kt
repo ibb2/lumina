@@ -23,8 +23,30 @@ class EmailsDataSource(db: LuminaDatabase) {
         isFlagged: Boolean,
         attachmentsCount: Int,
         hasAttachments: Boolean,
-        account: String
-    ): Unit = queries.insertEmail(id, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account)
+        account: String,
+    ): Long {
+
+        return queries.transactionWithResult {   queries.insertEmail(
+            id,
+            compositeKey,
+            folderName,
+            subject,
+            sender,
+            recipients,
+            sentDate,
+            receivedDate,
+            body,
+            snippet,
+            size,
+            isRead,
+            isFlagged,
+            attachmentsCount,
+            hasAttachments,
+            account
+        )
+            queries.lastInsertedRowId().executeAsOne()
+        }
+    }
 
     fun remove() = queries.removeAllEmails()
 
@@ -50,6 +72,4 @@ class EmailsDataSource(db: LuminaDatabase) {
             )
         }
     ).executeAsList()
-
-    fun lastInsertedRowId(): Long = queries.lastInsertedRowId().executeAsOne()
 }

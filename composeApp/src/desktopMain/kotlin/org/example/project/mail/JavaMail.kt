@@ -1,5 +1,6 @@
 package org.example.project.mail
 
+import app.cash.sqldelight.TransactionWithReturn
 import jakarta.mail.*
 import jakarta.mail.internet.MailDateFormat
 import jakarta.mail.internet.MimeMessage
@@ -116,14 +117,14 @@ class JavaMail(
                             isFlagged = message.isSet(Flags.Flag.FLAGGED),
                             attachmentsCount = attachments.size,
                             hasAttachments = attachments.isNotEmpty(),
-                            account = account[0],
+                            account = account[0]
                         )
 
                         for (attachment in attachments) {
                             attachmentsArray.add(
                                 AttachmentsDAO(
                                     id = null,
-                                    emailId = emailsDataSource.lastInsertedRowId(),
+                                    emailId = emailId,
                                     fileName = attachment.fileName,
                                     mimeType = attachment.mimeType,
                                     size = attachment.size,
