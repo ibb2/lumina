@@ -132,13 +132,12 @@ class JavaMail(
                                     downloaded = false
                                 )
                             )
-                            println("${i} : ${emailId}")
-//                            attachmentsDataSource.insertAttachment(
-//                                emailId = emailsDataSource.lastInsertedRowId(),
-//                                fileName = attachment.fileName,
-//                                mimeType = attachment.mimeType,
-//                                size = attachment.size,
-//                            )
+                            attachmentsDataSource.insertAttachment(
+                                emailId = emailId,
+                                fileName = attachment.fileName,
+                                mimeType = attachment.mimeType,
+                                size = attachment.size,
+                            )
                         }
                     } catch (e: MessagingException) {
                         print("Errored out")
