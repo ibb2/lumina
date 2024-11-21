@@ -96,7 +96,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         var password by remember { mutableStateOf("") }
         var loggedIn by remember { mutableStateOf(false) }
 
-        val emailCount by remember { mutableStateOf<Int>(emailService.getEmailCount(emailDataSource)) }
+        val emailCount by emailService.getEmailCount(emailDataSource).collectAsState()
 
         val observableSettings: ObservableSettings = settings.makeObservable()
 
@@ -128,7 +128,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        "Email Count: $emailCount"
+                        "Database Email Count: $emailCount"
                     )
                     Text(
                         "Login",
@@ -275,11 +275,11 @@ fun displayEmails(
         var emails by remember { mutableStateOf<List<EmailsDAO>>(emptyList()) } // Store emails
         var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
 
-
+        val totalEmails by emailService.totalEmails.collectAsState()
         val emailsReadCount by emailService.emailsRead.collectAsState()
 
         LaunchedEffect(emailsReadCount) {
-            loadProgress(emailsReadCount, emailService.getEmailCount(emailDataSource)) { progress ->
+            loadProgress(emailsReadCount, totalEmails) { progress ->
                 currentProgress = progress
             }
         }
@@ -327,10 +327,9 @@ fun displayEmails(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Loading emails...")
-                Text("Emails count: ${emailService.emailCount}")
-                Text("Emails read: ${emailsReadCount}")
+                Text("Emails read: ${emailsReadCount} out of ${totalEmails}")
                 LinearProgressIndicator(
-                    progress = currentProgress,
+//                    progress = currentProgress,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -513,7 +512,9 @@ suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Flo
 expect class EmailService {
 
     val emailsRead: StateFlow<Int>
+    val totalEmails: StateFlow<Int>
     var emailCount: Int
+
 
     suspend fun getEmails(
         emailDataSource: EmailsDataSource,
@@ -525,7 +526,7 @@ expect class EmailService {
 
     suspend fun deleteEmails(emailDataSource: EmailsDataSource)
 
-    fun getEmailCount(emailDataSource: EmailsDataSource): Int
+    fun getEmailCount(emailDataSource: EmailsDataSource): StateFlow<Int>
 
     fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO>
 

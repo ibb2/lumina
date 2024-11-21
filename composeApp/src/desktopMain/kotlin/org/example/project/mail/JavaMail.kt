@@ -5,6 +5,7 @@ import jakarta.mail.*
 import jakarta.mail.internet.MailDateFormat
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.format.DateTimeFormat
@@ -34,6 +35,8 @@ class JavaMail(
     var attachmentsArray: MutableList<AttachmentsDAO>,
     var emailsDataSource: EmailsDataSource,
     var attachmentsDataSource: AttachmentsDataSource,
+    var emailCount: Int,
+    var _emailsCount: MutableStateFlow<Int>
 ) : IMAPFolder.ProtocolCommand {
     //    @Throws(ProtocolException::class)
     override fun doCommand(protocol: IMAPProtocol): Any {
@@ -84,9 +87,9 @@ class JavaMail(
                         emails.add(
                             EmailsDAO(
                                 id = null,
-                                compositeKey = mm.subject + sentDate + mm.from.toString(),
+                                compositeKey = createCompositeKey(mm.subject, sentDate, mm.from.toString()),
                                 folderName = message.folder.fullName,
-                                subject = mm.subject,
+                                subject = mm.subject ?: "",
                                 sender = mm.from[0].toString(),
                                 recipients = getAllRecipients(mm).toString().toByteArray(),
                                 sentDate = sentDate,
@@ -139,6 +142,10 @@ class JavaMail(
                                 size = attachment.size,
                             )
                         }
+                        println("Email count: $emailCount")
+                        _emailsCount.value = emailCount
+                        emailCount++
+
                     } catch (e: MessagingException) {
                         print("Errored out")
                         e.printStackTrace()
@@ -207,6 +214,11 @@ class JavaMail(
             }
         }
         return body
+    }
+
+    fun createCompositeKey(subject: String?, receivedDate: String?, sender: String?): String {
+        val key = "${subject.orEmpty()}_${receivedDate.orEmpty()}_${sender.orEmpty()}"
+        return key
     }
 
 

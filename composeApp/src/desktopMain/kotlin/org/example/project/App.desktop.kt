@@ -31,7 +31,8 @@ actual class EmailService() {
     private lateinit var accountsDataSource: AccountsDataSource
 
     private var emails = mutableListOf<EmailsDAO>()
-    private var totalEmailCount = 0
+    private val totalEmailCount = MutableStateFlow(0)
+    actual val totalEmails: StateFlow<Int> = totalEmailCount
     private val _emailsRead = MutableStateFlow(0)
     actual val emailsRead: StateFlow<Int> = _emailsRead
     actual var emailCount by Delegates.observable(0) { property, oldValue, newValue ->
@@ -57,7 +58,7 @@ actual class EmailService() {
         accountsDataSource = AccountsDataSource(db)
 
         // Setting counts for emails and attachments
-        totalEmailCount = emailDataSource.selectAllEmails().size
+        totalEmailCount.value = emailDataSource.selectAllEmails().size
         totalAttachments = attachmentsDataSource.selectAllAttachments().size
     }
 
@@ -142,7 +143,7 @@ actual class EmailService() {
 
     fun doEmailsExist(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): Boolean {
         val emailsExist = emailDataSource.selectAllEmails()
-        totalEmailCount = emailsExist.size
+        totalEmailCount.value = emailsExist.size
         return emailsExist.isNotEmpty()
     }
 
@@ -271,7 +272,7 @@ actual class EmailService() {
         val nbMessages = inbox.getMessages().takeLast(50).size
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
-        totalEmailCount = nbMessages
+        totalEmailCount.value = nbMessages
 
         // Email UIDs
         val uf: UIDFolder = inbox
@@ -313,7 +314,9 @@ actual class EmailService() {
                     inbox.getMessages().takeLast(50).toTypedArray(),
                     attachments,
                     emailDataSource,
-                    attachmentDataSource
+                    attachmentDataSource,
+                    emailCount,
+                    _emailsRead
                 )
             )
 
@@ -358,9 +361,9 @@ actual class EmailService() {
         emailDataSource.remove()
     }
 
-    actual fun getEmailCount(emailDataSource: EmailsDataSource): Int {
+    actual fun getEmailCount(emailDataSource: EmailsDataSource): StateFlow<Int> {
 //        totalEmailCount = emailDataSource.selectAllEmails().size
-        return totalEmailCount
+        return totalEmails
     }
 
     actual fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean {
