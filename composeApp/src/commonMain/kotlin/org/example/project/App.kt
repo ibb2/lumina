@@ -1,19 +1,10 @@
 package org.example.project
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import com.composables.core.VerticalScrollbar
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.Icon
@@ -66,6 +57,13 @@ import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.composables.core.ScrollArea
+import com.composables.core.Thumb
+import com.composables.core.rememberScrollAreaState
+
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
@@ -116,73 +114,66 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         }
 
         // Ui
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(
-                rememberScrollState()
-            ).padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (!loggedIn) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        "Database Email Count: $emailCount"
-                    )
-                    Text(
-                        "Login",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 24.dp),
-                    )
-                    TextField(
-                        value = emailAddress,
-                        onValueChange = { it -> emailAddress = it },
-                        label = { Text("Email Address") },
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    TextField(
-                        value = password,
-                        onValueChange = { it -> password = it },
-                        label = { Text("Password") },
-                        modifier = Modifier.padding(bottom = 8.dp)
 
-                    )
-                    Button(onClick = {
-                        login(observableSettings, accountQueries, emailAddress, password)
-                    }) {
-                        Text("Login")
-                    }
-                    Button(onClick = {
-                        GlobalScope.launch(Dispatchers.IO) {
-                            emailService.deleteEmails(emailDataSource)
-                        }
-                    }) {
-                        Text("Delete Emails")
-                    }
-                }
+        if (!loggedIn) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
+            ) {
+                Text(
+                    "Database Email Count: $emailCount"
+                )
+                Text(
+                    "Login",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 24.dp),
+                )
+                TextField(
+                    value = emailAddress,
+                    onValueChange = { it -> emailAddress = it },
+                    label = { Text("Email Address") },
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                TextField(
+                    value = password,
+                    onValueChange = { it -> password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.padding(bottom = 8.dp)
 
-            } else {
-                Button(onClick = { logout(observableSettings) }) {
-                    Text(
-                        "Logout"
-                    )
+                )
+                Button(onClick = {
+                    login(observableSettings, accountQueries, emailAddress, password)
+                }) {
+                    Text("Login")
                 }
-                displayEmails(
-                    emailDataSource,
-                    observableSettings,
-                    emailQueries,
-                    accountQueries,
-                    emailService,
-                    loggedIn,
-                    emailAddress,
-                    password
+                Button(onClick = {
+                    GlobalScope.launch(Dispatchers.IO) {
+                        emailService.deleteEmails(emailDataSource)
+                    }
+                }) {
+                    Text("Delete Emails")
+                }
+            }
+
+        } else {
+            Button(onClick = { logout(observableSettings) }) {
+                Text(
+                    "Logout"
                 )
             }
+            displayEmails(
+                emailDataSource,
+                observableSettings,
+                emailQueries,
+                accountQueries,
+                emailService,
+                loggedIn,
+                emailAddress,
+                password
+            )
         }
     }
-
 }
 
 fun login(
@@ -278,6 +269,10 @@ fun displayEmails(
         val totalEmails by emailService.totalEmails.collectAsState()
         val emailsReadCount by emailService.emailsRead.collectAsState()
 
+        // Vertical scrollbar
+        var lazyListState = rememberLazyListState()
+        val scrollState = rememberScrollAreaState(lazyListState)
+
         LaunchedEffect(emailsReadCount) {
             loadProgress(emailsReadCount, totalEmails) { progress ->
                 currentProgress = progress
@@ -335,61 +330,70 @@ fun displayEmails(
             }
         } else {
             // Display email content
-            Column {
-                emails.forEach { email: EmailsDAO ->
-                    Column(
-                        modifier = Modifier.border(
-                            width = 1.dp,
-                            color = Color.DarkGray,
-                            shape = RoundedCornerShape(4.dp)
-                        ).background(
-                            color = Color.LightGray
-                        ).fillMaxSize()
-                    ) {
-                        Text(
-                            text = email.sender ?: "No from",
-                        )
-                        Text(
-                            text = email.subject ?: "No subject"
-                        )
-                        Button(
-                            onClick = {
-                                displayEmailBody(!display, email)
-                            },
+            ScrollArea(state = scrollState) {
+                LazyColumn(modifier = Modifier.fillMaxWidth(),state = lazyListState) {
+                    items(emails) { email ->
+                        Column(
+                            modifier = Modifier.border(
+                                width = 1.dp,
+                                color = Color.DarkGray,
+                                shape = RoundedCornerShape(4.dp)
+                            ).background(
+                                color = Color.LightGray
+                            ).fillMaxWidth()
                         ) {
-                            Text("View Email")
-                        }
-                        if (attachments.any { it.emailId === email.id }){
-                        Row {
-                            attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                Row {
-                                    Text(
-                                        text = attachment.fileName,
-                                        modifier = Modifier
-                                            .padding(8.dp)
-                                    )
-                                    Text(
-                                        text = attachment.size.toString(), modifier = Modifier
-                                            .padding(8.dp)
-
-                                    )
-                                    Text(
-                                        text = attachment.mimeType, modifier = Modifier
-                                            .padding(8.dp)
-                                    )
-                                }
-
-                            }
-                        } } else {
                             Text(
-                                text = "No attachments",
+                                text = email.sender ?: "No from",
                             )
+                            Text(
+                                text = email.subject ?: "No subject"
+                            )
+                            Button(
+                                onClick = {
+                                    displayEmailBody(!display, email)
+                                },
+                            ) {
+                                Text("View Email")
+                            }
+                            if (attachments.any { it.emailId === email.id }) {
+                                Row {
+                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                        Row {
+                                            Text(
+                                                text = attachment.fileName,
+                                                modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                            Text(
+                                                text = attachment.size.toString(), modifier = Modifier
+                                                    .padding(8.dp)
+
+                                            )
+                                            Text(
+                                                text = attachment.mimeType, modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                        }
+
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "No attachments",
+                                )
+                            }
                         }
+
                     }
+
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
+                ) {
+                    Thumb(Modifier.background(Color.LightGray))
                 }
             }
         }
-
     }
 
     if (display) {

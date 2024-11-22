@@ -64,6 +64,7 @@ kotlin {
             implementation(libs.koin.core)
             api("io.github.kevinnzou:compose-webview-multiplatform:1.8.4")
             implementation("app.cash.sqldelight:primitive-adapters:2.0.2")
+            implementation("com.composables:core:1.19.1")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
