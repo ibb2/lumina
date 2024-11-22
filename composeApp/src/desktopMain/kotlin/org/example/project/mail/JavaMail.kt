@@ -18,6 +18,7 @@ import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import java.io.ByteArrayInputStream
@@ -216,10 +217,7 @@ class JavaMail(
         return body
     }
 
-    fun createCompositeKey(subject: String?, receivedDate: String?, sender: String?): String {
-        val key = "${subject.orEmpty()}_${receivedDate.orEmpty()}_${sender.orEmpty()}"
-        return key
-    }
+
 
 
     fun generateSnippet(emailBody: String, snippetLength: Int = 100): String {
