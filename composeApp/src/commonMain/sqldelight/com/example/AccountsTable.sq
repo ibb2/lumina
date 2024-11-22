@@ -1,0 +1,23 @@
+CREATE TABLE Accounts(
+    emailAddress TEXT NOT NULL PRIMARY KEY
+);
+
+insertAccount:
+INSERT INTO Accounts(emailAddress) VALUES(?);
+
+removeAccount:
+DELETE FROM Accounts WHERE emailAddress = ?;
+
+removeAllAccounts:
+DELETE FROM Accounts;
+
+selectAllAccounts:
+SELECT * FROM Accounts;
+
+selectAccount:
+SELECT * FROM Accounts WHERE emailAddress = ?;
+
+lastInsertedRowId:
+SELECT last_insert_rowid();
+
+

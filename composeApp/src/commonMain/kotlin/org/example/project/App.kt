@@ -1,11 +1,22 @@
 package org.example.project
 
-import androidx.compose.animation.AnimatedVisibility
+import com.composables.core.VerticalScrollbar
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.*
+import androidx.compose.material.Button
+import androidx.compose.material.Card
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.material.TextField
+import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -14,31 +25,45 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
-import com.example.AccountTableQueries
-import com.example.EmailTableQueries
+import com.example.AccountsTableQueries
+import com.example.EmailsTableQueries
+import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import com.multiplatform.webview.util.KLogSeverity
-import com.multiplatform.webview.web.*
+import com.multiplatform.webview.web.LoadingState
+import com.multiplatform.webview.web.WebView
+import com.multiplatform.webview.web.rememberWebViewNavigator
+import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
 import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
-import com.russhwolf.settings.SettingsListener
 import com.russhwolf.settings.observable.makeObservable
-import io.ktor.http.ContentType.Text.Html
-import org.jetbrains.compose.resources.painterResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import org.example.project.shared.data.AttachmentsDAO
+import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.AttachmentsDataSource
+import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import lumina.composeapp.generated.resources.Res
-import lumina.composeapp.generated.resources.compose_multiplatform
-import org.example.project.shared.AppModule
-import org.example.project.sqldelight.AccountDataSource
-import org.example.project.sqldelight.EmailDataSource
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.composables.core.ScrollArea
+import com.composables.core.Thumb
+import com.composables.core.rememberScrollAreaState
+
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
@@ -47,18 +72,29 @@ fun App(emailService: EmailService, driver: SqlDriver) {
     MaterialTheme {
 
         // db related stuff
-        val database = LuminaDatabase(driver)
-        val accountQueries = database.accountTableQueries
+        val database = LuminaDatabase(
+            driver,
+            EmailsAdapter = Emails.Adapter(
+                attachments_countAdapter = IntColumnAdapter
+            ),
+        )
 
-        // Email db stuff
-        val emailQueries = database.emailTableQueries
-        val emailDataSource: EmailDataSource = EmailDataSource(database)
+        // Queries
+        val accountQueries = database.accountsTableQueries
+        val emailQueries = database.emailsTableQueries
 
+        // Data Sources
+        val emailDataSource: EmailsDataSource = EmailsDataSource(database)
+        val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
+
+        // Basic Auth
         val settings = Settings()
         var showContent by remember { mutableStateOf(false) }
         var emailAddress by remember { mutableStateOf("") }
         var password by remember { mutableStateOf("") }
         var loggedIn by remember { mutableStateOf(false) }
+
+        val emailCount by emailService.getEmailCount(emailDataSource).collectAsState()
 
         val observableSettings: ObservableSettings = settings.makeObservable()
 
@@ -66,72 +102,83 @@ fun App(emailService: EmailService, driver: SqlDriver) {
         observableSettings.putString("password", "")
         observableSettings.putBoolean("login", false)
 
-        observableSettings.addBooleanListener("login", defaultValue = false) { value -> loggedIn = value }
-        observableSettings.addStringListener("emailAddress", defaultValue = "") { value -> emailAddress = value }
-        observableSettings.addStringListener("password", defaultValue = "") { value -> password = value }
+        observableSettings.addBooleanListener("login", defaultValue = false) { value ->
+            loggedIn = value
+        }
+        observableSettings.addStringListener(
+            "emailAddress",
+            defaultValue = ""
+        ) { value -> emailAddress = value }
+        observableSettings.addStringListener("password", defaultValue = "") { value ->
+            password = value
+        }
 
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(
-                rememberScrollState()
-            ).padding(32.dp)
-        ) {
+        // Ui
 
+        if (!loggedIn) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
+            ) {
+                Text(
+                    "Database Email Count: $emailCount"
+                )
+                Text(
+                    "Login",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 24.dp),
+                )
+                TextField(
+                    value = emailAddress,
+                    onValueChange = { it -> emailAddress = it },
+                    label = { Text("Email Address") },
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                TextField(
+                    value = password,
+                    onValueChange = { it -> password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.padding(bottom = 8.dp)
 
-            if (!loggedIn) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        "Login",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 24.dp),
-                    )
-                    TextField(
-                        value = emailAddress,
-                        onValueChange = { it -> emailAddress = it },
-                        label = { Text("Email Address") },
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    TextField(
-                        value = password,
-                        onValueChange = { it -> password = it },
-                        label = { Text("Password") },
-                        modifier = Modifier.padding(bottom = 8.dp)
-
-                    )
-                    Button(onClick = {
-                        login(observableSettings, accountQueries, emailAddress, password)
-                    }) {
-                        Text("Login")
+                )
+                Button(onClick = {
+                    login(observableSettings, accountQueries, emailAddress, password)
+                }) {
+                    Text("Login")
+                }
+                Button(onClick = {
+                    GlobalScope.launch(Dispatchers.IO) {
+                        emailService.deleteEmails(emailDataSource)
                     }
+                }) {
+                    Text("Delete Emails")
                 }
+            }
 
-            } else {
-                Button(onClick = { logout(observableSettings) }) {
-                    Text(
-                        "Logout"
-                    )
-                }
-                displayEmails(
-                    emailDataSource,
-                    observableSettings,
-                    emailQueries,
-                    accountQueries,
-                    emailService,
-                    loggedIn,
-                    emailAddress,
-                    password
+        } else {
+            Button(onClick = { logout(observableSettings) }) {
+                Text(
+                    "Logout"
                 )
             }
+            displayEmails(
+                emailDataSource,
+                observableSettings,
+                emailQueries,
+                accountQueries,
+                emailService,
+                loggedIn,
+                emailAddress,
+                password
+            )
         }
     }
-
 }
 
 fun login(
     observableSettings: ObservableSettings,
-    accountQueries: AccountTableQueries,
+    accountQueries: AccountsTableQueries,
     emailAddress: String,
     password: String
 ): Unit {
@@ -139,14 +186,14 @@ fun login(
     observableSettings.putString("password", password)
     observableSettings.putBoolean("login", true)
 
-    val accountExists: String? = accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
-
-    if (accountExists == null) {
+    try {
+        accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
+            ?: throw NullPointerException()
+    } catch (e: NullPointerException) {
         accountQueries.insertAccount(emailAddress)
     }
 
     println("Logged in as $emailAddress")
-
 }
 
 fun logout(observableSettings: ObservableSettings): Unit {
@@ -158,10 +205,10 @@ fun logout(observableSettings: ObservableSettings): Unit {
 
 @Composable
 fun displayEmails(
-    emailDataSource: EmailDataSource,
+    emailDataSource: EmailsDataSource,
     observableSettings: ObservableSettings,
-    emailTableQueries: EmailTableQueries,
-    accountQueries: AccountTableQueries,
+    emailTableQueries: EmailsTableQueries,
+    accountQueries: AccountsTableQueries,
     emailService: EmailService,
     loggedIn: Boolean,
     emailAddress: String,
@@ -172,7 +219,12 @@ fun displayEmails(
     var emailSubject: String by remember { mutableStateOf("") }
     var emailContet: String by remember { mutableStateOf("") }
 
-    fun displayEmailBody(show: Boolean, email: Email) {
+    // Coroutine Scope
+    var currentProgress by remember { mutableStateOf(0f) }
+    var loading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope() // Create a coroutine scope
+
+    fun displayEmailBody(show: Boolean, email: EmailsDAO) {
 
         emailFromUser = ""
         emailSubject = ""
@@ -180,9 +232,9 @@ fun displayEmails(
 
         if (show) {
             display = true
-            emailFromUser = email.from ?: ""
+            emailFromUser = email.sender ?: ""
             emailSubject = email.subject ?: ""
-            emailContet = email.body
+            emailContet = email.body ?: ""
         }
     }
 
@@ -208,49 +260,150 @@ fun displayEmails(
         )
     }
 
-
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
-        val emailMessages: List<Email> =
-            emailService.getEmails(emailDataSource, emailTableQueries, accountQueries, emailAddress, password)
 
-        Column {
-            emailMessages.forEach { email: Email ->
-                Column(
-                    modifier = Modifier.border(
-                        width = 1.dp,
-                        color = Color.DarkGray,
-                        shape = RoundedCornerShape(4.dp)
-                    ).background(
-                        color = Color.LightGray
-                    ).fillMaxSize()
-                ) {
-                    Text(
-                        text = email.from ?: "No from",
-                    )
-                    Text(
-                        text = email.subject ?: "No subject"
-                    )
-                    Button(
-                        onClick = {
-                            displayEmailBody(!display, email)
-                        },
-                    ) {
-                        Text("View Email")
-                    }
-                }
+        var isLoading by remember { mutableStateOf(false) }
+        var emails by remember { mutableStateOf<List<EmailsDAO>>(emptyList()) } // Store emails
+        var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
+
+        val totalEmails by emailService.totalEmails.collectAsState()
+        val emailsReadCount by emailService.emailsRead.collectAsState()
+
+        // Vertical scrollbar
+        var lazyListState = rememberLazyListState()
+        val scrollState = rememberScrollAreaState(lazyListState)
+
+        LaunchedEffect(emailsReadCount) {
+            loadProgress(emailsReadCount, totalEmails) { progress ->
+                currentProgress = progress
             }
         }
 
-    } else {
-        Text(
-            text = "Please log in."
-        )
+        LaunchedEffect(Unit) { // Trigger once
+            isLoading = true
+            try {
+                // Replace with your actual email retrieval logic
+
+                val startTime = Clock.System.now()
+                val returned = withContext(Dispatchers.IO) {
+                    emailService.getEmails(
+                        emailDataSource,
+                        emailTableQueries,
+                        accountQueries,
+                        emailAddress,
+                        password
+                    )
+                }
+                val endTime = Clock.System.now()
+                val duration = endTime - startTime
+                println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
+
+                withContext(Dispatchers.Main) {
+                    emails = returned.first
+                    attachments = returned.second
+                    isLoading = false // Hide loading indicator after updating emails
+                }
+
+            } catch (e: Exception) {
+                // Handle error, e.g., show an error message
+                println("Error in App ${e.message}")
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                }
+            } finally {
+                isLoading = false
+            }
+        }
+
+        if (isLoading) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Loading emails...")
+                Text("Emails read: ${emailsReadCount} out of ${totalEmails}")
+                LinearProgressIndicator(
+//                    progress = currentProgress,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            // Display email content
+            ScrollArea(state = scrollState) {
+                LazyColumn(modifier = Modifier.fillMaxWidth(),state = lazyListState) {
+                    items(emails) { email ->
+                        Column(
+                            modifier = Modifier.border(
+                                width = 1.dp,
+                                color = Color.DarkGray,
+                                shape = RoundedCornerShape(4.dp)
+                            ).background(
+                                color = Color.LightGray
+                            ).fillMaxWidth()
+                        ) {
+                            Text(
+                                text = email.sender ?: "No from",
+                            )
+                            Text(
+                                text = email.subject ?: "No subject"
+                            )
+                            Button(
+                                onClick = {
+                                    displayEmailBody(!display, email)
+                                },
+                            ) {
+                                Text("View Email")
+                            }
+                            if (attachments.any { it.emailId === email.id }) {
+                                Row {
+                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                        Row {
+                                            Text(
+                                                text = attachment.fileName,
+                                                modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                            Text(
+                                                text = attachment.size.toString(), modifier = Modifier
+                                                    .padding(8.dp)
+
+                                            )
+                                            Text(
+                                                text = attachment.mimeType, modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                        }
+
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "No attachments",
+                                )
+                            }
+                        }
+
+                    }
+
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
+                ) {
+                    Thumb(Modifier.background(Color.LightGray))
+                }
+            }
+        }
     }
 
     if (display) {
         Dialog(
             onDismissRequest = { display = false },
-            properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true, usePlatformDefaultWidth = false),
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false
+            ),
         ) {
             // Draw a rectangle shape with rounded corners inside the dialog
             Surface(modifier = Modifier.fillMaxSize(0.6f)) {
@@ -355,25 +508,32 @@ fun displayEmails(
 
 }
 
+suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Float) -> Unit) {
+    updateProgress(emailsRead.toFloat() / totalEmails)
+}
+
 
 expect class EmailService {
 
-    fun getEmails(
-        emailDataSource: EmailDataSource,
-        emailTableQueries: EmailTableQueries,
-        accountQueries: AccountTableQueries,
+    val emailsRead: StateFlow<Int>
+    val totalEmails: StateFlow<Int>
+    var emailCount: Int
+
+
+    suspend fun getEmails(
+        emailDataSource: EmailsDataSource,
+        emailTableQueries: EmailsTableQueries,
+        accountQueries: AccountsTableQueries,
         emailAddress: String,
         password: String
-    ): List<Email>
+    ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>>
+
+    suspend fun deleteEmails(emailDataSource: EmailsDataSource)
+
+    fun getEmailCount(emailDataSource: EmailsDataSource): StateFlow<Int>
+
+    fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO>
+
+    fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean
+
 }
-
-data class Email(
-    val from: String?,
-    val subject: String?,
-    val body: String,
-    val to: String?,
-    val cc: String?,
-    val bcc: String?,
-    val account: String
-)
-

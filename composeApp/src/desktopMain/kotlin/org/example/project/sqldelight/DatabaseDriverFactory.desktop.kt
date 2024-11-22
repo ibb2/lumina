@@ -6,11 +6,12 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.example.project.database.LuminaDatabase
 import java.io.File
+import java.util.*
 
 actual class DatabaseDriverFactory {
     actual fun create(): SqlDriver {
         val dbFilePath: String = getPath(isDebug = false)
-        val driver: SqlDriver = JdbcSqliteDriver("jdbc:sqlite:$dbFilePath")
+        val driver: SqlDriver = JdbcSqliteDriver("jdbc:sqlite:$dbFilePath", properties = Properties(1).apply{ put("foreign_keys", "true") })
 
         if (!File(dbFilePath).exists()) {
             LuminaDatabase.Schema.create(driver)
