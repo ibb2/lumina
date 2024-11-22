@@ -427,12 +427,15 @@ actual class EmailService() {
 
         val searchedMessage = inboxFolder.search(MessageIDTerm(email.messageId))
 
+        println("Current read status ${searchedMessage[0].flags.contains(Flags.Flag.SEEN)}")
+
         return try {
-            inboxFolder.setFlags(searchedMessage, Flags(Flags.Flag.SEEN), true)
-            searchedMessage[0].setFlag(Flags.Flag.SEEN, !email.isRead)
+            inboxFolder.setFlags(searchedMessage, Flags(Flags.Flag.SEEN), !searchedMessage[0].flags.contains(Flags.Flag.SEEN))
+            inboxFolder.close(true)
             true
         } catch (e: Exception) {
             e.printStackTrace()
+            inboxFolder.close()
             false
         }
 
