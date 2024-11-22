@@ -1,5 +1,6 @@
 package org.example.project.sqldelight
 
+import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import org.example.project.shared.data.EmailsDAO
 
@@ -26,24 +27,25 @@ class EmailsDataSource(db: LuminaDatabase) {
         account: String,
     ): Long {
 
-        return queries.transactionWithResult {   queries.insertEmail(
-            id,
-            compositeKey,
-            folderName,
-            subject,
-            sender,
-            recipients,
-            sentDate,
-            receivedDate,
-            body,
-            snippet,
-            size,
-            isRead,
-            isFlagged,
-            attachmentsCount,
-            hasAttachments,
-            account
-        )
+        return queries.transactionWithResult {
+            queries.insertEmail(
+                id,
+                compositeKey,
+                folderName,
+                subject,
+                sender,
+                recipients,
+                sentDate,
+                receivedDate,
+                body,
+                snippet,
+                size,
+                isRead,
+                isFlagged,
+                attachmentsCount,
+                hasAttachments,
+                account
+            )
             queries.lastInsertedRowId().executeAsOne()
         }
     }
@@ -72,4 +74,29 @@ class EmailsDataSource(db: LuminaDatabase) {
             )
         }
     ).executeAsList()
+
+    fun selectEmail(compositeKey: String): List<EmailsDAO> = queries.selectEmail(
+        compositeKey,
+        mapper = { id, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+            EmailsDAO(
+                id = id,
+                compositeKey = compositeKey,
+                folderName = folderName,
+                subject = subject ?: "",
+                sender = sender ?: "",
+                recipients = recipients ?: byteArrayOf(),
+                sentDate = sentDate ?: "",
+                receivedDate = receivedDate ?: "",
+                body = body ?: "",
+                snippet = snippet ?: "",
+                size = size ?: 0,
+                isRead = isRead ?: false,
+                isFlagged = isFlagged ?: false,
+                attachmentsCount = attachmentsCount ?: 0,
+                hasAttachments = hasAttachments ?: false,
+                account = account
+            )
+        }
+    ).executeAsList()
+
 }
