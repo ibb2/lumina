@@ -1,7 +1,10 @@
 package org.example.project.shared.data
 
+import org.koin.core.logger.MESSAGE
+
 data class EmailsDAO(
     val id: Long?,
+    val messageId: String,
     val folderUID: Long,
     val compositeKey: String,
     val folderName: String,

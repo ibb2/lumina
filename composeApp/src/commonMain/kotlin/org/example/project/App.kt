@@ -163,6 +163,14 @@ fun App(emailService: EmailService, driver: SqlDriver) {
                     "Logout"
                 )
             }
+            Button(onClick = {
+                GlobalScope.launch(Dispatchers.IO) {
+                    emailService.deleteEmails(emailDataSource)
+                }
+            }) {
+                Text("Delete Emails")
+            }
+
             displayEmails(
                 emailDataSource,
                 observableSettings,
@@ -333,7 +341,7 @@ fun displayEmails(
             // Display email content
             ScrollArea(state = scrollState) {
                 LazyColumn(modifier = Modifier.fillMaxWidth(),state = lazyListState) {
-                    items(emails) { email ->
+                    items(emails.reversed()) { email ->
                         Column(
                             modifier = Modifier.border(
                                 width = 1.dp,
@@ -356,13 +364,13 @@ fun displayEmails(
                             ) {
                                 Text("View Email")
                             }
-//                            Button(
-//                                onClick = {
-//                                    read()
-//                                }
-//                            ) {
-//                                Text ("Mark as read")
-//                            }
+                            Button(
+                                onClick = {
+                                    read(email, emailDataSource, emailService, emailAddress, password)
+                                }
+                            ) {
+                                Text ("Mark as read")
+                            }
                             if (attachments.any { it.emailId === email.id }) {
                                 Row {
                                     attachments.filter { it.emailId === email.id }.forEach { attachment ->
@@ -516,14 +524,20 @@ fun displayEmails(
 
 }
 
-//suspend fun read(email: EmailsDAO, emailsDataSource: EmailsDataSource) {
-//
-//    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
-//    val emailEntry =emailsDataSource.selectEmail(emailCompKey)
-//
-//
-//
-//}
+fun read(email: EmailsDAO, emailsDataSource: EmailsDataSource, emailService: EmailService, emailAddress: String, password: String) {
+
+    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
+    val emailEntry = emailsDataSource.selectEmail(emailCompKey)
+
+    val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress, password)
+
+    if (emailRead) {
+        emailsDataSource.updateEmailReadStatus(
+            emailCompKey,
+            !email.isRead
+        )
+    }
+}
 
 suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Float) -> Unit) {
     updateProgress(emailsRead.toFloat() / totalEmails)
@@ -553,5 +567,5 @@ expect class EmailService {
 
     fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean
 
-//    fun readEmail(email: EmailsDAO, emailsDataSource: EmailsDataSource, emailAddress: String, password: String): Boolean
+    fun readEmail(email: EmailsDAO, emailsDataSource: EmailsDataSource, emailAddress: String, password: String): Boolean
 }

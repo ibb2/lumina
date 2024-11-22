@@ -94,6 +94,7 @@ class JavaMail(
                         emails.add(
                             EmailsDAO(
                                 id = null,
+                                messageId = mm.messageID,
                                 folderUID = uid,
                                 compositeKey = createCompositeKey(mm.subject, sentDate, mm.from.toString()),
                                 folderName = message.folder.fullName,
@@ -114,6 +115,7 @@ class JavaMail(
                         )
 
                         val emailId = emailsDataSource.insertEmail(
+                            messageId = mm.messageID,
                             folderUID = uid,
                             compositeKey = mm.subject + sentDate + mm.from.toString(),
                             folderName = message.folder.fullName,

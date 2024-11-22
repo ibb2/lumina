@@ -3,6 +3,7 @@ import kotlin.Int;
 
 CREATE TABLE Emails (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,      -- Unique ID for internal use
+    message_id TEXT NOT NULL UNIQUE,                 -- A message-id for Internet messages that is supposed to be unique per message
     folder_uid INTEGER NOT NULL UNIQUE,                 -- Emails Folder specific unique ID
     composite_key TEXT NOT NULL UNIQUE,                 -- Composite key for uniqueness
     folder_name TEXT NOT NULL,                          -- Folder where the email is located
@@ -25,6 +26,7 @@ CREATE TABLE Emails (
 insertEmail:
 INSERT OR REPLACE INTO Emails(
     id,
+    message_id,
     folder_uid,
     composite_key,
     folder_name,
@@ -41,7 +43,10 @@ INSERT OR REPLACE INTO Emails(
     attachments_count,
     has_attachments,
     account
-) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+) VALUES(?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+
+updateEmailReadStatus:
+UPDATE Emails SET is_read = ? WHERE composite_key = ?;
 
 removeAllEmails:
 DELETE FROM Emails;

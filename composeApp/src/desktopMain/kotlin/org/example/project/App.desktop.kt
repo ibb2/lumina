@@ -2,12 +2,14 @@ package org.example.project
 
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.AccountsTableQueries
-import com.example.Attachments
 import com.example.Emails
 import com.example.EmailsTableQueries
 import com.example.project.database.LuminaDatabase
 import jakarta.mail.*
 import jakarta.mail.internet.MimeMultipart
+import jakarta.mail.search.FlagTerm
+import jakarta.mail.search.MessageIDTerm
+import jakarta.mail.search.SearchTerm
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.eclipse.angus.mail.imap.IMAPFolder
@@ -19,6 +21,7 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.DatabaseDriverFactory
 import org.example.project.sqldelight.EmailsDataSource
 import java.util.*
+import kotlin.math.truncate
 import kotlin.properties.Delegates
 
 
@@ -137,6 +140,9 @@ actual class EmailService() {
             messages,
             properties
         )
+
+        inbox.close(false)
+
         println("Got them")
         return Pair(emails, attachments)
     }
@@ -268,8 +274,8 @@ actual class EmailService() {
         fp.add(FetchProfile.Item.FLAGS)
         fp.add(FetchProfile.Item.ENVELOPE)
         inbox.fetch(messages, fp)
+        val nbMessages = inbox.getMessages().size
         var index = 0
-        val nbMessages = inbox.getMessages().takeLast(50).size
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
         totalEmailCount.value = nbMessages
@@ -304,14 +310,16 @@ actual class EmailService() {
                 }
             }
 
+            val mail = inbox.getMessages()
+
             end = messages[index - 1].messageNumber
             inbox.doCommand(
                 JavaMail(
-                    start,
-                    end,
+                    start = nbMessages - 49,
+                    end = nbMessages,
                     emails,
                     account,
-                    inbox.getMessages().takeLast(50).toTypedArray(),
+                    mail,
                     attachments,
                     emailDataSource,
                     attachmentDataSource,
@@ -389,49 +397,46 @@ actual class EmailService() {
         return emailDataSource.selectAllEmails() as MutableList<EmailsDAO>
     }
 
-//    actual fun readEmail(email: EmailsDAO, emailsDataSource: EmailsDataSource, emailAddress: String, password: String): Boolean {
-//        val properties: Properties = Properties().apply {
-//            put("mail.imap.host", "imap.gmail.com")
-//            put("mail.imap.username", emailAddress)
-//            put("mail.imap.password", password)
-//            put("mail.imap.port", "993")
-//            put("mail.imap.ssl.enable", "true")
-//            put("mail.imap.connectiontimeout", 10000)
-//            put("mail.imap.timeout", 10000)
-//            put("mail.imap.partialfetch", "false");
-//            put("mail.imap.fetchsize", "1048576");
-//        }
-//
-//        val session = Session.getInstance(properties)
-//        println("Connecting...")
-//        val store: Store = session.getStore("imap").apply {
-//            connect(
-//                properties.getProperty("mail.imap.host"),
-//                properties.getProperty("mail.imap.username"),
-//                properties.getProperty("mail.imap.password")
-//            )
-//        }
-//        println("Connected")
-//
-//        println("Settings up inbox...")
-//        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
-//
-////        val fp = FetchProfile()
-////        fp.add(FetchProfile.Item.ENVELOPE)
-////        fp.add(IMAPFolder.FetchProfileItem.FLAGS)
-////        fp.add(IMAPFolder.FetchProfileItem.CONTENT_INFO)
-//
-//        val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
-//        folder.setFlags()
-//        val msgs = folder.messages
-//
-//        val messages: List<Message> = folder.messages.takeLast(50)
-////        folder.fetch(msgs, fp)
-//        // Email UIDs
-//        val uf: UIDFolder = folder as UIDFolder
-//
-//        return false
-//    }
+    actual fun readEmail(
+        email: EmailsDAO,
+        emailsDataSource: EmailsDataSource,
+        emailAddress: String,
+        password: String
+    ): Boolean {
+        val properties: Properties = Properties().apply {
+            put("mail.imap.host", "imap.gmail.com")
+            put("mail.imap.username", emailAddress)
+            put("mail.imap.password", password)
+            put("mail.imap.port", "993")
+            put("mail.imap.ssl.enable", "true")
+            put("mail.imap.connectiontimeout", 10000)
+            put("mail.imap.timeout", 10000)
+            put("mail.imap.partialfetch", "false");
+            put("mail.imap.fetchsize", "1048576");
+        }
+
+        val session = Session.getInstance(properties)
+        val store: Store = session.getStore("imap").apply {
+            connect(
+                properties.getProperty("mail.imap.host"),
+                properties.getProperty("mail.imap.username"),
+                properties.getProperty("mail.imap.password")
+            )
+        }
+        val inboxFolder = store.getFolder("INBOX").apply { open(Folder.READ_WRITE) }
+
+        val searchedMessage = inboxFolder.search(MessageIDTerm(email.messageId))
+
+        return try {
+            inboxFolder.setFlags(searchedMessage, Flags(Flags.Flag.SEEN), true)
+            searchedMessage[0].setFlag(Flags.Flag.SEEN, !email.isRead)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+
+    }
 
 }
 

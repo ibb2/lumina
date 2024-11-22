@@ -10,6 +10,7 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     fun insertEmail(
         id: Long? = null,
+        messageId: String,
         folderUID: Long,
         compositeKey: String,
         folderName: String,
@@ -31,6 +32,7 @@ class EmailsDataSource(db: LuminaDatabase) {
         return queries.transactionWithResult {
             queries.insertEmail(
                 id,
+                messageId,
                 folderUID,
                 compositeKey,
                 folderName,
@@ -55,9 +57,10 @@ class EmailsDataSource(db: LuminaDatabase) {
     fun remove() = queries.removeAllEmails()
 
     fun selectAllEmails(): List<EmailsDAO> = queries.selectAllEmails(
-        mapper = { id, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
+                messageId = messageId ?: "",
                 folderUID = folderUID,
                 compositeKey = compositeKey,
                 folderName = folderName,
@@ -80,9 +83,10 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     fun selectEmail(compositeKey: String): List<EmailsDAO> = queries.selectEmail(
         compositeKey,
-        mapper = { id, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
+                messageId = messageId ?: "",
                 folderUID = folderUID,
                 compositeKey = compositeKey,
                 folderName = folderName,
@@ -103,4 +107,5 @@ class EmailsDataSource(db: LuminaDatabase) {
         }
     ).executeAsList()
 
+    fun updateEmailReadStatus(compositeKey: String, isRead: Boolean) = queries.updateEmailReadStatus(isRead, compositeKey)
 }
