@@ -63,6 +63,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
+import org.example.project.shared.utils.createCompositeKey
 
 
 @OptIn(ExperimentalSettingsApi::class)
@@ -355,6 +356,13 @@ fun displayEmails(
                             ) {
                                 Text("View Email")
                             }
+//                            Button(
+//                                onClick = {
+//                                    read()
+//                                }
+//                            ) {
+//                                Text ("Mark as read")
+//                            }
                             if (attachments.any { it.emailId === email.id }) {
                                 Row {
                                     attachments.filter { it.emailId === email.id }.forEach { attachment ->
@@ -390,7 +398,7 @@ fun displayEmails(
                 VerticalScrollbar(
                     modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
                 ) {
-                    Thumb(Modifier.background(Color.LightGray))
+                    Thumb(Modifier.background(Color.Black))
                 }
             }
         }
@@ -508,6 +516,15 @@ fun displayEmails(
 
 }
 
+//suspend fun read(email: EmailsDAO, emailsDataSource: EmailsDataSource) {
+//
+//    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
+//    val emailEntry =emailsDataSource.selectEmail(emailCompKey)
+//
+//
+//
+//}
+
 suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Float) -> Unit) {
     updateProgress(emailsRead.toFloat() / totalEmails)
 }
@@ -536,4 +553,5 @@ expect class EmailService {
 
     fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean
 
+//    fun readEmail(email: EmailsDAO, emailsDataSource: EmailsDataSource, emailAddress: String, password: String): Boolean
 }

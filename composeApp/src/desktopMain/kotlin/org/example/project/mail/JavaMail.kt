@@ -16,6 +16,7 @@ import org.eclipse.angus.mail.imap.protocol.BODY
 import org.eclipse.angus.mail.imap.protocol.FetchResponse
 import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
+import org.eclipse.angus.mail.imap.protocol.UID
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.shared.utils.createCompositeKey
@@ -37,7 +38,9 @@ class JavaMail(
     var emailsDataSource: EmailsDataSource,
     var attachmentsDataSource: AttachmentsDataSource,
     var emailCount: Int,
-    var _emailsCount: MutableStateFlow<Int>
+    var _emailsCount: MutableStateFlow<Int>,
+    var folder: Folder,
+    var uFolder: UIDFolder,
 ) : IMAPFolder.ProtocolCommand {
     //    @Throws(ProtocolException::class)
     override fun doCommand(protocol: IMAPProtocol): Any {
@@ -64,6 +67,7 @@ class JavaMail(
             var mm: MimeMessage
             var `is`: ByteArrayInputStream? = null
             var message: Message
+            var uid: Long = 0
 
             // last response is only result summary: not contents
             for (i in 0..<r.size - 1) {
@@ -85,9 +89,12 @@ class JavaMail(
                             ?: getFallbackReceivedDate(mm)?.toInstant()?.toString()
                             ?: Clock.System.now().toString()
 
+                        uid = uFolder.getUID(message)
+
                         emails.add(
                             EmailsDAO(
                                 id = null,
+                                folderUID = uid,
                                 compositeKey = createCompositeKey(mm.subject, sentDate, mm.from.toString()),
                                 folderName = message.folder.fullName,
                                 subject = mm.subject ?: "",
@@ -107,6 +114,7 @@ class JavaMail(
                         )
 
                         val emailId = emailsDataSource.insertEmail(
+                            folderUID = uid,
                             compositeKey = mm.subject + sentDate + mm.from.toString(),
                             folderName = message.folder.fullName,
                             subject = mm.subject,

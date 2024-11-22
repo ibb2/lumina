@@ -10,6 +10,7 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     fun insertEmail(
         id: Long? = null,
+        folderUID: Long,
         compositeKey: String,
         folderName: String,
         subject: String,
@@ -30,6 +31,7 @@ class EmailsDataSource(db: LuminaDatabase) {
         return queries.transactionWithResult {
             queries.insertEmail(
                 id,
+                folderUID,
                 compositeKey,
                 folderName,
                 subject,
@@ -53,9 +55,10 @@ class EmailsDataSource(db: LuminaDatabase) {
     fun remove() = queries.removeAllEmails()
 
     fun selectAllEmails(): List<EmailsDAO> = queries.selectAllEmails(
-        mapper = { id, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+        mapper = { id, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
+                folderUID = folderUID,
                 compositeKey = compositeKey,
                 folderName = folderName,
                 subject = subject ?: "",
@@ -77,9 +80,10 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     fun selectEmail(compositeKey: String): List<EmailsDAO> = queries.selectEmail(
         compositeKey,
-        mapper = { id, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+        mapper = { id, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
+                folderUID = folderUID,
                 compositeKey = compositeKey,
                 folderName = folderName,
                 subject = subject ?: "",
