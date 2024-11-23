@@ -7,7 +7,7 @@ CREATE TABLE Attachments (
     mime_type TEXT,                                 -- MIME type (e.g., "application/pdf")
     size INTEGER,                                   -- Size in bytes
     download_path TEXT,                             -- Local path where file is saved (nullable)
-    downloaded INTEGER AS Boolean DEFAULT NULL,     -- Whether the file is downloaded (0 = no, 1 = yes)
+    downloaded INTEGER AS Boolean NOT NULL DEFAULT 0,     -- Whether the file is downloaded (0 = no, 1 = yes)
     FOREIGN KEY (email_id) REFERENCES Emails (id) ON DELETE CASCADE
 );
 
