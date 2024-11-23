@@ -3,7 +3,7 @@ import kotlin.Int;
 
 CREATE TABLE Emails (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,      -- Unique ID for internal use
-    message_id TEXT NOT NULL UNIQUE,                 -- A message-id for Internet messages that is supposed to be unique per message
+    message_id TEXT NOT NULL UNIQUE,                    -- A message-id for Internet messages that is supposed to be unique per message
     folder_uid INTEGER NOT NULL UNIQUE,                 -- Emails Folder specific unique ID
     composite_key TEXT NOT NULL UNIQUE,                 -- Composite key for uniqueness
     folder_name TEXT NOT NULL,                          -- Folder where the email is located
@@ -15,10 +15,10 @@ CREATE TABLE Emails (
     body TEXT,                                          -- Email body (plain text)
     snippet TEXT,                                       -- Short preview/snippet of the body
     size INTEGER,                                       -- Email size in bytes
-    is_read INTEGER AS Boolean DEFAULT NULL,            -- Read/unread status
-    is_flagged INTEGER AS Boolean DEFAULT NULL,         -- Flagged/important status
+    is_read INTEGER AS Boolean DEFAULT 0,               -- Read/unread status
+    is_flagged INTEGER AS Boolean DEFAULT 0,            -- Flagged/important status
     attachments_count INTEGER AS Int DEFAULT 0,         -- Number of attachments
-    has_attachments INTEGER AS Boolean DEFAULT NULL,    -- Whether the email has attachments
+    has_attachments INTEGER AS Boolean DEFAULT 0,       -- Whether the email has attachments
     account TEXT NOT NULL,                              -- Email account
     FOREIGN KEY(account) REFERENCES Accounts(emailAddress) ON DELETE CASCADE -- Foreign key to the Account table
 );
@@ -55,7 +55,7 @@ selectAllEmails:
 SELECT * FROM Emails;
 
 selectEmail:
-SELECT * FROM Emails WHERE composite_key = ? LIMIT 1;
+SELECT * FROM Emails WHERE composite_key = ?;
 
 lastInsertedRowId:
 SELECT last_insert_rowid();
