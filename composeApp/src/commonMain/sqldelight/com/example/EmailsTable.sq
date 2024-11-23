@@ -15,10 +15,10 @@ CREATE TABLE Emails (
     body TEXT,                                          -- Email body (plain text)
     snippet TEXT,                                       -- Short preview/snippet of the body
     size INTEGER,                                       -- Email size in bytes
-    is_read INTEGER AS Boolean DEFAULT 0,               -- Read/unread status
-    is_flagged INTEGER AS Boolean DEFAULT 0,            -- Flagged/important status
-    attachments_count INTEGER AS Int DEFAULT 0,         -- Number of attachments
-    has_attachments INTEGER AS Boolean DEFAULT 0,       -- Whether the email has attachments
+    is_read INTEGER AS Boolean NOT NULL DEFAULT 0,               -- Read/unread status
+    is_flagged INTEGER AS Boolean NOT NULL DEFAULT 0,            -- Flagged/important status
+    attachments_count INTEGER AS Int NOT NULL DEFAULT 0,         -- Number of attachments
+    has_attachments INTEGER AS Boolean NOT NULL DEFAULT 0,       -- Whether the email has attachments
     account TEXT NOT NULL,                              -- Email account
     FOREIGN KEY(account) REFERENCES Accounts(emailAddress) ON DELETE CASCADE -- Foreign key to the Account table
 );
