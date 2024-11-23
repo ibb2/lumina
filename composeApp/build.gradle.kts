@@ -65,6 +65,11 @@ kotlin {
             api("io.github.kevinnzou:compose-webview-multiplatform:1.8.4")
             implementation("app.cash.sqldelight:primitive-adapters:2.0.2")
             implementation("com.composables:core:1.19.1")
+//            implementation("com.squareup.sqldelight:coroutines-extensions:2.0.2")
+//            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+
+            implementation("app.cash.sqldelight:coroutines-extensions:2.0.2")
+
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)

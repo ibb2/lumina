@@ -51,7 +51,7 @@ class JavaMail(
 
         val r: Array<Response> = protocol.command("FETCH", args)
         val response: Response = r[r.size - 1]
-        print("Response is responding $response")
+        println("Response is responding $response")
         if (response.isOK()) {
             val props = Properties()
             props.setProperty("mail.store.protocol", "imap")
@@ -68,15 +68,22 @@ class JavaMail(
             var `is`: ByteArrayInputStream? = null
             var message: Message
             var uid: Long = 0
+            var isRead = false
+            var isFlagged = false
 
             // last response is only result summary: not contents
             for (i in 0..<r.size - 1) {
+
                 if (r[i] is IMAPResponse) {
                     fetch = r[i] as FetchResponse
                     body = fetch.getItem(0) as BODY
                     `is` = body.getByteArrayInputStream()
-                    message = messages[i]
+                    message = messages.takeLast(50)[i]
                     try {
+                        println("Read...${message.subject} ${message.flags.contains(Flags.Flag.SEEN)}")
+                        isRead = message.flags.contains(Flags.Flag.SEEN)
+                        isFlagged = message.flags.contains(Flags.Flag.FLAGGED)
+                        println("New Read... ${isRead}")
                         mm = MimeMessage(session, `is`)
 
                         val (emailBody, attachments) = getEmailBody(mm, i)
@@ -90,6 +97,7 @@ class JavaMail(
                             ?: Clock.System.now().toString()
 
                         uid = uFolder.getUID(message)
+
 
                         emails.add(
                             EmailsDAO(
@@ -106,13 +114,14 @@ class JavaMail(
                                 body = emailBody,
                                 snippet = generateSnippet(emailBody),
                                 size = mm.size.toLong(),
-                                isRead = message.isSet(Flags.Flag.SEEN),
-                                isFlagged = message.isSet(Flags.Flag.FLAGGED),
+                                isRead = isRead,
+                                isFlagged = isFlagged,
                                 attachmentsCount = attachments.size,
                                 hasAttachments = attachments.isNotEmpty(),
                                 account = account[0],
                             )
                         )
+
 
                         val emailId = emailsDataSource.insertEmail(
                             messageId = mm.messageID,
@@ -127,12 +136,14 @@ class JavaMail(
                             body = emailBody,
                             snippet = generateSnippet(emailBody),
                             size = mm.size.toLong(),
-                            isRead = message.isSet(Flags.Flag.SEEN),
-                            isFlagged = message.isSet(Flags.Flag.FLAGGED),
+                            isRead = isRead,
+                            isFlagged = isFlagged,
                             attachmentsCount = attachments.size,
                             hasAttachments = attachments.isNotEmpty(),
                             account = account[0]
                         )
+
+                        println("Email ${mm.from[0]} status now read... ${message.flags.contains(Flags.Flag.SEEN)} or mm... ${mm.flags.contains(Flags.Flag.SEEN)}")
 
                         for (attachment in attachments) {
                             attachmentsArray.add(
@@ -153,9 +164,9 @@ class JavaMail(
                                 size = attachment.size,
                             )
                         }
-                        println("Email count: $emailCount")
-                        _emailsCount.value = emailCount
-                        emailCount++
+//                        println("Email count: $emailCount")
+//                        _emailsCount.value = emailCount
+//                        emailCount++
 
                     } catch (e: MessagingException) {
                         print("Errored out")
@@ -226,8 +237,6 @@ class JavaMail(
         }
         return body
     }
-
-
 
 
     fun generateSnippet(emailBody: String, snippetLength: Int = 100): String {

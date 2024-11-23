@@ -275,7 +275,7 @@ actual class EmailService() {
         fp.add(FetchProfile.Item.ENVELOPE)
         inbox.fetch(messages, fp)
         val nbMessages = inbox.getMessages().size
-        var index = 0
+        var index = nbMessages - 49
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
         totalEmailCount.value = nbMessages
@@ -402,7 +402,7 @@ actual class EmailService() {
         emailsDataSource: EmailsDataSource,
         emailAddress: String,
         password: String
-    ): Boolean {
+    ): Pair<Boolean, Boolean?> {
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
             put("mail.imap.username", emailAddress)
@@ -430,13 +430,14 @@ actual class EmailService() {
         println("Current read status ${searchedMessage[0].flags.contains(Flags.Flag.SEEN)}")
 
         return try {
-            inboxFolder.setFlags(searchedMessage, Flags(Flags.Flag.SEEN), !searchedMessage[0].flags.contains(Flags.Flag.SEEN))
+            val readState = !searchedMessage[0].flags.contains(Flags.Flag.SEEN)
+            inboxFolder.setFlags(searchedMessage, Flags(Flags.Flag.SEEN), readState)
             inboxFolder.close(true)
-            true
+            Pair(true, readState)
         } catch (e: Exception) {
             e.printStackTrace()
             inboxFolder.close()
-            false
+            Pair(false, null)
         }
 
     }

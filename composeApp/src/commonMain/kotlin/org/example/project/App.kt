@@ -58,11 +58,11 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
+import kotlinx.coroutines.flow.asFlow
 import org.example.project.shared.utils.createCompositeKey
 
 
@@ -269,10 +269,12 @@ fun displayEmails(
         )
     }
 
+    var interger = intArrayOf(0).asFlow()
+
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
 
         var isLoading by remember { mutableStateOf(false) }
-        var emails by remember { mutableStateOf<List<EmailsDAO>>(emptyList()) } // Store emails
+        var emails by remember { mutableStateOf<List<EmailsDAO>?>(null) } // Store emails
         var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
 
         val totalEmails by emailService.totalEmails.collectAsState()
@@ -281,6 +283,7 @@ fun displayEmails(
         // Vertical scrollbar
         var lazyListState = rememberLazyListState()
         val scrollState = rememberScrollAreaState(lazyListState)
+
 
         LaunchedEffect(emailsReadCount) {
             loadProgress(emailsReadCount, totalEmails) { progress ->
@@ -307,8 +310,8 @@ fun displayEmails(
                 val duration = endTime - startTime
                 println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
 
+
                 withContext(Dispatchers.Main) {
-                    emails = returned.first
                     attachments = returned.second
                     isLoading = false // Hide loading indicator after updating emails
                 }
@@ -339,74 +342,85 @@ fun displayEmails(
             }
         } else {
             // Display email content
-            ScrollArea(state = scrollState) {
-                LazyColumn(modifier = Modifier.fillMaxWidth(),state = lazyListState) {
-                    items(emails.reversed()) { email ->
-                        Column(
-                            modifier = Modifier.border(
-                                width = 1.dp,
-                                color = Color.DarkGray,
-                                shape = RoundedCornerShape(4.dp)
-                            ).background(
-                                color = Color.LightGray
-                            ).fillMaxWidth()
-                        ) {
-                            Text(
-                                text = email.sender ?: "No from",
-                            )
-                            Text(
-                                text = email.subject ?: "No subject"
-                            )
-                            Button(
-                                onClick = {
-                                    displayEmailBody(!display, email)
-                                },
-                            ) {
-                                Text("View Email")
-                            }
-                            Button(
-                                onClick = {
-                                    read(email, emailDataSource, emailService, emailAddress, password)
-                                }
-                            ) {
-                                Text ("Mark as read")
-                            }
-                            if (attachments.any { it.emailId === email.id }) {
-                                Row {
-                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                        Row {
-                                            Text(
-                                                text = attachment.fileName,
-                                                modifier = Modifier
-                                                    .padding(8.dp)
-                                            )
-                                            Text(
-                                                text = attachment.size.toString(), modifier = Modifier
-                                                    .padding(8.dp)
 
-                                            )
-                                            Text(
-                                                text = attachment.mimeType, modifier = Modifier
-                                                    .padding(8.dp)
-                                            )
-                                        }
+            emails = emailDataSource.selectAllEmailsFlow().collectAsState(initial = emptyList()).value
 
-                                    }
-                                }
-                            } else {
+            if (emails != null) {
+                ScrollArea(state = scrollState) {
+                    // Email
+
+                    LazyColumn(modifier = Modifier.fillMaxWidth(), state = lazyListState) {
+
+                        items(emails!!.sortedBy { it.receivedDate }.reversed()) { email ->
+                            println("Email id...: ${email.subject} ${email.isRead}")
+                            Column(
+                                modifier = Modifier.border(
+                                    width = 1.dp,
+                                    color = Color.DarkGray,
+                                    shape = RoundedCornerShape(4.dp)
+                                ).background(
+                                    color = Color.LightGray
+                                ).fillMaxWidth()
+                            ) {
                                 Text(
-                                    text = "No attachments",
+                                    text = email.sender ?: "No from",
                                 )
+                                Text(
+                                    text = email.subject ?: "No subject"
+                                )
+                                Button(
+                                    onClick = {
+                                        displayEmailBody(!display, email)
+                                    },
+                                ) {
+                                    Text("View Email")
+                                }
+                                Text("Email read: ${email.isRead}")
+                                Button(
+                                    onClick = {
+
+                                            read(email, emailDataSource, emailService, emailAddress, password)
+                                    }
+                                ) {
+                                    Text(text = if (email.isRead) "Mark as unread" else "Mark as read")
+                                }
+                                if (attachments.any { it.emailId === email.id }) {
+                                    Row {
+                                        attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                            Row {
+                                                Text(
+                                                    text = attachment.fileName,
+                                                    modifier = Modifier
+                                                        .padding(8.dp)
+                                                )
+                                                Text(
+                                                    text = attachment.size.toString(), modifier = Modifier
+                                                        .padding(8.dp)
+
+                                                )
+                                                Text(
+                                                    text = attachment.mimeType, modifier = Modifier
+                                                        .padding(8.dp)
+                                                )
+                                            }
+
+                                        }
+                                    }
+                                } else {
+                                    Text(
+                                        text = "No attachments",
+                                    )
+                                }
                             }
+
                         }
 
                     }
-
-                }
-                VerticalScrollbar(
-                    modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
-                ) {
-                    Thumb(Modifier.background(Color.Black))
+                    VerticalScrollbar(
+                        modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
+                    ) {
+                        Thumb(Modifier.background(Color.Black))
+                    }
                 }
             }
         }
@@ -524,19 +538,27 @@ fun displayEmails(
 
 }
 
-fun read(email: EmailsDAO, emailsDataSource: EmailsDataSource, emailService: EmailService, emailAddress: String, password: String) {
+fun read(
+    email: EmailsDAO,
+    emailsDataSource: EmailsDataSource,
+    emailService: EmailService,
+    emailAddress: String,
+    password: String,
+): Boolean? {
 
     val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
-    val emailEntry = emailsDataSource.selectEmail(emailCompKey)
 
     val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress, password)
 
-    if (emailRead) {
+    if (emailRead.first) {
         emailsDataSource.updateEmailReadStatus(
             emailCompKey,
             !email.isRead
         )
     }
+
+    return emailRead.second
+
 }
 
 suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Float) -> Unit) {
@@ -567,5 +589,10 @@ expect class EmailService {
 
     fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean
 
-    fun readEmail(email: EmailsDAO, emailsDataSource: EmailsDataSource, emailAddress: String, password: String): Boolean
+    fun readEmail(
+        email: EmailsDAO,
+        emailsDataSource: EmailsDataSource,
+        emailAddress: String,
+        password: String
+    ): Pair<Boolean, Boolean?>
 }
