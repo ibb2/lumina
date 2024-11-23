@@ -442,5 +442,51 @@ actual class EmailService() {
 
     }
 
+
+    actual fun deleteEmail(
+        email: EmailsDAO,
+        emailsDataSource: EmailsDataSource,
+        emailAddress: String,
+        password: String
+    ): Boolean {
+        val properties: Properties = Properties().apply {
+            put("mail.imap.host", "imap.gmail.com")
+            put("mail.imap.username", emailAddress)
+            put("mail.imap.password", password)
+            put("mail.imap.port", "993")
+            put("mail.imap.ssl.enable", "true")
+            put("mail.imap.connectiontimeout", 10000)
+            put("mail.imap.timeout", 10000)
+            put("mail.imap.partialfetch", "false");
+            put("mail.imap.fetchsize", "1048576");
+        }
+
+        val session = Session.getInstance(properties)
+        val store: Store = session.getStore("imap").apply {
+            connect(
+                properties.getProperty("mail.imap.host"),
+                properties.getProperty("mail.imap.username"),
+                properties.getProperty("mail.imap.password")
+            )
+        }
+
+        val inboxFolder = store.getFolder("INBOX").apply { open(Folder.READ_WRITE) } as IMAPFolder
+        val trashFolder = store.getFolder("[Gmail]/Bin").apply { open(Folder.READ_WRITE) }
+
+        val searchedMessage = inboxFolder.search(MessageIDTerm(email.messageId))
+
+
+        return try {
+            inboxFolder.moveMessages(searchedMessage, trashFolder)
+            inboxFolder.close(true)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            inboxFolder.close()
+            false
+        }
+
+    }
+
 }
 

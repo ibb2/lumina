@@ -5,18 +5,6 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.Card
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.LinearProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.material.TextField
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -54,6 +42,7 @@ import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.*
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
@@ -269,6 +258,9 @@ fun displayEmails(
 
     if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
 
+        // Email
+
+
         var isLoading by remember { mutableStateOf(false) }
         var emails by remember { mutableStateOf<List<EmailsDAO>?>(null) } // Store emails
         var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
@@ -341,6 +333,8 @@ fun displayEmails(
 
             emails = emailDataSource.selectAllEmailsFlow().collectAsState(initial = emptyList()).value
 
+            println("Emails: ${emails!!.size}")
+
             if (emails != null) {
                 ScrollArea(state = scrollState) {
                     // Email
@@ -382,6 +376,16 @@ fun displayEmails(
                                     }
                                 ) {
                                     Text(text = if (isRead) "Mark as unread" else "Mark as read")
+                                }
+                                Button(
+                                    onClick = {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            deleteEmail(email, emailDataSource, emailService, emailAddress, password)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+                                ) {
+                                    Text(text = "Delete")
                                 }
                                 if (attachments.any { it.emailId === email.id }) {
                                     Row {
@@ -560,6 +564,28 @@ fun read(
 
 }
 
+fun deleteEmail(
+    email: EmailsDAO,
+    emailsDataSource: EmailsDataSource,
+    emailService: EmailService,
+    emailAddress: String,
+    password: String,
+) {
+
+    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
+    val emailDeleted = emailService.deleteEmail(email, emailsDataSource, emailAddress, password)
+
+//    println("Deleting suc")
+    if (emailDeleted) {
+
+        println("Delete successful $emailDeleted")
+
+        emailsDataSource.deleteEmail(
+            email.id!!
+        )
+    }
+}
+
 suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Float) -> Unit) {
     updateProgress(emailsRead.toFloat() / totalEmails)
 }
@@ -594,4 +620,11 @@ expect class EmailService {
         emailAddress: String,
         password: String
     ): Pair<Boolean, Boolean?>
+
+    fun deleteEmail(
+        email: EmailsDAO,
+        emailsDataSource: EmailsDataSource,
+        emailAddress: String,
+        password: String
+    ): Boolean
 }

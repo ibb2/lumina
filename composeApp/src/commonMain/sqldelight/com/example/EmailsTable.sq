@@ -58,7 +58,7 @@ selectEmail:
 SELECT * FROM Emails WHERE composite_key = ?;
 
 deleteEmail:
-DELETE FROM Emails WHERE composite_key = ?;
+DELETE FROM Emails WHERE id = ?;
 
 lastInsertedRowId:
 SELECT last_insert_rowid();
