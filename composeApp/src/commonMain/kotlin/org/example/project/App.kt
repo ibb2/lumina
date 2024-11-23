@@ -352,6 +352,8 @@ fun displayEmails(
                     LazyColumn(modifier = Modifier.fillMaxWidth(), state = lazyListState) {
 
                         items(emails!!.sortedBy { it.receivedDate }.reversed()) { email ->
+
+                            var isRead by remember { mutableStateOf(email.isRead) }
                             println("Email id...: ${email.subject} ${email.isRead}")
                             Column(
                                 modifier = Modifier.border(
@@ -375,14 +377,14 @@ fun displayEmails(
                                 ) {
                                     Text("View Email")
                                 }
-                                Text("Email read: ${email.isRead}")
+                                Text("Email read: ${isRead}")
                                 Button(
                                     onClick = {
 
-                                            read(email, emailDataSource, emailService, emailAddress, password)
+                                           isRead = read(email, emailDataSource, emailService, emailAddress, password) ?: false
                                     }
                                 ) {
-                                    Text(text = if (email.isRead) "Mark as unread" else "Mark as read")
+                                    Text(text = if (isRead) "Mark as unread" else "Mark as read")
                                 }
                                 if (attachments.any { it.emailId === email.id }) {
                                     Row {
