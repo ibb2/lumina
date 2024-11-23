@@ -165,4 +165,6 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     fun updateEmailReadStatus(compositeKey: String, isRead: Boolean) =
         queries.updateEmailReadStatus(isRead, compositeKey)
+
+    fun deleteEmail(id: Long) = queries.deleteEmail(id)
 }
