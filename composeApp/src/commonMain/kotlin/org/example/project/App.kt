@@ -45,12 +45,7 @@ import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.observable.makeObservable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
@@ -62,6 +57,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.asFlow
 import org.example.project.shared.utils.createCompositeKey
 
@@ -380,8 +376,9 @@ fun displayEmails(
                                 Text("Email read: ${isRead}")
                                 Button(
                                     onClick = {
-
-                                           isRead = read(email, emailDataSource, emailService, emailAddress, password) ?: false
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            isRead = read(email, emailDataSource, emailService, emailAddress, password) ?: false
+                                        }
                                     }
                                 ) {
                                     Text(text = if (isRead) "Mark as unread" else "Mark as read")
