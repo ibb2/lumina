@@ -6,13 +6,14 @@ import com.example.Emails
 import com.example.EmailsTableQueries
 import com.example.project.database.LuminaDatabase
 import jakarta.mail.*
+import jakarta.mail.internet.InternetAddress
+import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
-import jakarta.mail.search.FlagTerm
 import jakarta.mail.search.MessageIDTerm
-import jakarta.mail.search.SearchTerm
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.eclipse.angus.mail.imap.IMAPFolder
+import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
@@ -21,7 +22,6 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.DatabaseDriverFactory
 import org.example.project.sqldelight.EmailsDataSource
 import java.util.*
-import kotlin.math.truncate
 import kotlin.properties.Delegates
 
 
@@ -484,6 +484,60 @@ actual class EmailService() {
             e.printStackTrace()
             inboxFolder.close()
             false
+        }
+
+    }
+
+
+    actual fun sendNewEmail(
+        emailsDataSource: EmailsDataSource,
+        newEmail: NewEmail,
+        emailAddress: String,
+        password: String
+    ): Boolean {
+
+        val props = Properties().apply {
+            put("mail.smtp.host", "smtp.gmail.com")
+            put("mail.smtp.port", "587")
+            put("mail.smtp.auth", true)
+//            put("mail.smtp.ssl.enable", true)
+            put("mail.smtp.starttls.enable", "true"); //enable STARTTLS
+            put("mail.smtp.connectiontimeout", 1000)
+            put("mail.smtp.timeout", 3000)
+        }
+
+        val auth: Authenticator = object : Authenticator() {
+            //override the getPasswordAuthentication method
+            override fun getPasswordAuthentication(): PasswordAuthentication {
+                return PasswordAuthentication(emailAddress, password)
+            }
+        }
+
+
+        val session = Session.getInstance(props, auth)
+
+        var msg: Message
+
+        try {
+            msg = MimeMessage(session).apply {
+                setFrom(newEmail.from)
+                setRecipients(Message.RecipientType.TO, InternetAddress.parse(newEmail.to))
+                setSubject(newEmail.subject, "utf-8")
+                setText(newEmail.body, "utf-8")
+                setHeader("Content-Type", "text/plain")
+            }
+        } catch (e: Exception) {
+            println("Error creating message $e")
+            return false
+        }
+
+        val tr = session.getTransport("smtp")
+
+        try {
+            Transport.send(msg)
+            return true
+        } catch (e: Exception) {
+            return false
         }
 
     }

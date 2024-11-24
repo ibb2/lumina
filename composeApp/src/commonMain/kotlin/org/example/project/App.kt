@@ -46,8 +46,10 @@ import androidx.compose.material.*
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
+import com.russhwolf.settings.get
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.asFlow
+import org.example.project.data.NewEmail
 import org.example.project.shared.utils.createCompositeKey
 
 
@@ -176,10 +178,23 @@ fun login(
     emailAddress: String,
     password: String
 ): Unit {
-    observableSettings.putString("emailAddress", emailAddress)
-    observableSettings.putString("password", password)
-    observableSettings.putBoolean("login", true)
 
+    val em = observableSettings.getString(
+        "emailAddress",
+        defaultValue = ""
+    )
+    val pw = observableSettings.getString("password", defaultValue = "")
+
+    try {
+        observableSettings.putString("emailAddress", em)
+        observableSettings.putString("password", pw)
+        observableSettings.putBoolean("login", true)
+    } catch (e: NullPointerException) {
+
+        observableSettings.putString("emailAddress", emailAddress)
+        observableSettings.putString("password", password)
+        observableSettings.putBoolean("login", true)
+    }
     try {
         accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
             ?: throw NullPointerException()
@@ -195,7 +210,6 @@ fun logout(observableSettings: ObservableSettings): Unit {
     observableSettings.putString("password", "")
     observableSettings.putBoolean("login", false)
 }
-
 
 @Composable
 fun displayEmails(
@@ -217,6 +231,10 @@ fun displayEmails(
     var currentProgress by remember { mutableStateOf(0f) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope() // Create a coroutine scope
+
+    // Send email
+    var sendEmail by remember { mutableStateOf(false) }
+
 
     fun displayEmailBody(show: Boolean, email: EmailsDAO) {
 
@@ -336,93 +354,111 @@ fun displayEmails(
             println("Emails: ${emails!!.size}")
 
             if (emails != null) {
-                ScrollArea(state = scrollState) {
+                Column(modifier = Modifier.fillMaxHeight(0.7f), verticalArrangement = Arrangement.SpaceBetween) {
                     // Email
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        Button(
+                            onClick = {
+                                sendEmail = true
+                            }) {
+                            Text(text = "Send Email")
+                        }
+                    }
+                    ScrollArea(state = scrollState) {
 
-                    LazyColumn(modifier = Modifier.fillMaxWidth(), state = lazyListState) {
+                        LazyColumn(modifier = Modifier.fillMaxWidth(), state = lazyListState) {
 
-                        items(emails!!.sortedBy { it.receivedDate }.reversed()) { email ->
+                            items(emails!!.sortedBy { it.receivedDate }.reversed()) { email ->
 
-                            var isRead by remember { mutableStateOf(email.isRead) }
-                            println("Email id...: ${email.subject} ${email.isRead}")
-                            Column(
-                                modifier = Modifier.border(
-                                    width = 1.dp,
-                                    color = Color.DarkGray,
-                                    shape = RoundedCornerShape(4.dp)
-                                ).background(
-                                    color = Color.LightGray
-                                ).fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = email.sender ?: "No from",
-                                )
-                                Text(
-                                    text = email.subject ?: "No subject"
-                                )
-                                Button(
-                                    onClick = {
-                                        displayEmailBody(!display, email)
-                                    },
+                                var isRead by remember { mutableStateOf(email.isRead) }
+                                println("Email id...: ${email.subject} ${email.isRead}")
+                                Column(
+                                    modifier = Modifier.border(
+                                        width = 1.dp,
+                                        color = Color.DarkGray,
+                                        shape = RoundedCornerShape(4.dp)
+                                    ).background(
+                                        color = Color.LightGray
+                                    ).fillMaxWidth()
                                 ) {
-                                    Text("View Email")
-                                }
-                                Text("Email read: ${isRead}")
-                                Button(
-                                    onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            isRead = read(email, emailDataSource, emailService, emailAddress, password) ?: false
-                                        }
+                                    Text(
+                                        text = email.sender ?: "No from",
+                                    )
+                                    Text(
+                                        text = email.subject ?: "No subject"
+                                    )
+                                    Button(
+                                        onClick = {
+                                            displayEmailBody(!display, email)
+                                        },
+                                    ) {
+                                        Text("View Email")
                                     }
-                                ) {
-                                    Text(text = if (isRead) "Mark as unread" else "Mark as read")
-                                }
-                                Button(
-                                    onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            deleteEmail(email, emailDataSource, emailService, emailAddress, password)
+                                    Text("Email read: ${isRead}")
+                                    Button(
+                                        onClick = {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                isRead =
+                                                    read(email, emailDataSource, emailService, emailAddress, password)
+                                                        ?: false
+                                            }
                                         }
-                                    },
-                                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
-                                ) {
-                                    Text(text = "Delete")
-                                }
-                                if (attachments.any { it.emailId === email.id }) {
-                                    Row {
-                                        attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                            Row {
-                                                Text(
-                                                    text = attachment.fileName,
-                                                    modifier = Modifier
-                                                        .padding(8.dp)
-                                                )
-                                                Text(
-                                                    text = attachment.size.toString(), modifier = Modifier
-                                                        .padding(8.dp)
-
-                                                )
-                                                Text(
-                                                    text = attachment.mimeType, modifier = Modifier
-                                                        .padding(8.dp)
+                                    ) {
+                                        Text(text = if (isRead) "Mark as unread" else "Mark as read")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                deleteEmail(
+                                                    email,
+                                                    emailDataSource,
+                                                    emailService,
+                                                    emailAddress,
+                                                    password
                                                 )
                                             }
-
-                                        }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+                                    ) {
+                                        Text(text = "Delete")
                                     }
-                                } else {
-                                    Text(
-                                        text = "No attachments",
-                                    )
+                                    if (attachments.any { it.emailId === email.id }) {
+                                        Row {
+                                            attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                                Row {
+                                                    Text(
+                                                        text = attachment.fileName,
+                                                        modifier = Modifier
+                                                            .padding(8.dp)
+                                                    )
+                                                    Text(
+                                                        text = attachment.size.toString(), modifier = Modifier
+                                                            .padding(8.dp)
+
+                                                    )
+                                                    Text(
+                                                        text = attachment.mimeType, modifier = Modifier
+                                                            .padding(8.dp)
+                                                    )
+                                                }
+
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            text = "No attachments",
+                                        )
+                                    }
                                 }
+
                             }
 
                         }
-
-                    }
-                    VerticalScrollbar(
-                        modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
-                    ) {
-                        Thumb(Modifier.background(Color.Black))
+                        VerticalScrollbar(
+                            modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
+                        ) {
+                            Thumb(Modifier.background(Color.Black))
+                        }
                     }
                 }
             }
@@ -539,6 +575,92 @@ fun displayEmails(
         }
     }
 
+    if (sendEmail) {
+        var sendEmailFrom by remember { mutableStateOf("") }
+        var sendEmailTo by remember { mutableStateOf("") }
+        var sendEmailSubject by remember { mutableStateOf("") }
+        var sendEmailBody by remember { mutableStateOf("") }
+
+        fun sendEmail() {
+            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
+            var sentEmailSuccess = false
+            CoroutineScope(Dispatchers.IO).launch {
+                sentEmailSuccess = emailService.sendNewEmail(
+                    emailDataSource,
+                    NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
+                    emailAddress,
+                    password
+                )
+            }
+
+            println("Email sent successfully? $sentEmailSuccess")
+
+            sendEmail = false
+        }
+
+        Dialog(
+            onDismissRequest = { sendEmail = false },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false
+            ),
+        ) {
+            // Draw a rectangle shape with rounded corners inside the dialog
+            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(525.dp)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        TextField(
+                            label = { Text("From") },
+                            value = sendEmailFrom,
+                            onValueChange = { sendEmailFrom = it },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        TextField(
+                            label = { Text("To") },
+                            value = sendEmailTo,
+                            onValueChange = { sendEmailTo = it },
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        TextField(
+                            label = { Text("Subject") },
+                            value = sendEmailSubject,
+                            onValueChange = { sendEmailSubject = it },
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        TextField(
+                            label = { Text("Body") },
+                            value = sendEmailBody,
+                            onValueChange = { sendEmailBody = it },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        Button(onClick = {
+                            sendEmail()
+                        }) {
+                            Text(text = "Send")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun newEmailDialog(sendEmail: Boolean) {
+
 }
 
 fun read(
@@ -624,6 +746,13 @@ expect class EmailService {
     fun deleteEmail(
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
+        emailAddress: String,
+        password: String
+    ): Boolean
+
+    fun sendNewEmail(
+        emailsDataSource: EmailsDataSource,
+        newEmail: NewEmail,
         emailAddress: String,
         password: String
     ): Boolean
