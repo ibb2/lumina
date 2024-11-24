@@ -522,7 +522,7 @@ actual class EmailService() {
             msg = MimeMessage(session).apply {
                 setFrom(newEmail.from)
                 setRecipients(Message.RecipientType.TO, InternetAddress.parse(newEmail.to))
-                subject.apply { newEmail.subject }
+                setSubject(newEmail.subject, "utf-8")
                 setText(newEmail.body, "utf-8")
                 setHeader("Content-Type", "text/plain")
             }

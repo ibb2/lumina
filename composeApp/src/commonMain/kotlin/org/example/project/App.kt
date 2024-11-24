@@ -583,17 +583,19 @@ fun displayEmails(
 
         fun sendEmail() {
             println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
-
-            val sentEmailSuccess = emailService.sendNewEmail(
-                emailDataSource,
-                NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
-                emailAddress,
-                password
-            )
+            var sentEmailSuccess = false
+            CoroutineScope(Dispatchers.IO).launch {
+                sentEmailSuccess = emailService.sendNewEmail(
+                    emailDataSource,
+                    NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
+                    emailAddress,
+                    password
+                )
+            }
 
             println("Email sent successfully? $sentEmailSuccess")
 
-            sendEmail = sentEmailSuccess
+            sendEmail = false
         }
 
         Dialog(
