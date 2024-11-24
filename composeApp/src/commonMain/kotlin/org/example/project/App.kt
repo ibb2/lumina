@@ -583,7 +583,17 @@ fun displayEmails(
 
         fun sendEmail() {
             println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
-            sendEmail = false
+
+            val sentEmailSuccess = emailService.sendNewEmail(
+                emailDataSource,
+                NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
+                emailAddress,
+                password
+            )
+
+            println("Email sent successfully? $sentEmailSuccess")
+
+            sendEmail = sentEmailSuccess
         }
 
         Dialog(
@@ -738,5 +748,10 @@ expect class EmailService {
         password: String
     ): Boolean
 
-    fun sendNewEmail(emailService: EmailService, emailsDataSource: EmailsDataSource, newEmail: NewEmail, emailAddress: String, password: String): Boolean
+    fun sendNewEmail(
+        emailsDataSource: EmailsDataSource,
+        newEmail: NewEmail,
+        emailAddress: String,
+        password: String
+    ): Boolean
 }
