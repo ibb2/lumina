@@ -47,6 +47,11 @@ import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
 import com.russhwolf.settings.get
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.auth.FirebaseAuth
+import dev.gitlive.firebase.auth.GoogleAuthProvider
+import dev.gitlive.firebase.auth.OAuthProvider
+import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.asFlow
 import org.example.project.data.NewEmail
@@ -170,6 +175,10 @@ fun App(emailService: EmailService, driver: SqlDriver) {
             )
         }
     }
+}
+
+fun authentication() {
+
 }
 
 fun login(
@@ -655,12 +664,6 @@ fun displayEmails(
             }
         }
     }
-}
-
-
-@Composable
-fun newEmailDialog(sendEmail: Boolean) {
-
 }
 
 fun read(

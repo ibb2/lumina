@@ -58,6 +58,8 @@ jvm-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqlD
 androidx-core = { group = "androidx.core", name = "core", version.ref = "core" }
 androidx-material3-desktop = { group = "androidx.compose.material3", name = "material3-desktop", version.ref = "material3Desktop" }
 
+
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }

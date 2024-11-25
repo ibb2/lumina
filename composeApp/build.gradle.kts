@@ -67,9 +67,8 @@ kotlin {
             implementation("com.composables:core:1.19.1")
 //            implementation("com.squareup.sqldelight:coroutines-extensions:2.0.2")
 //            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
-
             implementation("app.cash.sqldelight:coroutines-extensions:2.0.2")
-
+            implementation("dev.gitlive:firebase-auth:2.1.0")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
