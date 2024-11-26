@@ -1,5 +1,9 @@
 package org.example.project
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.AccountsTableQueries
 import com.example.Emails
@@ -10,17 +14,23 @@ import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
 import jakarta.mail.search.MessageIDTerm
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
+import org.example.project.networking.FirebaseAuthClient
+import org.example.project.networking.runKtorServer
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.DatabaseDriverFactory
 import org.example.project.sqldelight.EmailsDataSource
+import java.net.URI
 import java.util.*
 import kotlin.properties.Delegates
 
@@ -544,3 +554,34 @@ actual class EmailService() {
 
 }
 
+actual suspend fun openBrowser(): String {
+
+    val code = CompletableDeferred<String>()
+
+    runKtorServer {
+        code.complete( it)
+        println("Code: $code")
+    }
+
+    val authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
+            "?client_id=113121378086-7s0tvasib3ujgd660d5kkiod7434lp55.apps.googleusercontent.com" +
+            "&redirect_uri=http://localhost:8080" +
+            "&response_type=code" +
+            "&scope=openid%20email%20profile" +
+            "&access_type=offline" +    // Request a refresh token
+            "&prompt=consent"           // Ensure the consent screen is displayed
+
+    val uri: URI = authUrl.toHttpUrl().toUri()
+
+    val desktop: java.awt.Desktop? =
+        if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop() else null
+    if (desktop != null && desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+        try {
+            desktop.browse(uri)
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    return code.await()
+}

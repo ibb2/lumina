@@ -69,6 +69,9 @@ kotlin {
 //            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
             implementation("app.cash.sqldelight:coroutines-extensions:2.0.2")
             implementation("dev.gitlive:firebase-auth:2.1.0")
+            implementation("io.ktor:ktor-server-core:3.0.1")
+            implementation("io.ktor:ktor-server-netty:3.0.1")
+            implementation("io.ktor:ktor-client-content-negotiation:3.0.1")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)

@@ -46,22 +46,21 @@ import androidx.compose.material.*
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
-import com.russhwolf.settings.get
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.auth.FirebaseAuth
-import dev.gitlive.firebase.auth.GoogleAuthProvider
-import dev.gitlive.firebase.auth.OAuthProvider
-import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.asFlow
 import org.example.project.data.NewEmail
+import org.example.project.networking.FirebaseAuthClient
+import org.example.project.networking.OAuthResponse
 import org.example.project.shared.utils.createCompositeKey
+import org.example.project.utils.NetworkError
+import org.example.project.utils.onError
+import org.example.project.utils.onSuccess
 
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
-fun App(emailService: EmailService, driver: SqlDriver) {
+fun App(client: FirebaseAuthClient, emailService: EmailService, driver: SqlDriver) {
     MaterialTheme {
 
         // db related stuff
@@ -108,14 +107,78 @@ fun App(emailService: EmailService, driver: SqlDriver) {
 
         // Ui
 
+        var login by remember {
+            mutableStateOf(false)
+        }
+
+        var isLoading by remember {
+            mutableStateOf(false)
+        }
+
+        var errorMsg by remember {
+            mutableStateOf<NetworkError?>(null)
+        }
+
+        var oAuthResponse by remember {
+            mutableStateOf<OAuthResponse?>(null)
+        }
+
+        val scope = rememberCoroutineScope()
+        var authenticationCode by remember { mutableStateOf("") }
+        var tResponse by remember { mutableStateOf<FirebaseAuthClient.TokenResponse?>(null) }
+        var tError by remember {
+            mutableStateOf<NetworkError?>(null)
+        }
+
         if (!loggedIn) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
                 modifier = Modifier.padding(16.dp).fillMaxWidth()
             ) {
                 Text(
                     "Database Email Count: $emailCount"
                 )
+                errorMsg?.let {
+                    Text(it.name, color = Color.Red)
+                }
+                tError?.let {
+                    Text(it.name, color = Color.Yellow)
+                }
+                Button(onClick = {
+                    runBlocking {
+                        authenticationCode = openBrowser()
+                        client.googleTokenIdEndpoint(authenticationCode).onSuccess {
+                            tResponse = it
+                        }.onError {
+                            tError = it
+                        }
+                    }
+                }) {
+                    Text(text = "Open Browser to sign in")
+                }
+                Button(onClick = {
+                    scope.launch {
+                        println("Auth Code: $authenticationCode")
+                        client.googleLogin(tResponse!!.idToken ?: "").onSuccess {
+                            oAuthResponse = it
+                            isLoading = false
+                        }.onError {
+                            isLoading = false
+                            errorMsg = it
+                        }
+                    }
+                }) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(15.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Sign in with Google")
+                    }
+                }
                 Text(
                     "Login",
                     fontSize = 32.sp,
@@ -178,6 +241,7 @@ fun App(emailService: EmailService, driver: SqlDriver) {
 }
 
 fun authentication() {
+
 
 }
 
@@ -722,7 +786,6 @@ expect class EmailService {
     val totalEmails: StateFlow<Int>
     var emailCount: Int
 
-
     suspend fun getEmails(
         emailDataSource: EmailsDataSource,
         emailTableQueries: EmailsTableQueries,
@@ -759,4 +822,8 @@ expect class EmailService {
         emailAddress: String,
         password: String
     ): Boolean
+
+
 }
+
+expect suspend fun openBrowser(): String
