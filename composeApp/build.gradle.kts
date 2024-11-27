@@ -79,6 +79,8 @@ kotlin {
             implementation(libs.jvm.driver)
             implementation(libs.ktor.client.okhttp)
             implementation("net.java.dev.jna:jna:5.15.0")
+            implementation("net.java.dev.jna:jna-platform:5.15.0")
+            implementation("com.microsoft:credential-secure-storage:1.0.3")
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
