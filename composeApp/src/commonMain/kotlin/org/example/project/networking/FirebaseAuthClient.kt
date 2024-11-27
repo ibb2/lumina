@@ -66,17 +66,12 @@ class FirebaseAuthClient(
     suspend fun googleTokenIdEndpoint(code: String): Result<TokenResponse, NetworkError> {
 
         val response = try {
-            httpClient.post("https://oauth2.googleapis.com/token") {
-                this.contentType(ContentType.Application.FormUrlEncoded)
+            httpClient.post("http://127.0.0.1:8000/api/tokens") {
+                this.contentType(ContentType.Application.Json)
                 this.setBody(
-                    FormDataContent(Parameters.build {
-                        append("code", code)
-                        append("client_id", "113121378086-7s0tvasib3ujgd660d5kkiod7434lp55.apps.googleusercontent.com")
-                        append("client_secret", "")
-                        append("redirect_uri", "http://localhost:8080")
-                        append("grant_type", "authorization_code")
-                    })
+                    DjangoToken(code)
                 )
+
             }
         } catch (e: UnresolvedAddressException) {
             return Result.Error(NetworkError.NO_INTERNET)

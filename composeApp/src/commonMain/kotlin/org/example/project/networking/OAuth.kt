@@ -47,3 +47,8 @@ data class TokenResponse(
     @SerialName("scope") val scope: String? = null, // Optional field
     @SerialName("id_token") val idToken: String? = null // Optional field
 )
+
+@Serializable
+data class DjangoToken(
+    val code: String
+)
