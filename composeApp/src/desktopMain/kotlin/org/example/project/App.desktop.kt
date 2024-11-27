@@ -23,6 +23,8 @@ import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
 import org.example.project.networking.FirebaseAuthClient
+import org.example.project.networking.OAuthResponse
+import org.example.project.networking.TokenResponse
 import org.example.project.networking.runKtorServer
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
@@ -30,6 +32,9 @@ import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.DatabaseDriverFactory
 import org.example.project.sqldelight.EmailsDataSource
+import org.example.project.utils.NetworkError
+import org.example.project.utils.onError
+import org.example.project.utils.onSuccess
 import java.net.URI
 import java.util.*
 import kotlin.properties.Delegates
@@ -559,7 +564,7 @@ actual suspend fun openBrowser(): String {
     val code = CompletableDeferred<String>()
 
     runKtorServer {
-        code.complete( it)
+        code.complete(it)
         println("Code: $code")
     }
 
@@ -584,4 +589,74 @@ actual suspend fun openBrowser(): String {
     }
 
     return code.await()
+}
+
+actual class Authentication {
+
+    private var code = ""
+    private var tResponse: TokenResponse? = null
+    private var tError: NetworkError? = null
+    private var oAuthResponse: OAuthResponse? = null
+    private var oAuthErr: NetworkError? = null
+    private val deferred = CompletableDeferred<Unit>()
+
+    actual suspend fun authenticateUser(fAuthClient: FirebaseAuthClient): Pair<OAuthResponse?, NetworkError?> {
+
+        runBlocking {
+            runKtorServer {
+                code = it
+                println("Code: $code")
+                deferred.complete(Unit)
+            }
+
+            val authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
+                    "?client_id=113121378086-7s0tvasib3ujgd660d5kkiod7434lp55.apps.googleusercontent.com" +
+                    "&redirect_uri=http://localhost:8080" +
+                    "&response_type=code" +
+                    "&scope=openid%20email%20profile" +
+                    "&access_type=offline" +    // Request a refresh token
+                    "&prompt=consent"           // Ensure the consent screen is displayed
+
+            val uri: URI = authUrl.toHttpUrl().toUri()
+
+            val desktop: java.awt.Desktop? =
+                if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop() else null
+            if (desktop != null && desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+                try {
+                    desktop.browse(uri)
+                } catch (e: java.lang.Exception) {
+                    e.printStackTrace()
+                }
+            }
+            deferred.await()
+        }
+
+        if (code.isNotEmpty()) {
+
+            println("Code received: $code")
+
+            fAuthClient.googleTokenIdEndpoint(code).onSuccess {
+                tResponse = it
+            }.onError {
+                tError = it
+            }
+
+            if (tError == null && tResponse?.idToken?.isNotEmpty() == true) {
+                fAuthClient.googleLogin(tResponse!!.idToken!!).onSuccess {
+                    oAuthResponse = it
+                }.onError {
+                    oAuthErr = it
+                }
+
+                if (oAuthErr == null) return Pair(oAuthResponse, null)
+
+            }
+
+            return Pair(null, tError)
+        }
+
+        return Pair(null, null)
+
+    }
+
 }

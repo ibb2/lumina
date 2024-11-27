@@ -55,7 +55,7 @@ fun main() = application {
             Text(text = "Restart required.")
         } else {
             if (initialized) {
-                App(client = FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create())), emailService = EmailService(), driver = DatabaseDriverFactory().create())
+                App(client = FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create())), emailService = EmailService(), authentication = Authentication(), driver = DatabaseDriverFactory().create())
             } else {
                 Text(text = "Downloading $downloading%")
             }

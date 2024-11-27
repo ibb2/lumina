@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.asFlow
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
+import org.example.project.networking.TokenResponse
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.utils.NetworkError
 import org.example.project.utils.onError
@@ -60,7 +61,7 @@ import org.example.project.utils.onSuccess
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
-fun App(client: FirebaseAuthClient, emailService: EmailService, driver: SqlDriver) {
+fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
     MaterialTheme {
 
         // db related stuff
@@ -125,8 +126,13 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, driver: SqlDrive
 
         val scope = rememberCoroutineScope()
         var authenticationCode by remember { mutableStateOf("") }
-        var tResponse by remember { mutableStateOf<FirebaseAuthClient.TokenResponse?>(null) }
+        var tResponse by remember { mutableStateOf<TokenResponse?>(null) }
         var tError by remember {
+            mutableStateOf<NetworkError?>(null)
+        }
+
+        var r by remember { mutableStateOf<OAuthResponse?>(null) }
+        var e by remember {
             mutableStateOf<NetworkError?>(null)
         }
 
@@ -139,11 +145,28 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, driver: SqlDrive
                 Text(
                     "Database Email Count: $emailCount"
                 )
+                r?.let {
+                    Text(it.email, color = Color.Green)
+                }
+                e?.let {
+                    Text(it.name, color = Color.Magenta)
+                }
                 errorMsg?.let {
                     Text(it.name, color = Color.Red)
                 }
                 tError?.let {
                     Text(it.name, color = Color.Yellow)
+                }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            val re = authentication.authenticateUser(client)
+                            r = re.first
+                            e = re.second
+                        }
+                    }
+                ) {
+                    Text("Google Sign in full")
                 }
                 Button(onClick = {
                     runBlocking {
@@ -827,3 +850,8 @@ expect class EmailService {
 }
 
 expect suspend fun openBrowser(): String
+
+expect class Authentication {
+
+    suspend fun authenticateUser(fAuthClient: FirebaseAuthClient): Pair<OAuthResponse?, NetworkError?>
+}

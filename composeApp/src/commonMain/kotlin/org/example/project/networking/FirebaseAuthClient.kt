@@ -14,6 +14,7 @@ import org.example.project.utils.NetworkError
 import org.example.project.utils.Result
 
 
+
 class FirebaseAuthClient(
     private val httpClient: HttpClient
 ) {
@@ -59,23 +60,7 @@ class FirebaseAuthClient(
         }
     }
 
-    @Serializable
-    data class Token(
-        val code: String,
-        val clientId: String,
-        val redirectUri: String,
-        val grantType: String
-    )
 
-    @Serializable
-    data class TokenResponse(
-        @SerialName("access_token") val accessToken: String,
-        @SerialName("token_type") val tokenType: String,
-        @SerialName("expires_in") val expiresIn: Int,
-        @SerialName("refresh_token") val refreshToken: String? = null, // Optional field
-        @SerialName("scope") val scope: String? = null, // Optional field
-        @SerialName("id_token") val idToken: String? = null // Optional field
-    )
 
 
     suspend fun googleTokenIdEndpoint(code: String): Result<TokenResponse, NetworkError> {
