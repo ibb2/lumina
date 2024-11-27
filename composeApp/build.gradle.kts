@@ -78,6 +78,7 @@ kotlin {
             implementation(libs.kotlinx.coroutines.swing)
             implementation(libs.jvm.driver)
             implementation(libs.ktor.client.okhttp)
+            implementation("net.java.dev.jna:jna:5.15.0")
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
