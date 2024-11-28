@@ -15,6 +15,7 @@ import jakarta.mail.search.MessageIDTerm
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
@@ -600,6 +601,9 @@ actual class Authentication {
     private var oAuthErr: NetworkError? = null
     private val deferred = CompletableDeferred<Unit>()
 
+    private val _isLoggedIn = MutableStateFlow(false)
+    actual val isLoggedIn = _isLoggedIn.asStateFlow()
+
     actual suspend fun authenticateUser(
         fAuthClient: FirebaseAuthClient,
         accountsDataSource: AccountsDataSource
@@ -666,6 +670,7 @@ actual class Authentication {
                     CredentialManager(it.email, "accessToken").registerUser(it.email, tResponse!!.accessToken)
                     CredentialManager(it.email, "refreshToken").registerUser(it.email, it.refreshToken)
                     CredentialManager(it.email, "idToken").registerUser(it.email, it.refreshToken)
+                    _isLoggedIn.value = true
                 }.onError {
                     oAuthErr = it
                 }
@@ -686,6 +691,7 @@ actual class Authentication {
         val accounts = accountsDataSource.selectAll()
 
         if (accounts?.isNotEmpty() == true) {
+            _isLoggedIn.value = true
 
             val atExists = CredentialManager(accounts[0].email, "accessToken").exists()
             val rfExists = CredentialManager(accounts[0].email, "refreshToken").exists()
@@ -693,6 +699,8 @@ actual class Authentication {
 
             return atExists && rfExists && idExists
         }
+
+        _isLoggedIn.value = false
 
         return false
     }

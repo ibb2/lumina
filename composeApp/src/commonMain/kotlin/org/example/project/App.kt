@@ -138,7 +138,8 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             mutableStateOf<NetworkError?>(null)
         }
 
-        val amILoggedIn by remember { mutableStateOf(authentication.amILoggedIn(accountsDataSource)) }
+        authentication.amILoggedIn(accountsDataSource)
+        val amILoggedIn = authentication.isLoggedIn.collectAsState().value
 
         if (amILoggedIn) {
             Text("Logged in")
@@ -862,6 +863,8 @@ expect class EmailService {
 expect suspend fun openBrowser(): String
 
 expect class Authentication {
+
+    val isLoggedIn: StateFlow<Boolean>
 
     suspend fun authenticateUser(fAuthClient: FirebaseAuthClient, accountsDataSource: AccountsDataSource): Pair<OAuthResponse?, NetworkError?>
 
