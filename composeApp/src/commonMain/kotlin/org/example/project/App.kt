@@ -53,6 +53,7 @@ import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
 import org.example.project.networking.TokenResponse
 import org.example.project.shared.utils.createCompositeKey
+import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.utils.NetworkError
 import org.example.project.utils.onError
 import org.example.project.utils.onSuccess
@@ -79,6 +80,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         // Data Sources
         val emailDataSource: EmailsDataSource = EmailsDataSource(database)
         val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
+        val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
 
         // Basic Auth
         val settings = Settings()
@@ -136,6 +138,14 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             mutableStateOf<NetworkError?>(null)
         }
 
+        val amILoggedIn by remember { mutableStateOf(authentication.amILoggedIn(accountsDataSource)) }
+
+        if (amILoggedIn) {
+            Text("Logged in")
+        } else {
+            Text("Not logged in")
+        }
+
         if (!loggedIn) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -160,7 +170,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 Button(
                     onClick = {
                         scope.launch {
-                            val re = authentication.authenticateUser(client)
+                            val re = authentication.authenticateUser(client, accountsDataSource)
                             r = re.first
                             e = re.second
                         }
@@ -853,5 +863,7 @@ expect suspend fun openBrowser(): String
 
 expect class Authentication {
 
-    suspend fun authenticateUser(fAuthClient: FirebaseAuthClient): Pair<OAuthResponse?, NetworkError?>
+    suspend fun authenticateUser(fAuthClient: FirebaseAuthClient, accountsDataSource: AccountsDataSource): Pair<OAuthResponse?, NetworkError?>
+    fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean
+    fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean
 }

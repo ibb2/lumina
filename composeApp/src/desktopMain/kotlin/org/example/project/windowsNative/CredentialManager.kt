@@ -9,31 +9,34 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 class CredentialManager(val user: String,val type: String) {
-    private var credentialStorage: SecretStore<StoredCredential>? = null
+    private val credentialStorage: SecretStore<StoredCredential>? = StorageProvider.getCredentialStorage(true, SecureOption.REQUIRED)
     private val log: Logger = LoggerFactory.getLogger(StoredCredentialApp::class.java)
 
     private val CREDENTIALS_KEY: String = "Lumina Mail $user:$type"
 
-    private fun run() {
-        // Get a secure store instance.
-        credentialStorage = StorageProvider.getCredentialStorage(true, SecureOption.REQUIRED)
+//    private fun run() {
+//        // Get a secure store instance.
+//        credentialStorage = StorageProvider.getCredentialStorage(true, SecureOption.REQUIRED)
+//
+//        if (credentialStorage == null) {
+//            log.error("No secure credential storage available.")
+//            return
+//        }
+//
+//        userLogin()
+//
+//        unregisterUser()
+//    }
 
-        if (credentialStorage == null) {
-            log.error("No secure credential storage available.")
-            return
-        }
+    fun exists(): Boolean {
+        // Save the credential to the store.
+        val storedCredential = credentialStorage!![CREDENTIALS_KEY]
 
-        registerUser()
-
-        userLogin()
-
-        unregisterUser()
+        return storedCredential !== null
     }
 
-    private fun registerUser() {
-        log.info("Registering a new user:")
-
-        val credential = enterCredentials()
+     fun registerUser(email: String, password: String) {
+         val credential = StoredCredential(email, password.toCharArray())
 
         try {
             // Save the credential to the store.
@@ -45,7 +48,7 @@ class CredentialManager(val user: String,val type: String) {
         }
     }
 
-    private fun userLogin() {
+    fun userLogin() {
         log.info("Authenticating a user")
 
         val enteredCredential = enterCredentials()
@@ -68,7 +71,7 @@ class CredentialManager(val user: String,val type: String) {
         }
     }
 
-    private fun unregisterUser() {
+     fun unregisterUser() {
         // Remove credentials from the store.
         credentialStorage!!.delete(CREDENTIALS_KEY)
         log.info("User deleted.")

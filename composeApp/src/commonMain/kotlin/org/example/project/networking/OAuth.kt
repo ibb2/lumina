@@ -19,7 +19,8 @@ data class OAuthResponse(
     val photoUrl: String,
     val refreshToken: String,
     val expiresIn: String,
-    val rawUserInfo: String
+    val rawUserInfo: String,
+    val kind: String
 )
 
 @Serializable

@@ -1,9 +1,6 @@
 package org.example.project
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.AccountsTableQueries
 import com.example.Emails
@@ -20,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
+import org.example.project.data.Account
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
 import org.example.project.networking.FirebaseAuthClient
@@ -35,6 +33,7 @@ import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.utils.NetworkError
 import org.example.project.utils.onError
 import org.example.project.utils.onSuccess
+import org.example.project.windowsNative.CredentialManager
 import java.net.URI
 import java.util.*
 import kotlin.properties.Delegates
@@ -594,13 +593,17 @@ actual suspend fun openBrowser(): String {
 actual class Authentication {
 
     private var code = ""
+    private var accessToken = ""
     private var tResponse: TokenResponse? = null
     private var tError: NetworkError? = null
     private var oAuthResponse: OAuthResponse? = null
     private var oAuthErr: NetworkError? = null
     private val deferred = CompletableDeferred<Unit>()
 
-    actual suspend fun authenticateUser(fAuthClient: FirebaseAuthClient): Pair<OAuthResponse?, NetworkError?> {
+    actual suspend fun authenticateUser(
+        fAuthClient: FirebaseAuthClient,
+        accountsDataSource: AccountsDataSource
+    ): Pair<OAuthResponse?, NetworkError?> {
 
         runBlocking {
             runKtorServer {
@@ -644,6 +647,25 @@ actual class Authentication {
             if (tError == null && tResponse?.idToken?.isNotEmpty() == true) {
                 fAuthClient.googleLogin(tResponse!!.idToken!!).onSuccess {
                     oAuthResponse = it
+                    accountsDataSource.insert(
+                        null,
+                        it.federatedId,
+                        it.providerId,
+                        it.email,
+                        it.emailVerified,
+                        it.firstName,
+                        it.fullName,
+                        it.lastName,
+                        it.photoUrl,
+                        it.localId,
+                        it.displayName,
+                        it.expiresIn,
+                        it.rawUserInfo,
+                        it.kind
+                    )
+                    CredentialManager(it.email, "accessToken").registerUser(it.email, tResponse!!.accessToken)
+                    CredentialManager(it.email, "refreshToken").registerUser(it.email, it.refreshToken)
+                    CredentialManager(it.email, "idToken").registerUser(it.email, it.refreshToken)
                 }.onError {
                     oAuthErr = it
                 }
@@ -657,6 +679,26 @@ actual class Authentication {
 
         return Pair(null, null)
 
+    }
+
+    actual fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean {
+
+        val accounts = accountsDataSource.selectAll().collectAsState(initial = null).value
+
+        if (accounts?.isNotEmpty() == true) {
+
+            val atExists = CredentialManager(accounts[0].email, "accessToken").exists()
+            val rfExists = CredentialManager(accounts[0].email, "refreshToken").exists()
+            val idExists = CredentialManager(accounts[0].email, "idToken").exists()
+
+            return atExists && rfExists && idExists
+        }
+
+        return false
+    }
+
+    actual fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean {
+        return tResponse?.expiresIn == 0L
     }
 
 }
