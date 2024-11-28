@@ -141,17 +141,11 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         authentication.amILoggedIn(accountsDataSource)
         val amILoggedIn = authentication.isLoggedIn.collectAsState().value
 
-        if (amILoggedIn) {
-            Text("Logged in")
-        } else {
-            Text("Not logged in")
-        }
-
         if (!loggedIn) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-                modifier = Modifier.padding(16.dp).fillMaxWidth()
+                modifier = Modifier.padding(16.dp).fillMaxSize()
             ) {
                 Text(
                     "Database Email Count: $emailCount"
@@ -159,90 +153,40 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 r?.let {
                     Text(it.email, color = Color.Green)
                 }
-                e?.let {
-                    Text(it.name, color = Color.Magenta)
-                }
-                errorMsg?.let {
-                    Text(it.name, color = Color.Red)
-                }
-                tError?.let {
-                    Text(it.name, color = Color.Yellow)
-                }
-                Button(
-                    onClick = {
-                        scope.launch {
-                            val re = authentication.authenticateUser(client, accountsDataSource)
-                            r = re.first
-                            e = re.second
+                if (amILoggedIn) {
+                    Text("Logged in")
+                } else {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isLoading = true
+                                val re = authentication.authenticateUser(client, accountsDataSource)
+                                r = re.first
+                                e = re.second
+                                isLoading = false
+                            }
+                        }
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(15.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Text("Sign in with Google")
                         }
                     }
-                ) {
-                    Text("Google Sign in full")
                 }
-                Button(onClick = {
-                    runBlocking {
-                        authenticationCode = openBrowser()
-                        client.googleTokenIdEndpoint(authenticationCode).onSuccess {
-                            tResponse = it
-                        }.onError {
-                            tError = it
-                        }
-                    }
-                }) {
-                    Text(text = "Open Browser to sign in")
-                }
-                Button(onClick = {
-                    scope.launch {
-                        println("Auth Code: $authenticationCode")
-                        client.googleLogin(tResponse!!.idToken ?: "").onSuccess {
-                            oAuthResponse = it
-                            isLoading = false
-                        }.onError {
-                            isLoading = false
-                            errorMsg = it
-                        }
-                    }
-                }) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(15.dp),
-                            strokeWidth = 2.dp,
-                            color = Color.White
-                        )
-                    } else {
-                        Text("Sign in with Google")
-                    }
-                }
-                Text(
-                    "Login",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 24.dp),
-                )
-                TextField(
-                    value = emailAddress,
-                    onValueChange = { it -> emailAddress = it },
-                    label = { Text("Email Address") },
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                TextField(
-                    value = password,
-                    onValueChange = { it -> password = it },
-                    label = { Text("Password") },
-                    modifier = Modifier.padding(bottom = 8.dp)
 
-                )
-                Button(onClick = {
-//                    login(observableSettings, accountQueries, emailAddress, password)
-                }) {
-                    Text("Login")
-                }
-                Button(onClick = {
-                    GlobalScope.launch(Dispatchers.IO) {
-                        emailService.deleteEmails(emailDataSource)
+                if (amILoggedIn) {
+                    Button(onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            emailService.deleteEmails(emailDataSource)
+                        }
+                    }) {
+                        Text("Delete Emails")
                     }
-                }) {
-                    Text("Delete Emails")
                 }
             }
 
