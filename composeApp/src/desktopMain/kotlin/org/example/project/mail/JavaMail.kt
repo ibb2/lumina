@@ -1,14 +1,12 @@
 package org.example.project.mail
 
-import app.cash.sqldelight.TransactionWithReturn
+import com.example.Accounts
 import jakarta.mail.*
 import jakarta.mail.internet.MailDateFormat
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.format.DateTimeFormat
 import org.eclipse.angus.mail.iap.Argument
 import org.eclipse.angus.mail.iap.Response
 import org.eclipse.angus.mail.imap.IMAPFolder
@@ -16,14 +14,12 @@ import org.eclipse.angus.mail.imap.protocol.BODY
 import org.eclipse.angus.mail.imap.protocol.FetchResponse
 import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
-import org.eclipse.angus.mail.imap.protocol.UID
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import java.io.ByteArrayInputStream
-import java.text.SimpleDateFormat
 import java.util.*
 
 class JavaMail(
@@ -32,7 +28,7 @@ class JavaMail(
     /** Index on server of last mail to fetch  */
     var end: Int,
     var emails: MutableList<EmailsDAO>,
-    var account: List<String>,
+    var account: List<Accounts>,
     var messages: Array<Message>,
     var attachmentsArray: MutableList<AttachmentsDAO>,
     var emailsDataSource: EmailsDataSource,
@@ -118,7 +114,7 @@ class JavaMail(
                                 isFlagged = isFlagged,
                                 attachmentsCount = attachments.size,
                                 hasAttachments = attachments.isNotEmpty(),
-                                account = account[0],
+                                account = account[0].email,
                             )
                         )
 
@@ -140,7 +136,7 @@ class JavaMail(
                             isFlagged = isFlagged,
                             attachmentsCount = attachments.size,
                             hasAttachments = attachments.isNotEmpty(),
-                            account = account[0]
+                            account = account[0].email
                         )
 
                         println("Email ${mm.from[0]} status now read... ${message.flags.contains(Flags.Flag.SEEN)} or mm... ${mm.flags.contains(Flags.Flag.SEEN)}")

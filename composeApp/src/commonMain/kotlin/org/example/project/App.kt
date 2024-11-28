@@ -232,7 +232,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 
                 )
                 Button(onClick = {
-                    login(observableSettings, accountQueries, emailAddress, password)
+//                    login(observableSettings, accountQueries, emailAddress, password)
                 }) {
                     Text("Login")
                 }
@@ -252,23 +252,23 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 )
             }
             Button(onClick = {
-                GlobalScope.launch(Dispatchers.IO) {
+                scope.launch(Dispatchers.IO) {
                     emailService.deleteEmails(emailDataSource)
                 }
             }) {
                 Text("Delete Emails")
             }
 
-            displayEmails(
-                emailDataSource,
-                observableSettings,
-                emailQueries,
-                accountQueries,
-                emailService,
-                loggedIn,
-                emailAddress,
-                password
-            )
+//            displayEmails(
+//                emailDataSource,
+//                observableSettings,
+//                emailQueries,
+//                accountQueries,
+//                emailService,
+//                loggedIn,
+//                emailAddress,
+//                password
+//            )
         }
     }
 }
@@ -278,38 +278,38 @@ fun authentication() {
 
 }
 
-fun login(
-    observableSettings: ObservableSettings,
-    accountQueries: AccountsTableQueries,
-    emailAddress: String,
-    password: String
-): Unit {
-
-    val em = observableSettings.getString(
-        "emailAddress",
-        defaultValue = ""
-    )
-    val pw = observableSettings.getString("password", defaultValue = "")
-
-    try {
-        observableSettings.putString("emailAddress", em)
-        observableSettings.putString("password", pw)
-        observableSettings.putBoolean("login", true)
-    } catch (e: NullPointerException) {
-
-        observableSettings.putString("emailAddress", emailAddress)
-        observableSettings.putString("password", password)
-        observableSettings.putBoolean("login", true)
-    }
-    try {
-        accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
-            ?: throw NullPointerException()
-    } catch (e: NullPointerException) {
-        accountQueries.insertAccount(emailAddress)
-    }
-
-    println("Logged in as $emailAddress")
-}
+//fun login(
+//    observableSettings: ObservableSettings,
+//    accountQueries: AccountsTableQueries,
+//    emailAddress: String,
+//    password: String
+//): Unit {
+//
+//    val em = observableSettings.getString(
+//        "emailAddress",
+//        defaultValue = ""
+//    )
+//    val pw = observableSettings.getString("password", defaultValue = "")
+//
+//    try {
+//        observableSettings.putString("emailAddress", em)
+//        observableSettings.putString("password", pw)
+//        observableSettings.putBoolean("login", true)
+//    } catch (e: NullPointerException) {
+//
+//        observableSettings.putString("emailAddress", emailAddress)
+//        observableSettings.putString("password", password)
+//        observableSettings.putBoolean("login", true)
+//    }
+//    try {
+//        accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
+//            ?: throw NullPointerException()
+//    } catch (e: NullPointerException) {
+//        accountQueries.insertAccount(emailAddress)
+//    }
+//
+//    println("Logged in as $emailAddress")
+//}
 
 fun logout(observableSettings: ObservableSettings): Unit {
     observableSettings.putString("emailAddress", "")
@@ -864,6 +864,7 @@ expect suspend fun openBrowser(): String
 expect class Authentication {
 
     suspend fun authenticateUser(fAuthClient: FirebaseAuthClient, accountsDataSource: AccountsDataSource): Pair<OAuthResponse?, NetworkError?>
+
     fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean
     fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean
 }

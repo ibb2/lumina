@@ -2,6 +2,7 @@ package org.example.project
 
 import androidx.compose.runtime.*
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
+import com.example.Accounts
 import com.example.AccountsTableQueries
 import com.example.Emails
 import com.example.EmailsTableQueries
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
-import org.example.project.data.Account
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
 import org.example.project.networking.FirebaseAuthClient
@@ -133,12 +133,12 @@ actual class EmailService() {
         }
 
         println("Did not find any.")
-//        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
+//        fetchEmailBodies(email, emailTableQueries, emailDataSource, accountQueries, store)
 
         println("Settings up inbox...")
         val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
         val messages = inbox.getMessages()
-        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
+        val account = accountQueries.selectAccount(email = emailAddress).executeAsList()
 
         println("Manually getting emails now")
         efficientGetContents(
@@ -167,60 +167,90 @@ actual class EmailService() {
         return emailsExist.isNotEmpty()
     }
 
-    fun fetchEmailBodies(
-        emailAddress: String,
-        emailTableQueries: EmailsTableQueries,
-        emailDataSource: EmailsDataSource,
-        accountQueries: AccountsTableQueries,
-        store: Store
-    ) {
-        /**
-         * Fetches the bodies of the emails in the INBOX folder.
-         *
-         * This uses the JavaMail API to connect to the IMAP server and fetch the emails.
-         * It then uses the sqldelight library to insert the emails into the sqlite database.
-         * This should only be run on initial setup of the app.
-         *
-         * @param emailAddress The email address to use for the imap connection.
-         * @param emailTableQueries The sqldelight query object for the email table.
-         * @param emailDataSource The sqldelight data source for the email table.
-         * @param accountQueries The sqldelight query object for the account table.
-         * @param store The JavaMail store object.
-         */
-
-        val fp = FetchProfile()
-        fp.add(FetchProfile.Item.ENVELOPE)
-        fp.add(IMAPFolder.FetchProfileItem.FLAGS)
-        fp.add(IMAPFolder.FetchProfileItem.CONTENT_INFO)
-
-        val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
-        val msgs = folder.messages
-
-        val messages: List<Message> = folder.messages.takeLast(50)
-//        folder.fetch(msgs, fp)
-        // Email UIDs
-        val uf: UIDFolder = folder as UIDFolder
-
-        // Account
-        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
-
-//        totalEmailCount = 50
-
-//        for (message in messages) {
-//            val emailUID = uf.getUID(message)
-//            println("Message: ${message.from}")
-//            emails.add(
-//                Email(
-//                    id = emailUID,
-//                    from = message.from?.joinToString(),
-//                    subject = message.subject ?: "",
-//                    body = getEmailBody(message),
-//                    to = "",
-//                    cc = null,
-//                    bcc = null,
-//                    account = account[0]
-//                )
-//            )
+//    fun fetchEmailBodies(
+//        emailAddress: String,
+//        emailTableQueries: EmailsTableQueries,
+//        emailDataSource: EmailsDataSource,
+//        accountQueries: AccountsTableQueries,
+//        store: Store
+//    ) {
+//        /**
+//         * Fetches the bodies of the emails in the INBOX folder.
+//         *
+//         * This uses the JavaMail API to connect to the IMAP server and fetch the emails.
+//         * It then uses the sqldelight library to insert the emails into the sqlite database.
+//         * This should only be run on initial setup of the app.
+//         *
+//         * @param emailAddress The email address to use for the imap connection.
+//         * @param emailTableQueries The sqldelight query object for the email table.
+//         * @param emailDataSource The sqldelight data source for the email table.
+//         * @param accountQueries The sqldelight query object for the account table.
+//         * @param store The JavaMail store object.
+//         */
+//
+//        val fp = FetchProfile()
+//        fp.add(FetchProfile.Item.ENVELOPE)
+//        fp.add(IMAPFolder.FetchProfileItem.FLAGS)
+//        fp.add(IMAPFolder.FetchProfileItem.CONTENT_INFO)
+//
+//        val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
+//        val msgs = folder.messages
+//
+//        val messages: List<Message> = folder.messages.takeLast(50)
+////        folder.fetch(msgs, fp)
+//        // Email UIDs
+//        val uf: UIDFolder = folder as UIDFolder
+//
+//        // Account
+//        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
+//
+////        totalEmailCount = 50
+//
+////        for (message in messages) {
+////            val emailUID = uf.getUID(message)
+////            println("Message: ${message.from}")
+////            emails.add(
+////                Email(
+////                    id = emailUID,
+////                    from = message.from?.joinToString(),
+////                    subject = message.subject ?: "",
+////                    body = getEmailBody(message),
+////                    to = "",
+////                    cc = null,
+////                    bcc = null,
+////                    account = account[0]
+////                )
+////            )
+////
+//////            emailTableQueries.insertEmail(
+//////                id = emailUID,
+//////                from_user = message.from?.joinToString() ?: "",
+//////                subject = message.subject ?: "",
+//////                body = getEmailBody(message),
+//////                to_user = "",
+//////                cc = null,
+//////                bcc = null,
+//////                account = account[0]
+//////            )
+////
+////            emailCount++
+////        }
+//
+////        for (message in folder.getMessages().takeLast(50)) {
+////            val emailUID = uf.getUID(message)
+////            println("Message: ${message.from}")
+////            emails.add(
+////                Email(
+////                    id = emailUID,
+////                    from = message.from?.joinToString(),
+////                    subject = message.subject ?: "",
+////                    body = getEmailBody(message),
+////                    to = "",
+////                    cc = null,
+////                    bcc = null,
+////                    account = account[0]
+////                )
+////            )
 //
 ////            emailTableQueries.insertEmail(
 ////                id = emailUID,
@@ -232,43 +262,13 @@ actual class EmailService() {
 ////                bcc = null,
 ////                account = account[0]
 ////            )
+////
+////            emailCount++
+////        }
 //
-//            emailCount++
-//        }
-
-//        for (message in folder.getMessages().takeLast(50)) {
-//            val emailUID = uf.getUID(message)
-//            println("Message: ${message.from}")
-//            emails.add(
-//                Email(
-//                    id = emailUID,
-//                    from = message.from?.joinToString(),
-//                    subject = message.subject ?: "",
-//                    body = getEmailBody(message),
-//                    to = "",
-//                    cc = null,
-//                    bcc = null,
-//                    account = account[0]
-//                )
-//            )
-
-//            emailTableQueries.insertEmail(
-//                id = emailUID,
-//                from_user = message.from?.joinToString() ?: "",
-//                subject = message.subject ?: "",
-//                body = getEmailBody(message),
-//                to_user = "",
-//                cc = null,
-//                bcc = null,
-//                account = account[0]
-//            )
-//
-//            emailCount++
-//        }
-
-        folder.close(false)
-        store.close()
-    }
+//        folder.close(false)
+//        store.close()
+//    }
 
     @Throws(MessagingException::class)
     fun efficientGetContents(
@@ -278,7 +278,7 @@ actual class EmailService() {
         accountQueries: AccountsTableQueries,
         store: Store,
         emails: MutableList<EmailsDAO>,
-        account: List<String>,
+        account: List<Accounts>,
         folder: Folder,
         inbox: IMAPFolder,
         messages: Array<Message>,
@@ -683,7 +683,7 @@ actual class Authentication {
 
     actual fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean {
 
-        val accounts = accountsDataSource.selectAll().collectAsState(initial = null).value
+        val accounts = accountsDataSource.selectAll()
 
         if (accounts?.isNotEmpty() == true) {
 
@@ -698,7 +698,7 @@ actual class Authentication {
     }
 
     actual fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean {
-        return tResponse?.expiresIn == 0L
+        return true
     }
 
 }

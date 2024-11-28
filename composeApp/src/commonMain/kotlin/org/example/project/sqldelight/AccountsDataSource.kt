@@ -1,5 +1,6 @@
 package org.example.project.sqldelight
 
+import androidx.compose.runtime.collectAsState
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOne
@@ -62,7 +63,7 @@ class AccountsDataSource(db: LuminaDatabase) {
            rawUserInfo = raw_user_info,
            kind = kind
         )
-    }).asFlow().mapToList(context = Dispatchers.IO)
+    }).executeAsList()
     fun select(emailAddress: String) = queries.selectAccount(emailAddress)
 
     fun remove(emailAddress: String) = queries.removeAccount(emailAddress)
