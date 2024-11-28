@@ -187,6 +187,12 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                     }) {
                         Text("Delete Emails")
                     }
+                    Button(onClick = {
+                        authentication.logout(accountsDataSource, authentication.email.value)
+
+                    }) {
+                        Text("Logout")
+                    }
                 }
             }
 
@@ -809,9 +815,14 @@ expect suspend fun openBrowser(): String
 expect class Authentication {
 
     val isLoggedIn: StateFlow<Boolean>
+    val email: StateFlow<String>
 
-    suspend fun authenticateUser(fAuthClient: FirebaseAuthClient, accountsDataSource: AccountsDataSource): Pair<OAuthResponse?, NetworkError?>
+    suspend fun authenticateUser(
+        fAuthClient: FirebaseAuthClient,
+        accountsDataSource: AccountsDataSource
+    ): Pair<OAuthResponse?, NetworkError?>
 
     fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean
     fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean
+    fun logout(accountsDataSource: AccountsDataSource, email: String)
 }

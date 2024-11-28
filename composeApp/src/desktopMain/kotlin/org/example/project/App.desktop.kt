@@ -593,6 +593,7 @@ actual suspend fun openBrowser(): String {
 
 actual class Authentication {
 
+
     private var code = ""
     private var accessToken = ""
     private var tResponse: TokenResponse? = null
@@ -603,6 +604,9 @@ actual class Authentication {
 
     private val _isLoggedIn = MutableStateFlow(false)
     actual val isLoggedIn = _isLoggedIn.asStateFlow()
+
+    private val _email = MutableStateFlow("")
+    actual val email = _email.asStateFlow()
 
     actual suspend fun authenticateUser(
         fAuthClient: FirebaseAuthClient,
@@ -693,6 +697,8 @@ actual class Authentication {
         if (accounts?.isNotEmpty() == true) {
             _isLoggedIn.value = true
 
+            _email.value = accounts[0].email
+
             val atExists = CredentialManager(accounts[0].email, "accessToken").exists()
             val rfExists = CredentialManager(accounts[0].email, "refreshToken").exists()
             val idExists = CredentialManager(accounts[0].email, "idToken").exists()
@@ -703,6 +709,14 @@ actual class Authentication {
         _isLoggedIn.value = false
 
         return false
+    }
+
+    actual fun logout(accountsDataSource: AccountsDataSource, email: String) {
+       accountsDataSource.remove(email)
+        CredentialManager(email, "accessToken").unregisterUser()
+        CredentialManager(email, "refreshToken").unregisterUser()
+        CredentialManager(email, "idToken").unregisterUser()
+        _isLoggedIn.value = false
     }
 
     actual fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean {
