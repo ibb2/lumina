@@ -98,6 +98,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         }
 
         authentication.amILoggedIn(accountsDataSource)
+        val accountsExists = authentication.accountsExists(accountsDataSource)
         val amILoggedIn = authentication.isLoggedIn.collectAsState().value
 
         Column(
@@ -111,8 +112,19 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             r?.let {
                 Text(it.email, color = Color.Green)
             }
-            if (amILoggedIn) {
+            if (accountsExists) {
                 Text("Logged in")
+                Button(onClick = {
+                    scope.launch {
+                        isLoading = true
+                        val re = authentication.authenticateUser(client, accountsDataSource)
+                        r = re.first
+                        e = re.second
+                        isLoading = false
+                    }
+                }) {
+                    Text("Add another account (GMAIL)")
+                }
                 Button(onClick = {
                     scope.launch(Dispatchers.IO) {
                         emailService.deleteEmails(emailDataSource)
@@ -142,7 +154,6 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                     authentication.email.value,
                     client
                 )
-
             } else {
                 Button(
                     onClick = {
@@ -339,6 +350,7 @@ fun displayEmails(
                                         color = Color.LightGray
                                     ).fillMaxWidth()
                                 ) {
+                                    Text(text = "Account $emailAddress")
                                     Text(
                                         text = email.sender ?: "No from",
                                     )
@@ -717,6 +729,7 @@ expect class Authentication {
     ): Pair<OAuthResponse?, NetworkError?>
 
     fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean
+    fun accountsExists(accountsDataSource: AccountsDataSource): Boolean
     fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean
     fun logout(accountsDataSource: AccountsDataSource, email: String)
 }

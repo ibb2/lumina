@@ -763,6 +763,12 @@ actual class Authentication {
         return false
     }
 
+    actual fun accountsExists(accountsDataSource: AccountsDataSource): Boolean {
+        return accountsDataSource.selectAll().isNotEmpty()
+    }
+
+
+
     actual fun logout(accountsDataSource: AccountsDataSource, email: String) {
         accountsDataSource.remove(email)
         CredentialManager(email, "accessToken").unregisterUser()
