@@ -22,6 +22,7 @@ import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
 import org.example.project.networking.*
+import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AccountsDataSource
@@ -767,7 +768,9 @@ actual class Authentication {
         return accountsDataSource.selectAll().isNotEmpty()
     }
 
-
+    actual fun getAccounts(accountsDataSource: AccountsDataSource): List<AccountsDAO> {
+        return accountsDataSource.selectAll()
+    }
 
     actual fun logout(accountsDataSource: AccountsDataSource, email: String) {
         accountsDataSource.remove(email)

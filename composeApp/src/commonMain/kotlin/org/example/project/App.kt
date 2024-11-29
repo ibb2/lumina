@@ -52,6 +52,7 @@ import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
 import org.example.project.networking.TokenResponse
+import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.utils.NetworkError
@@ -101,6 +102,8 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val accountsExists = authentication.accountsExists(accountsDataSource)
         val amILoggedIn = authentication.isLoggedIn.collectAsState().value
 
+        val accounts = authentication.getAccounts(accountsDataSource)
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
@@ -114,6 +117,11 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             }
             if (accountsExists) {
                 Text("Logged in")
+                LazyColumn {
+                    items(accounts) {
+                        Text(it.email)
+                    }
+                }
                 Button(onClick = {
                     scope.launch {
                         isLoading = true
@@ -730,6 +738,7 @@ expect class Authentication {
 
     fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean
     fun accountsExists(accountsDataSource: AccountsDataSource): Boolean
+    fun getAccounts(accountsDataSource: AccountsDataSource): List<AccountsDAO>
     fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean
     fun logout(accountsDataSource: AccountsDataSource, email: String)
 }
