@@ -53,3 +53,9 @@ data class TokenResponse(
 data class DjangoToken(
     val code: String
 )
+
+
+@Serializable
+data class DjangoRefreshToken(
+    @SerialName("refresh_token") val refreshToken: String
+)

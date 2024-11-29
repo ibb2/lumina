@@ -4,12 +4,14 @@ import com.microsoft.credentialstorage.SecretStore
 import com.microsoft.credentialstorage.StorageProvider
 import com.microsoft.credentialstorage.StorageProvider.SecureOption
 import com.microsoft.credentialstorage.model.StoredCredential
+import org.example.project.windowsNative.StoredCredentialApp.Companion
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 
-class CredentialManager(val user: String,val type: String) {
-    private val credentialStorage: SecretStore<StoredCredential>? = StorageProvider.getCredentialStorage(true, SecureOption.REQUIRED)
+class CredentialManager(val user: String, val type: String) {
+    private val credentialStorage: SecretStore<StoredCredential>? =
+        StorageProvider.getCredentialStorage(true, SecureOption.REQUIRED)
     private val log: Logger = LoggerFactory.getLogger(StoredCredentialApp::class.java)
 
     private val CREDENTIALS_KEY: String = "Lumina Mail $user:$type"
@@ -35,8 +37,8 @@ class CredentialManager(val user: String,val type: String) {
         return storedCredential !== null
     }
 
-     fun registerUser(email: String, password: String) {
-         val credential = StoredCredential(email, password.toCharArray())
+    fun registerUser(email: String, password: String) {
+        val credential = StoredCredential(email, password.toCharArray())
 
         try {
             // Save the credential to the store.
@@ -46,6 +48,10 @@ class CredentialManager(val user: String,val type: String) {
             // clear password value.
             credential.clear()
         }
+    }
+
+    fun returnCredentials(): StoredCredential? {
+        return credentialStorage!![CREDENTIALS_KEY]
     }
 
     fun userLogin() {
@@ -71,7 +77,7 @@ class CredentialManager(val user: String,val type: String) {
         }
     }
 
-     fun unregisterUser() {
+    fun unregisterUser() {
         // Remove credentials from the store.
         credentialStorage!!.delete(CREDENTIALS_KEY)
         log.info("User deleted.")

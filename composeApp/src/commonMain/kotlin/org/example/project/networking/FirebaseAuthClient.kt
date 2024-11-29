@@ -97,4 +97,38 @@ class FirebaseAuthClient(
         }
     }
 
+    suspend fun refreshAccessToken(refreshToken: String): Result<TokenResponse, NetworkError> {
+
+        val response = try {
+            httpClient.post("http://127.0.0.1:8000/api/tokens/refresh") {
+                this.contentType(ContentType.Application.Json)
+                this.setBody(
+                    DjangoRefreshToken(refreshToken)
+                )
+
+            }
+        } catch (e: UnresolvedAddressException) {
+            return Result.Error(NetworkError.NO_INTERNET)
+        } catch (e: SerializationException) {
+            return Result.Error(NetworkError.SERIALIZATION)
+        }
+        return when (response.status.value) {
+            in 200..299 -> {
+                val oauthResponse = response.body<TokenResponse>()
+                Result.Success(oauthResponse)
+            }
+
+            401 -> Result.Error(NetworkError.UNAUTHORIZED)
+            408 -> Result.Error(NetworkError.REQUEST_TIMEOUT)
+            409 -> Result.Error(NetworkError.CONFLICT)
+            413 -> Result.Error(NetworkError.PAYLOAD_TOO_LARGE)
+            in 500..599 -> Result.Error(NetworkError.SERVER_ERROR)
+            else -> {
+                println(response.status.description)
+                println(response.status.value)
+                Result.Error(NetworkError.UNKNOWN)
+            }
+        }
+    }
+
 }

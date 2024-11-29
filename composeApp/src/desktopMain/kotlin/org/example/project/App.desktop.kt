@@ -21,10 +21,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
-import org.example.project.networking.FirebaseAuthClient
-import org.example.project.networking.OAuthResponse
-import org.example.project.networking.TokenResponse
-import org.example.project.networking.runKtorServer
+import org.example.project.networking.*
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AccountsDataSource
@@ -85,13 +82,14 @@ actual class EmailService() {
         emailTableQueries: EmailsTableQueries,
         accountQueries: AccountsTableQueries,
         emailAddress: String,
-        password: String
+        client: FirebaseAuthClient
     ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>> {
 
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
-            put("mail.imap.username", emailAddress)
-            put("mail.imap.password", password)
+            put("mail.imap.auth.mechanisms", "XOAUTH2");
+//            put("mail.imap.username", emailAddress)
+//            put("mail.imap.password", password)
             put("mail.imap.port", "993")
             put("mail.imap.ssl.enable", "true")
             put("mail.imap.connectiontimeout", 10000)
@@ -103,13 +101,56 @@ actual class EmailService() {
 
         val session = Session.getInstance(properties)
         println("Connecting...")
-        val store: Store = session.getStore("imap").apply {
-            connect(
-                properties.getProperty("mail.imap.host"),
-                properties.getProperty("mail.imap.username"),
-                properties.getProperty("mail.imap.password")
-            )
-        }
+
+        var store: Store
+
+//        try {
+            val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+            val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
+
+
+            store = session.getStore("imap").apply {
+                connect(
+                    properties.getProperty("mail.imap.host"),
+                    emailAddress,
+                    String(atCred?.password!!)
+                )
+            }
+//        }
+//        catch (e: Exception) {
+//
+//            var results: TokenResponse? = null
+//            var errors: NetworkError? = null
+//
+//            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+//            val refreshTokenPassword = rtCred?.password?.let { String(it) }
+//
+//            client.refreshAccessToken(refreshToken = refreshTokenPassword!!).onSuccess {
+//                results = it
+//            }.onError {
+//                errors = it
+//            }
+//
+//            if (results == null) {
+//                throw Exception(errors?.name)
+//            }
+//
+//            CredentialManager(emailAddress, "accessToken").registerUser(
+//                emailAddress,
+//                results!!.accessToken
+//            )
+//            CredentialManager(emailAddress, "idToken").registerUser(emailAddress, results!!.idToken!!)
+//
+//
+//            store = session.getStore("imap").apply {
+//                connect(
+//                    properties.getProperty("mail.imap.host"),
+//                    emailAddress,
+//                    results!!.accessToken
+//                )
+//            }
+//        }
         println("Connected")
 
         // Check if emails exist in db
@@ -416,12 +457,15 @@ actual class EmailService() {
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
         emailAddress: String,
-        password: String
     ): Pair<Boolean, Boolean?> {
+
+        val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+        val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+        val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
+
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
-            put("mail.imap.username", emailAddress)
-            put("mail.imap.password", password)
+            put("mail.imap.auth.mechanisms", "XOAUTH2")
             put("mail.imap.port", "993")
             put("mail.imap.ssl.enable", "true")
             put("mail.imap.connectiontimeout", 10000)
@@ -434,8 +478,8 @@ actual class EmailService() {
         val store: Store = session.getStore("imap").apply {
             connect(
                 properties.getProperty("mail.imap.host"),
-                properties.getProperty("mail.imap.username"),
-                properties.getProperty("mail.imap.password")
+                emailAddress,
+                atCred?.password.toString()
             )
         }
         val inboxFolder = store.getFolder("INBOX").apply { open(Folder.READ_WRITE) }
@@ -462,12 +506,15 @@ actual class EmailService() {
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
         emailAddress: String,
-        password: String
     ): Boolean {
+
+        val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+        val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+        val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
+
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
-            put("mail.imap.username", emailAddress)
-            put("mail.imap.password", password)
+            put("mail.imap.auth.mechanisms", "XOAUTH2")
             put("mail.imap.port", "993")
             put("mail.imap.ssl.enable", "true")
             put("mail.imap.connectiontimeout", 10000)
@@ -480,8 +527,8 @@ actual class EmailService() {
         val store: Store = session.getStore("imap").apply {
             connect(
                 properties.getProperty("mail.imap.host"),
-                properties.getProperty("mail.imap.username"),
-                properties.getProperty("mail.imap.password")
+                emailAddress,
+                atCred?.password.toString()
             )
         }
 
@@ -508,8 +555,12 @@ actual class EmailService() {
         emailsDataSource: EmailsDataSource,
         newEmail: NewEmail,
         emailAddress: String,
-        password: String
     ): Boolean {
+
+        val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+        val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+        val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
+
 
         val props = Properties().apply {
             put("mail.smtp.host", "smtp.gmail.com")
@@ -524,7 +575,7 @@ actual class EmailService() {
         val auth: Authenticator = object : Authenticator() {
             //override the getPasswordAuthentication method
             override fun getPasswordAuthentication(): PasswordAuthentication {
-                return PasswordAuthentication(emailAddress, password)
+                return PasswordAuthentication(emailAddress, atCred?.password.toString())
             }
         }
 
@@ -620,11 +671,14 @@ actual class Authentication {
                 deferred.complete(Unit)
             }
 
+            val scopes = "openid email profile https://www.googleapis.com/auth/gmail.addons.current.action.compose https://www.googleapis.com/auth/gmail.addons.current.message.action https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.metadata"
+            val xOAuthScopes = "openid email profile https://mail.google.com/"
+
             val authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
                     "?client_id=113121378086-7s0tvasib3ujgd660d5kkiod7434lp55.apps.googleusercontent.com" +
                     "&redirect_uri=http://localhost:8080" +
                     "&response_type=code" +
-                    "&scope=openid%20email%20profile" +
+                    "&scope=$xOAuthScopes" +
                     "&access_type=offline" +    // Request a refresh token
                     "&prompt=consent"           // Ensure the consent screen is displayed
 
@@ -712,7 +766,7 @@ actual class Authentication {
     }
 
     actual fun logout(accountsDataSource: AccountsDataSource, email: String) {
-       accountsDataSource.remove(email)
+        accountsDataSource.remove(email)
         CredentialManager(email, "accessToken").unregisterUser()
         CredentialManager(email, "refreshToken").unregisterUser()
         CredentialManager(email, "idToken").unregisterUser()

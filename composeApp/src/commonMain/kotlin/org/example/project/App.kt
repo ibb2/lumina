@@ -83,55 +83,14 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
 
         // Basic Auth
-        val settings = Settings()
-        var showContent by remember { mutableStateOf(false) }
-        var emailAddress by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-        var loggedIn by remember { mutableStateOf(false) }
-
         val emailCount by emailService.getEmailCount(emailDataSource).collectAsState()
 
-        val observableSettings: ObservableSettings = settings.makeObservable()
-
-        observableSettings.putString("emailAddress", "")
-        observableSettings.putString("password", "")
-        observableSettings.putBoolean("login", false)
-
-        observableSettings.addBooleanListener("login", defaultValue = false) { value ->
-            loggedIn = value
-        }
-        observableSettings.addStringListener(
-            "emailAddress",
-            defaultValue = ""
-        ) { value -> emailAddress = value }
-        observableSettings.addStringListener("password", defaultValue = "") { value ->
-            password = value
-        }
-
         // Ui
-
-        var login by remember {
-            mutableStateOf(false)
-        }
-
         var isLoading by remember {
             mutableStateOf(false)
         }
 
-        var errorMsg by remember {
-            mutableStateOf<NetworkError?>(null)
-        }
-
-        var oAuthResponse by remember {
-            mutableStateOf<OAuthResponse?>(null)
-        }
-
         val scope = rememberCoroutineScope()
-        var authenticationCode by remember { mutableStateOf("") }
-        var tResponse by remember { mutableStateOf<TokenResponse?>(null) }
-        var tError by remember {
-            mutableStateOf<NetworkError?>(null)
-        }
 
         var r by remember { mutableStateOf<OAuthResponse?>(null) }
         var e by remember {
@@ -141,148 +100,90 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         authentication.amILoggedIn(accountsDataSource)
         val amILoggedIn = authentication.isLoggedIn.collectAsState().value
 
-        if (!loggedIn) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-                modifier = Modifier.padding(16.dp).fillMaxSize()
-            ) {
-                Text(
-                    "Database Email Count: $emailCount"
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            modifier = Modifier.padding(16.dp).fillMaxSize()
+        ) {
+            Text(
+                "Database Email Count: $emailCount"
+            )
+            r?.let {
+                Text(it.email, color = Color.Green)
+            }
+            if (amILoggedIn) {
+                Text("Logged in")
+                Button(onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        emailService.deleteEmails(emailDataSource)
+                    }
+                }) {
+                    Text("Manually Fetch emails")
+                }
+                Button(onClick = {
+                    scope.launch(Dispatchers.IO) {
+                        emailService.deleteEmails(emailDataSource)
+                    }
+                }) {
+                    Text("Delete Emails")
+                }
+                Button(onClick = {
+                    authentication.logout(accountsDataSource, authentication.email.value)
+
+                }) {
+                    Text("Logout")
+                }
+                displayEmails(
+                    emailDataSource,
+                    emailQueries,
+                    accountQueries,
+                    emailService,
+                    amILoggedIn,
+                    authentication.email.value,
+                    client
                 )
-                r?.let {
-                    Text(it.email, color = Color.Green)
-                }
-                if (amILoggedIn) {
-                    Text("Logged in")
-                } else {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                isLoading = true
-                                val re = authentication.authenticateUser(client, accountsDataSource)
-                                r = re.first
-                                e = re.second
-                                isLoading = false
-                            }
-                        }
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(15.dp),
-                                strokeWidth = 2.dp,
-                                color = Color.White
-                            )
-                        } else {
-                            Text("Sign in with Google")
+
+            } else {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            isLoading = true
+                            val re = authentication.authenticateUser(client, accountsDataSource)
+                            r = re.first
+                            e = re.second
+                            isLoading = false
                         }
                     }
-                }
-
-                if (amILoggedIn) {
-                    Button(onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            emailService.deleteEmails(emailDataSource)
-                        }
-                    }) {
-                        Text("Delete Emails")
-                    }
-                    Button(onClick = {
-                        authentication.logout(accountsDataSource, authentication.email.value)
-
-                    }) {
-                        Text("Logout")
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(15.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Sign in with Google")
                     }
                 }
             }
-
-        } else {
-            Button(onClick = { logout(observableSettings) }) {
-                Text(
-                    "Logout"
-                )
-            }
-            Button(onClick = {
-                scope.launch(Dispatchers.IO) {
-                    emailService.deleteEmails(emailDataSource)
-                }
-            }) {
-                Text("Delete Emails")
-            }
-
-//            displayEmails(
-//                emailDataSource,
-//                observableSettings,
-//                emailQueries,
-//                accountQueries,
-//                emailService,
-//                loggedIn,
-//                emailAddress,
-//                password
-//            )
         }
     }
-}
-
-fun authentication() {
-
-
-}
-
-//fun login(
-//    observableSettings: ObservableSettings,
-//    accountQueries: AccountsTableQueries,
-//    emailAddress: String,
-//    password: String
-//): Unit {
-//
-//    val em = observableSettings.getString(
-//        "emailAddress",
-//        defaultValue = ""
-//    )
-//    val pw = observableSettings.getString("password", defaultValue = "")
-//
-//    try {
-//        observableSettings.putString("emailAddress", em)
-//        observableSettings.putString("password", pw)
-//        observableSettings.putBoolean("login", true)
-//    } catch (e: NullPointerException) {
-//
-//        observableSettings.putString("emailAddress", emailAddress)
-//        observableSettings.putString("password", password)
-//        observableSettings.putBoolean("login", true)
-//    }
-//    try {
-//        accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
-//            ?: throw NullPointerException()
-//    } catch (e: NullPointerException) {
-//        accountQueries.insertAccount(emailAddress)
-//    }
-//
-//    println("Logged in as $emailAddress")
-//}
-
-fun logout(observableSettings: ObservableSettings): Unit {
-    observableSettings.putString("emailAddress", "")
-    observableSettings.putString("password", "")
-    observableSettings.putBoolean("login", false)
 }
 
 @Composable
 fun displayEmails(
     emailDataSource: EmailsDataSource,
-    observableSettings: ObservableSettings,
     emailTableQueries: EmailsTableQueries,
     accountQueries: AccountsTableQueries,
     emailService: EmailService,
     loggedIn: Boolean,
     emailAddress: String,
-    password: String
+    client: FirebaseAuthClient
 ) {
     var display: Boolean by remember { mutableStateOf(false) }
     var emailFromUser: String by remember { mutableStateOf("") }
     var emailSubject: String by remember { mutableStateOf("") }
-    var emailContet: String by remember { mutableStateOf("") }
+    var emailContent: String by remember { mutableStateOf("") }
 
     // Coroutine Scope
     var currentProgress by remember { mutableStateOf(0f) }
@@ -297,17 +198,17 @@ fun displayEmails(
 
         emailFromUser = ""
         emailSubject = ""
-        emailContet = ""
+        emailContent = ""
 
         if (show) {
             display = true
             emailFromUser = email.sender ?: ""
             emailSubject = email.subject ?: ""
-            emailContet = email.body ?: ""
+            emailContent = email.body ?: ""
         }
     }
 
-    val state = rememberWebViewStateWithHTMLData(emailContet)
+    val state = rememberWebViewStateWithHTMLData(emailContent)
     LaunchedEffect(Unit) {
         state.webSettings.apply {
             logSeverity = KLogSeverity.Debug
@@ -331,7 +232,7 @@ fun displayEmails(
 
     var interger = intArrayOf(0).asFlow()
 
-    if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
+    if (loggedIn && emailAddress.isNotEmpty()) {
 
         // Email
 
@@ -366,7 +267,7 @@ fun displayEmails(
                         emailTableQueries,
                         accountQueries,
                         emailAddress,
-                        password
+                        client
                     )
                 }
                 val endTime = Clock.System.now()
@@ -456,7 +357,7 @@ fun displayEmails(
                                         onClick = {
                                             CoroutineScope(Dispatchers.IO).launch {
                                                 isRead =
-                                                    read(email, emailDataSource, emailService, emailAddress, password)
+                                                    read(email, emailDataSource, emailService, emailAddress)
                                                         ?: false
                                             }
                                         }
@@ -470,8 +371,7 @@ fun displayEmails(
                                                     email,
                                                     emailDataSource,
                                                     emailService,
-                                                    emailAddress,
-                                                    password
+                                                    emailAddress
                                                 )
                                             }
                                         },
@@ -645,8 +545,7 @@ fun displayEmails(
                 sentEmailSuccess = emailService.sendNewEmail(
                     emailDataSource,
                     NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
-                    emailAddress,
-                    password
+                    emailAddress
                 )
             }
 
@@ -719,12 +618,11 @@ fun read(
     emailsDataSource: EmailsDataSource,
     emailService: EmailService,
     emailAddress: String,
-    password: String,
 ): Boolean? {
 
     val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
 
-    val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress, password)
+    val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress)
 
     if (emailRead.first) {
         emailsDataSource.updateEmailReadStatus(
@@ -742,11 +640,10 @@ fun deleteEmail(
     emailsDataSource: EmailsDataSource,
     emailService: EmailService,
     emailAddress: String,
-    password: String,
 ) {
 
     val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
-    val emailDeleted = emailService.deleteEmail(email, emailsDataSource, emailAddress, password)
+    val emailDeleted = emailService.deleteEmail(email, emailsDataSource, emailAddress)
 
 //    println("Deleting suc")
     if (emailDeleted) {
@@ -775,7 +672,7 @@ expect class EmailService {
         emailTableQueries: EmailsTableQueries,
         accountQueries: AccountsTableQueries,
         emailAddress: String,
-        password: String
+        client: FirebaseAuthClient
     ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>>
 
     suspend fun deleteEmails(emailDataSource: EmailsDataSource)
@@ -789,22 +686,19 @@ expect class EmailService {
     fun readEmail(
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
-        emailAddress: String,
-        password: String
+        emailAddress: String
     ): Pair<Boolean, Boolean?>
 
     fun deleteEmail(
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
-        emailAddress: String,
-        password: String
+        emailAddress: String
     ): Boolean
 
     fun sendNewEmail(
         emailsDataSource: EmailsDataSource,
         newEmail: NewEmail,
-        emailAddress: String,
-        password: String
+        emailAddress: String
     ): Boolean
 
 
