@@ -341,7 +341,7 @@ fun displayEmails(
                             color = Color.LightGray
                         ).fillMaxWidth()
                     ) {
-                        Text(text = "Account $emailAddress")
+                        Text(text = "Account $emailAddress", color = Color.hsl(38f, 0.5f, 0.5f))
                         Text(
                             text = email.sender,
                         )

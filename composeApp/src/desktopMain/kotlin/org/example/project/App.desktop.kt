@@ -165,12 +165,12 @@ actual class EmailService() {
             attach = returnAttachments(attachmentsDataSource)
         }
 
-        if (emailsExist) {
-            emails = returnEmails(emailTableQueries, emailDataSource)
-
-            println("Found em")
-            return Pair(emails, attach)
-        }
+//        if (emailsExist) {
+//            emails = returnEmails(emailTableQueries, emailDataSource)
+//
+//            println("Found em")
+//            return Pair(emails, attach)
+//        }
 
         println("Did not find any.")
 //        fetchEmailBodies(email, emailTableQueries, emailDataSource, accountQueries, store)
@@ -329,7 +329,7 @@ actual class EmailService() {
         fp.add(FetchProfile.Item.ENVELOPE)
         inbox.fetch(messages, fp)
         val nbMessages = inbox.getMessages().size
-        var index = nbMessages - 49
+        var index = nbMessages - 10
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
         totalEmailCount.value = nbMessages
@@ -369,7 +369,7 @@ actual class EmailService() {
             end = messages[index - 1].messageNumber
             inbox.doCommand(
                 JavaMail(
-                    start = nbMessages - 49,
+                    start = nbMessages - 10,
                     end = nbMessages,
                     emails,
                     account,
