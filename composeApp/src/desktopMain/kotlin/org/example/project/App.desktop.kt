@@ -103,7 +103,7 @@ actual class EmailService() {
 
         var store: Store
 
-//        try {
+        try {
             val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
 
             val password = String(atCred?.password!!)
@@ -115,40 +115,40 @@ actual class EmailService() {
                     password
                 )
             }
-//        }
-//        catch (e: Exception) {
-//
-//            var results: TokenResponse? = null
-//            var errors: NetworkError? = null
-//
-//            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
-//            val refreshTokenPassword = rtCred?.password?.let { String(it) }
-//
-//            client.refreshAccessToken(refreshToken = refreshTokenPassword!!).onSuccess {
-//                results = it
-//            }.onError {
-//                errors = it
-//            }
-//
-//            if (results == null) {
-//                throw Exception(errors?.name)
-//            }
-//
-//            CredentialManager(emailAddress, "accessToken").registerUser(
-//                emailAddress,
-//                results!!.accessToken
-//            )
-//            CredentialManager(emailAddress, "idToken").registerUser(emailAddress, results!!.idToken!!)
-//
-//
-//            store = session.getStore("imap").apply {
-//                connect(
-//                    properties.getProperty("mail.imap.host"),
-//                    emailAddress,
-//                    results!!.accessToken
-//                )
-//            }
-//        }
+        }
+        catch (e: Exception) {
+
+            var results: DjangoRefreshTokenResponse? = null
+            var errors: NetworkError? = null
+
+            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+            val refreshTokenPassword = rtCred?.password?.let { String(it) }
+
+            client.refreshAccessToken(refreshToken = refreshTokenPassword!!).onSuccess {
+                results = it
+            }.onError {
+                errors = it
+            }
+
+            if (results == null) {
+                throw Exception(errors?.name)
+            }
+
+            CredentialManager(emailAddress, "accessToken").registerUser(
+                emailAddress,
+                results!!.accessToken
+            )
+            CredentialManager(emailAddress, "idToken").registerUser(emailAddress, results!!.idToken)
+
+
+            store = session.getStore("imap").apply {
+                connect(
+                    properties.getProperty("mail.imap.host"),
+                    emailAddress,
+                    results!!.accessToken
+                )
+            }
+        }
         println("Connected")
 
         // Check if emails exist in db
