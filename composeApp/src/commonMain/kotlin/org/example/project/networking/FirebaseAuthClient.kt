@@ -97,7 +97,7 @@ class FirebaseAuthClient(
         }
     }
 
-    suspend fun refreshAccessToken(refreshToken: String): Result<TokenResponse, NetworkError> {
+    suspend fun refreshAccessToken(refreshToken: String): Result<DjangoRefreshTokenResponse, NetworkError> {
 
         val response = try {
             httpClient.post("http://127.0.0.1:8000/api/tokens/refresh") {
@@ -114,7 +114,7 @@ class FirebaseAuthClient(
         }
         return when (response.status.value) {
             in 200..299 -> {
-                val oauthResponse = response.body<TokenResponse>()
+                val oauthResponse = response.body<DjangoRefreshTokenResponse>()
                 Result.Success(oauthResponse)
             }
 

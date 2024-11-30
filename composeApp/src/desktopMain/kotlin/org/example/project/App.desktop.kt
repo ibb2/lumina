@@ -103,53 +103,52 @@ actual class EmailService() {
 
         var store: Store
 
-        try {
+//        try {
             val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
-            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
-            val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
 
-
-            store = session.getStore("imap").apply {
-                connect(
-                    properties.getProperty("mail.imap.host"),
-                    emailAddress,
-                    String(atCred?.password!!)
-                )
-            }
-        }
-        catch (e: Exception) {
-
-            var results: TokenResponse? = null
-            var errors: NetworkError? = null
-
-            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
-            val refreshTokenPassword = rtCred?.password?.let { String(it) }
-
-            client.refreshAccessToken(refreshToken = refreshTokenPassword!!).onSuccess {
-                results = it
-            }.onError {
-                errors = it
-            }
-
-            if (results == null) {
-                throw Exception(errors?.name)
-            }
-
-            CredentialManager(emailAddress, "accessToken").registerUser(
-                emailAddress,
-                results!!.accessToken
-            )
-            CredentialManager(emailAddress, "idToken").registerUser(emailAddress, results!!.idToken!!)
-
+            val password = String(atCred?.password!!)
 
             store = session.getStore("imap").apply {
                 connect(
                     properties.getProperty("mail.imap.host"),
                     emailAddress,
-                    results!!.accessToken
+                    password
                 )
             }
-        }
+//        }
+//        catch (e: Exception) {
+//
+//            var results: TokenResponse? = null
+//            var errors: NetworkError? = null
+//
+//            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+//            val refreshTokenPassword = rtCred?.password?.let { String(it) }
+//
+//            client.refreshAccessToken(refreshToken = refreshTokenPassword!!).onSuccess {
+//                results = it
+//            }.onError {
+//                errors = it
+//            }
+//
+//            if (results == null) {
+//                throw Exception(errors?.name)
+//            }
+//
+//            CredentialManager(emailAddress, "accessToken").registerUser(
+//                emailAddress,
+//                results!!.accessToken
+//            )
+//            CredentialManager(emailAddress, "idToken").registerUser(emailAddress, results!!.idToken!!)
+//
+//
+//            store = session.getStore("imap").apply {
+//                connect(
+//                    properties.getProperty("mail.imap.host"),
+//                    emailAddress,
+//                    results!!.accessToken
+//                )
+//            }
+//        }
         println("Connected")
 
         // Check if emails exist in db
@@ -646,6 +645,8 @@ actual class Authentication {
 
     private var code = ""
     private var accessToken = ""
+    private var refreshToken = ""
+    private var idToken = ""
     private var tResponse: TokenResponse? = null
     private var tError: NetworkError? = null
     private var oAuthResponse: OAuthResponse? = null
@@ -701,6 +702,10 @@ actual class Authentication {
 
             fAuthClient.googleTokenIdEndpoint(code).onSuccess {
                 tResponse = it
+                println("Initial refresh token ${it.refreshToken}")
+                accessToken = it.accessToken
+                refreshToken = it.refreshToken!!
+                idToken = it.idToken!!
             }.onError {
                 tError = it
             }
@@ -724,9 +729,10 @@ actual class Authentication {
                         it.rawUserInfo,
                         it.kind
                     )
-                    CredentialManager(it.email, "accessToken").registerUser(it.email, tResponse!!.accessToken)
-                    CredentialManager(it.email, "refreshToken").registerUser(it.email, it.refreshToken)
-                    CredentialManager(it.email, "idToken").registerUser(it.email, it.refreshToken)
+                    println("Refresh token ${it.refreshToken}")
+                    CredentialManager(it.email, "accessToken").registerUser(it.email, accessToken)
+                    CredentialManager(it.email, "refreshToken").registerUser(it.email, refreshToken)
+                    CredentialManager(it.email, "idToken").registerUser(it.email, idToken)
                     _isLoggedIn.value = true
                 }.onError {
                     oAuthErr = it
