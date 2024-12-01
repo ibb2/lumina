@@ -7,8 +7,8 @@ import io.ktor.server.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 
-fun runKtorServer(onRedirectReceived: (String) -> Unit) {
-    embeddedServer(Netty, port = 8080) {
+fun runKtorServer(onRedirectReceived: (String) -> Unit): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
+    return embeddedServer(Netty, port = 3000) {
         routing {
             get("/") {
                 val code = call.request.queryParameters["code"]
@@ -20,5 +20,5 @@ fun runKtorServer(onRedirectReceived: (String) -> Unit) {
                 }
             }
         }
-    }.start(wait = false)
+    }
 }

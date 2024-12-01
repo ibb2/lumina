@@ -59,6 +59,8 @@ actual class EmailService() {
     private val attachments: MutableList<AttachmentsDAO> = mutableListOf()
     private var totalAttachments = 0
 
+    private var lastRememberedAccounts = 0
+
     init {
         val driver = DatabaseDriverFactory().create()
         db = LuminaDatabase(
@@ -83,7 +85,8 @@ actual class EmailService() {
         emailTableQueries: EmailsTableQueries,
         accountQueries: AccountsTableQueries,
         emailAddress: String,
-        client: FirebaseAuthClient
+        client: FirebaseAuthClient,
+        accounts: List<AccountsDAO>
     ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>> {
 
         val properties: Properties = Properties().apply {
@@ -101,7 +104,12 @@ actual class EmailService() {
         val session = Session.getInstance(properties)
         println("Connecting...")
 
+        var retryCount = 0
+        val maxRetryCount = 2
+
         var store: Store
+
+
 
         try {
             val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
@@ -115,8 +123,13 @@ actual class EmailService() {
                     password
                 )
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
+            retryCount++
+
+            if (retryCount >= maxRetryCount) {
+                // Handle error after max retries
+                throw e
+            }
 
             var results: DjangoRefreshTokenResponse? = null
             var errors: NetworkError? = null
@@ -149,6 +162,7 @@ actual class EmailService() {
                 )
             }
         }
+
         println("Connected")
 
         // Check if emails exist in db
@@ -165,10 +179,12 @@ actual class EmailService() {
             attach = returnAttachments(attachmentsDataSource)
         }
 
-//        if (emailsExist) {
+//        if ((emailsExist && lastRememberedAccounts == 0) || (emailsExist && lastRememberedAccounts == accounts.size)) {
 //            emails = returnEmails(emailTableQueries, emailDataSource)
 //
 //            println("Found em")
+//            lastRememberedAccounts++
+//
 //            return Pair(emails, attach)
 //        }
 
@@ -198,6 +214,9 @@ actual class EmailService() {
         inbox.close(false)
 
         println("Got them")
+
+//        lastRememberedAccounts = accounts.size
+
         return Pair(emails, attachments)
     }
 
@@ -665,18 +684,21 @@ actual class Authentication {
     ): Pair<OAuthResponse?, NetworkError?> {
 
         runBlocking {
-            runKtorServer {
+            val server = runKtorServer {
                 code = it
                 println("Code: $code")
                 deferred.complete(Unit)
             }
 
-            val scopes = "openid email profile https://www.googleapis.com/auth/gmail.addons.current.action.compose https://www.googleapis.com/auth/gmail.addons.current.message.action https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.metadata"
+            server.start()
+
+            val scopes =
+                "openid email profile https://www.googleapis.com/auth/gmail.addons.current.action.compose https://www.googleapis.com/auth/gmail.addons.current.message.action https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.metadata"
             val xOAuthScopes = "openid email profile https://mail.google.com/"
 
             val authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
                     "?client_id=113121378086-7s0tvasib3ujgd660d5kkiod7434lp55.apps.googleusercontent.com" +
-                    "&redirect_uri=http://localhost:8080" +
+                    "&redirect_uri=http://localhost:3000" +
                     "&response_type=code" +
                     "&scope=$xOAuthScopes" +
                     "&access_type=offline" +    // Request a refresh token
@@ -694,10 +716,10 @@ actual class Authentication {
                 }
             }
             deferred.await()
+            server.stop()
         }
 
         if (code.isNotEmpty()) {
-
             println("Code received: $code")
 
             fAuthClient.googleTokenIdEndpoint(code).onSuccess {
@@ -783,7 +805,7 @@ actual class Authentication {
         CredentialManager(email, "accessToken").unregisterUser()
         CredentialManager(email, "refreshToken").unregisterUser()
         CredentialManager(email, "idToken").unregisterUser()
-        _isLoggedIn.value = false
+        if (!accountsExists(accountsDataSource)) _isLoggedIn.value = false
     }
 
     actual fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean {

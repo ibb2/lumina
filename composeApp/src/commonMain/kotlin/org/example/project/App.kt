@@ -43,6 +43,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
+import androidx.compose.ui.text.style.TextAlign
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
@@ -103,12 +104,13 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val accountsExists = authentication.accountsExists(accountsDataSource)
         val amILoggedIn = authentication.isLoggedIn.collectAsState().value
 
-        val accounts = authentication.getAccounts(accountsDataSource)
+        val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
 
-        val allEmails = remember { mutableListOf<EmailsDAO>() }
-        val allAttachments = remember { mutableListOf<AttachmentsDAO>() }
+        val allEmails = remember { mutableStateListOf<EmailsDAO>() }
+        val allAttachments = remember { mutableStateListOf<AttachmentsDAO>() }
 
-        var showEmails by remember { mutableStateOf(false)}
+        var showEmails by remember { mutableStateOf(false) }
+
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -122,42 +124,112 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 Text(it.email, color = Color.Green)
             }
             if (accountsExists) {
-                scope.launch(Dispatchers.Main) {
+                LaunchedEffect(accounts.value) {
+
+                    if (accounts.value.isEmpty()) {
+                        // Clear UI state if there are no accounts
+                        allEmails.clear()
+                        allAttachments.clear()
+                        showEmails = false
+                        return@LaunchedEffect
+                    }
+
+                    allEmails.clear()
+                    allAttachments.clear()
                     val emailsAndAttachments = getAllEmails(
                         emailDataSource,
                         emailQueries,
                         accountQueries,
                         emailService,
                         client,
-                        accounts
+                        accounts.value
                     )
-                    allEmails.addAll(emailsAndAttachments.first)
-                    allAttachments.addAll(emailsAndAttachments.second)
+                    allEmails.addAll(emailsAndAttachments.first.toSet())
+                    allAttachments.addAll(emailsAndAttachments.second.toSet())
                     showEmails = true
                 }
                 Text("Logged in")
+                println("Rendering emails. Current email count: ${allEmails.size}")
+
+
                 LazyColumn {
-                    items(accounts) {
-                        Text(it.email)
+                    items(accounts.value) { account ->
+                        Text(account.email)
+                        Button(onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                showEmails = false
+                                isLoading = true
+
+                                authentication.logout(accountsDataSource, account.email)
+
+                                // Update state
+                                withContext(Dispatchers.Main) {
+                                    // Update accounts first
+                                    accounts.value = authentication.getAccounts(accountsDataSource)
+
+                                    // Clear and potentially reload emails
+                                    allEmails.clear()
+                                    allAttachments.clear()
+
+                                    if (accounts.value.isNotEmpty()) {
+                                        val emailsAndAttachments = getAllEmails(
+                                            emailDataSource,
+                                            emailQueries,
+                                            accountQueries,
+                                            emailService,
+                                            client,
+                                            accounts.value
+                                        )
+                                        allEmails.addAll(emailsAndAttachments.first)
+                                        allAttachments.addAll(emailsAndAttachments.second)
+                                        showEmails = true
+                                    }
+
+                                    isLoading = false
+                                }
+                            }
+                        }) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(15.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color.White
+                                )
+                            } else {
+                                Text("Logout")
+                            }
+                        }
+
                     }
                 }
                 Button(onClick = {
                     scope.launch {
+                        showEmails = false
                         isLoading = true
                         val re = authentication.authenticateUser(client, accountsDataSource)
                         r = re.first
                         e = re.second
-                        isLoading = false
+
+                        // Update state
+                        accounts.value = authentication.getAccounts(accountsDataSource)
+
+                        // Fetch emails for remaining accounts
                         val emailsAndAttachments = getAllEmails(
                             emailDataSource,
                             emailQueries,
                             accountQueries,
                             emailService,
                             client,
-                            accounts
+                            accounts.value
                         )
+                        allEmails.clear()
+                        allAttachments.clear()
                         allEmails.addAll(emailsAndAttachments.first)
                         allAttachments.addAll(emailsAndAttachments.second)
+
+                        // Re-render the UI
+                        showEmails = allEmails.isNotEmpty()
+                        isLoading = false
                     }
                 }) {
                     Text("Add another account (GMAIL)")
@@ -176,14 +248,8 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 }) {
                     Text("Delete Emails")
                 }
-                Button(onClick = {
-                    authentication.logout(accountsDataSource, authentication.email.value)
-
-                }) {
-                    Text("Logout")
-                }
                 if (showEmails) {
-                     displayEmails(accounts, allEmails, allAttachments, emailDataSource, emailService)
+                    displayEmails(accounts.value, allEmails, allAttachments, emailDataSource, emailService)
                 }
 //                displayEmails(
 //                    emailDataSource,
@@ -196,24 +262,20 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 //                )
 
             } else {
+                Text(
+                    text = "No Emails"
+                )
                 Button(
                     onClick = {
-                        scope.launch {
+                        scope.launch(Dispatchers.IO) {
                             isLoading = true
                             val re = authentication.authenticateUser(client, accountsDataSource)
                             r = re.first
                             e = re.second
+
+                            // Update state
+                            accounts.value = authentication.getAccounts(accountsDataSource)
                             isLoading = false
-                            val emailsAndAttachments = getAllEmails(
-                                emailDataSource,
-                                emailQueries,
-                                accountQueries,
-                                emailService,
-                                client,
-                                accounts
-                            )
-                            allEmails.addAll(emailsAndAttachments.first)
-                            allAttachments.addAll(emailsAndAttachments.second)
                         }
                     }
                 ) {
@@ -239,17 +301,33 @@ suspend fun getAllEmails(
     emailService: EmailService,
     client: FirebaseAuthClient,
     accounts: List<AccountsDAO>
-): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>> {
+): Pair<MutableSet<EmailsDAO>, MutableSet<AttachmentsDAO>> {
+
+    if (accounts.isEmpty()) {
+        // Return empty lists if no accounts are present
+        return Pair(mutableSetOf(), mutableSetOf())
+    }
+
+
     // Fetch emails for all accounts
 
-    var emails: MutableList<EmailsDAO> = mutableListOf()
-    var attachments: MutableList<AttachmentsDAO> = mutableListOf()
+    val emails: MutableSet<EmailsDAO> = mutableSetOf()
+    val attachments: MutableSet<AttachmentsDAO> = mutableSetOf()
 
     for ((index, account) in accounts.withIndex()) {
-//        if (account.email == "ibyster824@gmail.com") {
-            val r = emailService.getEmails(emailDataSource, emailTableQueries, accountQueries, account.email, client)
-            emails.addAll(r.first)
-            attachments.addAll(r.second)
+        print("Index  $index")
+//        if (index == 0) {
+        val r =
+            emailService.getEmails(
+                emailDataSource,
+                emailTableQueries,
+                accountQueries,
+                account.email,
+                client,
+                accounts
+            )
+        emails.addAll(r.first)
+        attachments.addAll(r.second)
 //        }
     }
 
@@ -313,23 +391,50 @@ fun displayEmails(
     val lazyListState = rememberLazyListState()
     val scrollState = rememberScrollAreaState(lazyListState)
 
-    Column(modifier = Modifier.fillMaxHeight(0.7f), verticalArrangement = Arrangement.SpaceBetween) {
-        // Email
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            Button(
-                onClick = {
-                    sendEmail = true
-                }) {
-                Text(text = "Send Email")
-            }
+    val snapshotEmails by remember { derivedStateOf { allEmails.toList() } }
+
+    // Create a derived state that updates when accounts change
+    val filteredEmails = remember(accounts) {
+        allEmails.filter { email ->
+            accounts.any { it.email == email.account }
+        }.toMutableList()
+    }
+
+    // Modify the list to remove emails from logged-out accounts
+    LaunchedEffect(accounts) {
+        // Create a set of valid account emails
+        val validAccountEmails = accounts.map { it.email }.toSet()
+
+        // Remove emails that don't belong to current accounts
+        allEmails.removeAll { email ->
+            email.account !in validAccountEmails
         }
-        ScrollArea(state = scrollState) {
 
-            LazyColumn(modifier = Modifier.fillMaxWidth(), state = lazyListState) {
+        // Similarly, remove orphaned attachments
+        allAttachments.removeAll { attachment ->
+            // Remove attachments for emails that are no longer in the list
+            allEmails.none { it.id == attachment.emailId }
+        }
+    }
 
-                items(allEmails) { email ->
 
-                    val emailAddress = accounts.filter { it.email == email.account }[0].email
+    if (allEmails.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.SpaceBetween) {
+            // Email
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Button(
+                    onClick = {
+                        sendEmail = true
+                    }) {
+                    Text(text = "Send Email")
+                }
+            }
+//        ScrollArea(state = scrollState) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+
+                allEmails.forEach { email ->
+
+                    val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
                     var isRead by remember { mutableStateOf(email.isRead) }
                     println("Emails ${email.subject}")
                     Column(
@@ -370,12 +475,11 @@ fun displayEmails(
                         Button(
                             onClick = {
                                 CoroutineScope(Dispatchers.IO).launch {
-                                    deleteEmail(
-                                        email,
-                                        emailDataSource,
-                                        emailService,
-                                        emailAddress
-                                    )
+                                    deleteEmail(email, emailDataSource, emailService, emailAddress)
+                                    // Remove email on the main thread
+                                    withContext(Dispatchers.Main) {
+                                        allEmails.remove(email)
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
@@ -414,201 +518,120 @@ fun displayEmails(
                 }
 
             }
-            VerticalScrollbar(
-                modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
-            ) {
-                Thumb(Modifier.background(Color.Black))
-            }
         }
+//        VerticalScrollbar(
+//                modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
+//            ) {
+//                Thumb(Modifier.background(Color.Black))
+//            }
+    } else {
+        // Optionally show a placeholder or message
+        Text("No emails to display", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+    }
+//
 
-        if (display) {
-            Dialog(
-                onDismissRequest = { display = false },
-                properties = DialogProperties(
-                    dismissOnBackPress = true,
-                    dismissOnClickOutside = true,
-                    usePlatformDefaultWidth = false
-                ),
-            ) {
-                // Draw a rectangle shape with rounded corners inside the dialog
-                Surface(modifier = Modifier.fillMaxSize(0.6f)) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(525.dp)
-                            .padding(16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                    ) {
-                        Column {
-                            TopAppBar(
-                                title = { Text(text = "WebView Sample") },
-                                navigationIcon = {
-                                    if (navigator.canGoBack) {
-                                        IconButton(onClick = { navigator.navigateBack() }) {
-                                            Icon(
-                                                imageVector = Icons.Default.ArrowBack,
-                                                contentDescription = "Back",
-                                            )
-                                        }
-                                    }
-                                },
-                            )
-
-                            Row {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    if (state.errorsForCurrentRequest.isNotEmpty()) {
-                                        Image(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Error",
-                                            colorFilter = ColorFilter.tint(Color.Red),
-                                            modifier =
-                                                Modifier
-                                                    .align(Alignment.CenterEnd)
-                                                    .padding(8.dp),
+    if (display) {
+        Dialog(
+            onDismissRequest = { display = false },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false
+            ),
+        ) {
+            // Draw a rectangle shape with rounded corners inside the dialog
+            Surface(modifier = Modifier.fillMaxSize(0.6f)) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(525.dp)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Column {
+                        TopAppBar(
+                            title = { Text(text = "WebView Sample") },
+                            navigationIcon = {
+                                if (navigator.canGoBack) {
+                                    IconButton(onClick = { navigator.navigateBack() }) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowBack,
+                                            contentDescription = "Back",
                                         )
                                     }
+                                }
+                            },
+                        )
 
-                                    OutlinedTextField(
-                                        value = textFieldValue ?: "",
-                                        onValueChange = { textFieldValue = it },
-                                        modifier = Modifier.fillMaxWidth(),
+                        Row {
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (state.errorsForCurrentRequest.isNotEmpty()) {
+                                    Image(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Error",
+                                        colorFilter = ColorFilter.tint(Color.Red),
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .padding(8.dp),
                                     )
                                 }
 
-                                Button(
-                                    onClick = {
-                                        textFieldValue?.let {
-                                            navigator.loadUrl(it)
-                                        }
-                                    },
-                                    modifier = Modifier.align(Alignment.CenterVertically),
-                                ) {
-                                    Text("Go")
-                                }
+                                OutlinedTextField(
+                                    value = textFieldValue ?: "",
+                                    onValueChange = { textFieldValue = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
-                        }
 
-                        WebView(
-                            state = state,
-                            modifier =
-                                Modifier
-                                    .fillMaxSize(),
-                            navigator = navigator,
-                        )
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-
-                            Text(
-                                text = "This is a dialog with buttons and an image.",
-                                modifier = Modifier.padding(16.dp),
-                            )
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
+                            Button(
+                                onClick = {
+                                    textFieldValue?.let {
+                                        navigator.loadUrl(it)
+                                    }
+                                },
+                                modifier = Modifier.align(Alignment.CenterVertically),
                             ) {
-                                TextButton(
-                                    onClick = { /* TODO */ },
-                                    modifier = Modifier.padding(8.dp),
-                                ) {
-                                    Text("Dismiss")
-                                }
-                                TextButton(
-                                    onClick = { /* TODO*/ },
-                                    modifier = Modifier.padding(8.dp),
-                                ) {
-                                    Text("Confirm")
-                                }
+                                Text("Go")
                             }
                         }
                     }
-                }
-            }
-        }
 
-        if (sendEmail) {
-            var sendEmailFrom by remember { mutableStateOf("") }
-            var sendEmailTo by remember { mutableStateOf("") }
-            var sendEmailSubject by remember { mutableStateOf("") }
-            var sendEmailBody by remember { mutableStateOf("") }
-
-            fun sendEmail() {
-                println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
-                var sentEmailSuccess = false
-                CoroutineScope(Dispatchers.IO).launch {
-                    sentEmailSuccess = emailService.sendNewEmail(
-                        emailDataSource,
-                        NewEmail(
-                            from = sendEmailFrom,
-                            to = sendEmailTo,
-                            subject = sendEmailSubject,
-                            body = sendEmailBody
-                        ),
-                        sendEmailFrom
-                    )
-                }
-
-                println("Email sent successfully? $sentEmailSuccess")
-
-                sendEmail = false
-            }
-
-            Dialog(
-                onDismissRequest = { sendEmail = false },
-                properties = DialogProperties(
-                    dismissOnBackPress = true,
-                    dismissOnClickOutside = true,
-                    usePlatformDefaultWidth = false
-                ),
-            ) {
-                // Draw a rectangle shape with rounded corners inside the dialog
-                Surface(modifier = Modifier.fillMaxSize(0.9f)) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(525.dp)
-                            .padding(16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier
+                    WebView(
+                        state = state,
+                        modifier =
+                            Modifier
                                 .fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                        navigator = navigator,
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+
+                        Text(
+                            text = "This is a dialog with buttons and an image.",
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
                         ) {
-                            TextField(
-                                label = { Text("From") },
-                                value = sendEmailFrom,
-                                onValueChange = { sendEmailFrom = it },
-                                modifier = Modifier.padding(16.dp),
-                            )
-                            TextField(
-                                label = { Text("To") },
-                                value = sendEmailTo,
-                                onValueChange = { sendEmailTo = it },
-                                modifier = Modifier.padding(16.dp)
-                            )
-                            TextField(
-                                label = { Text("Subject") },
-                                value = sendEmailSubject,
-                                onValueChange = { sendEmailSubject = it },
-                                modifier = Modifier.padding(16.dp)
-                            )
-                            TextField(
-                                label = { Text("Body") },
-                                value = sendEmailBody,
-                                onValueChange = { sendEmailBody = it },
-                                modifier = Modifier.padding(16.dp),
-                            )
-                            Button(onClick = {
-                                sendEmail()
-                            }) {
-                                Text(text = "Send")
+                            TextButton(
+                                onClick = { /* TODO */ },
+                                modifier = Modifier.padding(8.dp),
+                            ) {
+                                Text("Dismiss")
+                            }
+                            TextButton(
+                                onClick = { /* TODO*/ },
+                                modifier = Modifier.padding(8.dp),
+                            ) {
+                                Text("Confirm")
                             }
                         }
                     }
@@ -616,7 +639,93 @@ fun displayEmails(
             }
         }
     }
+
+    if (sendEmail) {
+        var sendEmailFrom by remember { mutableStateOf("") }
+        var sendEmailTo by remember { mutableStateOf("") }
+        var sendEmailSubject by remember { mutableStateOf("") }
+        var sendEmailBody by remember { mutableStateOf("") }
+
+        fun sendEmail() {
+            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
+            var sentEmailSuccess = false
+            CoroutineScope(Dispatchers.IO).launch {
+                sentEmailSuccess = emailService.sendNewEmail(
+                    emailDataSource,
+                    NewEmail(
+                        from = sendEmailFrom,
+                        to = sendEmailTo,
+                        subject = sendEmailSubject,
+                        body = sendEmailBody
+                    ),
+                    sendEmailFrom
+                )
+            }
+
+            println("Email sent successfully? $sentEmailSuccess")
+
+            sendEmail = false
+        }
+
+        Dialog(
+            onDismissRequest = { sendEmail = false },
+            properties = DialogProperties(
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false
+            ),
+        ) {
+            // Draw a rectangle shape with rounded corners inside the dialog
+            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(525.dp)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        TextField(
+                            label = { Text("From") },
+                            value = sendEmailFrom,
+                            onValueChange = { sendEmailFrom = it },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        TextField(
+                            label = { Text("To") },
+                            value = sendEmailTo,
+                            onValueChange = { sendEmailTo = it },
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        TextField(
+                            label = { Text("Subject") },
+                            value = sendEmailSubject,
+                            onValueChange = { sendEmailSubject = it },
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        TextField(
+                            label = { Text("Body") },
+                            value = sendEmailBody,
+                            onValueChange = { sendEmailBody = it },
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        Button(onClick = {
+                            sendEmail()
+                        }) {
+                            Text(text = "Send")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+
 
 //@Composable
 //fun displayEmails(
@@ -1121,7 +1230,8 @@ expect class EmailService {
         emailTableQueries: EmailsTableQueries,
         accountQueries: AccountsTableQueries,
         emailAddress: String,
-        client: FirebaseAuthClient
+        client: FirebaseAuthClient,
+        accounts: List<AccountsDAO>
     ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>>
 
     suspend fun deleteEmails(emailDataSource: EmailsDataSource)

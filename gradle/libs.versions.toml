@@ -21,7 +21,7 @@ koin = "3.5.3"
 ktor = "3.0.1"
 sqlDelight = "2.0.2"
 lifecycleViewmodelCompose = "2.7.0"
-material3 = "1.2.0"
+material3 = "1.7.1"
 core = "1.15.0"
 material3Desktop = "1.3.1"
 
