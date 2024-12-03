@@ -1,13 +1,10 @@
 package org.example.project.sqldelight
 
-import app.cash.sqldelight.Query
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import org.example.project.shared.data.EmailsDAO
 
@@ -19,7 +16,7 @@ class EmailsDataSource(db: LuminaDatabase) {
     fun insertEmail(
         id: Long? = null,
         messageId: String,
-        folderUID: Long,
+        folderUID: Long?,
         compositeKey: String,
         folderName: String,
         subject: String,

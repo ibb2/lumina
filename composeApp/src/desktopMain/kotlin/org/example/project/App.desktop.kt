@@ -3,14 +3,11 @@ package org.example.project
 import androidx.compose.runtime.*
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.Accounts
-import com.example.AccountsTableQueries
 import com.example.Emails
-import com.example.EmailsTableQueries
 import com.example.project.database.LuminaDatabase
 import jakarta.mail.*
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
-import jakarta.mail.internet.MimeMultipart
 import jakarta.mail.search.MessageIDTerm
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,34 +32,29 @@ import org.example.project.utils.onSuccess
 import org.example.project.windowsNative.CredentialManager
 import java.net.URI
 import java.util.*
-import kotlin.properties.Delegates
 
 
-actual class EmailService() {
+actual class EmailService actual constructor(
+    private val client: FirebaseAuthClient,
+) {
 
-    // Database
-    private lateinit var db: LuminaDatabase
-    private lateinit var emailDataSource: EmailsDataSource
-    private lateinit var attachmentsDataSource: AttachmentsDataSource
-    private lateinit var accountsDataSource: AccountsDataSource
+    private var db: LuminaDatabase
+    private var emailDataSource: EmailsDataSource
+    private var attachmentsDataSource: AttachmentsDataSource
+    private var accountsDataSource: AccountsDataSource
 
-    private var emails = mutableListOf<EmailsDAO>()
-    private val totalEmailCount = MutableStateFlow(0)
-    actual val totalEmails: StateFlow<Int> = totalEmailCount
-    private val _emailsRead = MutableStateFlow(0)
-    actual val emailsRead: StateFlow<Int> = _emailsRead
-    actual var emailCount by Delegates.observable(0) { property, oldValue, newValue ->
-        println("Value changed ${property.name} from $oldValue to $newValue")
-        _emailsRead.value = newValue
-        println("Emails read: $emailsRead")
-    }
-    private val attachments: MutableList<AttachmentsDAO> = mutableListOf()
-    private var totalAttachments = 0
+    private val _emails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
+    actual val emails = _emails.asStateFlow()
 
-    private var lastRememberedAccounts = 0
+    private val _attachments = MutableStateFlow<MutableList<AttachmentsDAO>>(mutableListOf())
+    actual val attachments = _attachments.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow<Boolean>(false)
+    actual val isSyncing = _isSyncing.asStateFlow()
 
     init {
         val driver = DatabaseDriverFactory().create()
+
         db = LuminaDatabase(
             driver,
             EmailsAdapter = Emails.Adapter(
@@ -74,22 +66,12 @@ actual class EmailService() {
         emailDataSource = EmailsDataSource(db)
         attachmentsDataSource = AttachmentsDataSource(db)
         accountsDataSource = AccountsDataSource(db)
-
-        // Setting counts for emails and attachments
-        totalEmailCount.value = emailDataSource.selectAllEmails().size
-        totalAttachments = attachmentsDataSource.selectAllAttachments().size
     }
 
-    actual suspend fun getEmails(
-        emailDataSource: EmailsDataSource,
-        emailTableQueries: EmailsTableQueries,
-        accountQueries: AccountsTableQueries,
-        emailAddress: String,
-        client: FirebaseAuthClient,
-        accounts: List<AccountsDAO>
-    ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>> {
+    private fun getProps(): Properties {
+        // Return properties need for Session
 
-        val properties: Properties = Properties().apply {
+        return Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
             put("mail.imap.auth.mechanisms", "XOAUTH2");
             put("mail.imap.port", "993")
@@ -98,38 +80,25 @@ actual class EmailService() {
             put("mail.imap.timeout", 10000)
             put("mail.imap.partialfetch", "false");
             put("mail.imap.fetchsize", "1048576");
-
         }
+    }
 
-        val session = Session.getInstance(properties)
-        println("Connecting...")
-
-        var retryCount = 0
-        val maxRetryCount = 2
-
-        var store: Store
-
-
+    private suspend fun connectToStore(session: Session, props: Properties, emailAddress: String): Store {
+        // Connect to the Imap store session
 
         try {
             val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
 
             val password = String(atCred?.password!!)
 
-            store = session.getStore("imap").apply {
+            return session.getStore("imap").apply {
                 connect(
-                    properties.getProperty("mail.imap.host"),
+                    props.getProperty("mail.imap.host"),
                     emailAddress,
                     password
                 )
             }
         } catch (e: Exception) {
-            retryCount++
-
-            if (retryCount >= maxRetryCount) {
-                // Handle error after max retries
-                throw e
-            }
 
             var results: DjangoRefreshTokenResponse? = null
             var errors: NetworkError? = null
@@ -154,75 +123,45 @@ actual class EmailService() {
             CredentialManager(emailAddress, "idToken").registerUser(emailAddress, results!!.idToken)
 
 
-            store = session.getStore("imap").apply {
+            return session.getStore("imap").apply {
                 connect(
-                    properties.getProperty("mail.imap.host"),
+                    props.getProperty("mail.imap.host"),
                     emailAddress,
                     results!!.accessToken
                 )
             }
         }
+    }
 
-        println("Connected")
+    actual suspend fun getEmails(
+        emailAddress: String
+    ): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>> {
+
+        val props = getProps()
+        val session = Session.getInstance(props)
+
+        val store = connectToStore(session, props, emailAddress)
+        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
+        val messages = inbox.getMessages()
 
         // Check if emails exist in db
         println("Checking for emails and attachments...")
-        doEmailsExist(emailTableQueries, emailDataSource)
 
-        val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
-        val attachmentsExist = doAttachmentsExist(attachmentsDataSource)
+        val account = accountsDataSource.select(emailAddress).executeAsOne()
 
-        var attach: MutableList<AttachmentsDAO> = mutableListOf()
-
-
-        if (attachmentsExist) {
-            attach = returnAttachments(attachmentsDataSource)
-        }
-
-//        if ((emailsExist && lastRememberedAccounts == 0) || (emailsExist && lastRememberedAccounts == accounts.size)) {
-//            emails = returnEmails(emailTableQueries, emailDataSource)
-//
-//            println("Found em")
-//            lastRememberedAccounts++
-//
-//            return Pair(emails, attach)
-//        }
-
-        println("Did not find any.")
-//        fetchEmailBodies(email, emailTableQueries, emailDataSource, accountQueries, store)
-
-        println("Settings up inbox...")
-        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
-        val messages = inbox.getMessages()
-        val account = accountQueries.selectAccount(email = emailAddress).executeAsList()
-
-        println("Manually getting emails now")
         efficientGetContents(
-            emailAddress,
-            emailTableQueries,
-            emailDataSource,
-            accountQueries,
-            store,
-            emails,
             account,
             inbox,
-            inbox,
             messages,
-            properties
         )
 
         inbox.close(false)
 
-        println("Got them")
-
-//        lastRememberedAccounts = accounts.size
-
         return Pair(emails, attachments)
     }
 
-    fun doEmailsExist(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): Boolean {
+    fun doEmailsExist(emailDataSource: EmailsDataSource): Boolean {
         val emailsExist = emailDataSource.selectAllEmails()
-        totalEmailCount.value = emailsExist.size
         return emailsExist.isNotEmpty()
     }
 
@@ -331,35 +270,19 @@ actual class EmailService() {
 
     @Throws(MessagingException::class)
     fun efficientGetContents(
-        emailAddress: String,
-        emailTableQueries: EmailsTableQueries,
-        emailDataSource: EmailsDataSource,
-        accountQueries: AccountsTableQueries,
-        store: Store,
-        emails: MutableList<EmailsDAO>,
-        account: List<Accounts>,
-        folder: Folder,
+        account: Accounts,
         inbox: IMAPFolder,
         messages: Array<Message>,
-        properties: Properties
     ): Int {
         val fp = FetchProfile()
         fp.add(FetchProfile.Item.FLAGS)
         fp.add(FetchProfile.Item.ENVELOPE)
         inbox.fetch(messages, fp)
+
         val nbMessages = inbox.getMessages().size
         var index = nbMessages - 10
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
-        totalEmailCount.value = nbMessages
-
-        // Email UIDs
-        val uf: UIDFolder = inbox
-
-        // Attachments
-        val attachmentDataSource: AttachmentsDataSource = AttachmentsDataSource(db)
-
-        // Emails
 
         // Message numbers limit to fetch
         var start: Int
@@ -390,16 +313,12 @@ actual class EmailService() {
                 JavaMail(
                     start = nbMessages - 10,
                     end = nbMessages,
-                    emails,
+                    emails.value,
+                    attachments.value,
+                    emailDataSource,
+                    attachmentsDataSource,
                     account,
                     mail,
-                    attachments,
-                    emailDataSource,
-                    attachmentDataSource,
-                    emailCount,
-                    _emailsRead,
-                    folder,
-                    uf,
                 )
             )
 
@@ -411,63 +330,6 @@ actual class EmailService() {
         }
 
         return nbMessages
-    }
-
-
-    fun getEmailBody(message: Message): String {
-        return when (val content = message.content) {
-            is String -> content // Plain text or HTML content
-            is MimeMultipart -> getTextFromMimeMultipart(content) // Multipart email (e.g., with attachments)
-            else -> "Unsupported content type"
-        }
-    }
-
-    fun getTextFromMimeMultipart(mimeMultipart: MimeMultipart): String {
-        val result = StringBuilder()
-        for (i in 0 until mimeMultipart.count) {
-            val bodyPart = mimeMultipart.getBodyPart(i)
-
-
-
-            when {
-                bodyPart.isMimeType("text/plain") -> result.append(bodyPart.content)
-                bodyPart.isMimeType("text/html") -> result.append(bodyPart.content) // Optionally, ignore or prefer text/plain
-                bodyPart.content is MimeMultipart -> result.append(
-                    getTextFromMimeMultipart(bodyPart.content as MimeMultipart)
-                )
-            }
-        }
-        return result.toString()
-    }
-
-    actual suspend fun deleteEmails(emailDataSource: EmailsDataSource) {
-        emailDataSource.remove()
-    }
-
-    actual fun getEmailCount(emailDataSource: EmailsDataSource): StateFlow<Int> {
-//        totalEmailCount = emailDataSource.selectAllEmails().size
-        return totalEmails
-    }
-
-    actual fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean {
-        val attachments = attachmentsDataSource.selectAllAttachments()
-        return attachments.isNotEmpty()
-    }
-
-    actual fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO> {
-
-        val attach = attachmentsDataSource.selectAllAttachments()
-        attachments.addAll(attach)
-
-        return attachments
-    }
-
-    fun returnEmails(
-        emailTableQueries: EmailsTableQueries,
-        emailDataSource: EmailsDataSource
-    ): MutableList<EmailsDAO> {
-        println("Return emails from database")
-        return emailDataSource.selectAllEmails() as MutableList<EmailsDAO>
     }
 
     actual fun readEmail(
@@ -627,37 +489,6 @@ actual class EmailService() {
 
 }
 
-actual suspend fun openBrowser(): String {
-
-    val code = CompletableDeferred<String>()
-
-    runKtorServer {
-        code.complete(it)
-        println("Code: $code")
-    }
-
-    val authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
-            "?client_id=113121378086-7s0tvasib3ujgd660d5kkiod7434lp55.apps.googleusercontent.com" +
-            "&redirect_uri=http://localhost:8080" +
-            "&response_type=code" +
-            "&scope=openid%20email%20profile" +
-            "&access_type=offline" +    // Request a refresh token
-            "&prompt=consent"           // Ensure the consent screen is displayed
-
-    val uri: URI = authUrl.toHttpUrl().toUri()
-
-    val desktop: java.awt.Desktop? =
-        if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop() else null
-    if (desktop != null && desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
-        try {
-            desktop.browse(uri)
-        } catch (e: java.lang.Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    return code.await()
-}
 
 actual class Authentication {
 
@@ -796,8 +627,8 @@ actual class Authentication {
         return accountsDataSource.selectAll().isNotEmpty()
     }
 
-    actual fun getAccounts(accountsDataSource: AccountsDataSource): List<AccountsDAO> {
-        return accountsDataSource.selectAll()
+    actual fun getAccounts(accountsDataSource: AccountsDataSource): MutableList<AccountsDAO> {
+        return accountsDataSource.selectAll().toMutableList()
     }
 
     actual fun logout(accountsDataSource: AccountsDataSource, email: String) {
