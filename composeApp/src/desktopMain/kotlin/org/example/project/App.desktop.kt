@@ -137,9 +137,9 @@ actual class EmailService actual constructor(
         // Check if emails exist in db
         println("Checking for emails and attachments...")
 
-        val account = emailDataSource.selectAllEmailsForAccount(emailAddress).size
-
-        return account < messagesSize
+        val totalEmailsForAccount = emailDataSource.selectAllEmailsForAccount(emailAddress).size
+        println("Size $totalEmailsForAccount")
+        return  if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
     }
 
     actual suspend fun getEmails(
