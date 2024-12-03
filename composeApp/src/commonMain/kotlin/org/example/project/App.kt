@@ -99,9 +99,11 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         }
 
         LaunchedEffect(accounts.value) {
-            emailServiceManager.syncEmails(
-                accounts.value
-            )
+            withContext(Dispatchers.Default) {
+                emailServiceManager.syncEmails(
+                    accounts.value
+                )
+            }
         }
 
         val emails by emailServiceManager.emails.collectAsState()
