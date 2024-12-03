@@ -77,22 +77,10 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             ),
         )
 
-        // Queries
-        val accountQueries = database.accountsTableQueries
-        val emailQueries = database.emailsTableQueries
-
         // Data Sources
         val emailDataSource: EmailsDataSource = EmailsDataSource(database)
         val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
         val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
-
-        // Basic Auth
-//        val emailCount by emailService.getEmailCount(emailDataSource).collectAsState()
-
-        // Ui
-        var isLoading by remember {
-            mutableStateOf(false)
-        }
 
         val scope = rememberCoroutineScope()
 
@@ -102,16 +90,8 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         }
 
         authentication.amILoggedIn(accountsDataSource)
-        val accountsExists = authentication.accountsExists(accountsDataSource)
-        val amILoggedIn = authentication.isLoggedIn.collectAsState().value
 
         val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
-
-        val allEmails = remember { mutableStateListOf<EmailsDAO>() }
-        val allAttachments = remember { mutableStateListOf<AttachmentsDAO>() }
-
-        var showEmails by remember { mutableStateOf(false) }
-
         val emailServiceManager = remember {
             EmailServiceManager(
                 emailService,
