@@ -201,15 +201,17 @@ class EmailServiceManager(
                 }.awaitAll()
             }
 
+            emailResults
+//            _emails.value = mutableListOf()
+//            _attachments.value = mutableListOf()
+
             // Combine results from all accounts
-            val combinedEmails = emailResults.first().first.value
-            val combinedAttachments = emailResults.first().second.value
+            val combinedEmails = emailResults.flatMap { it.first.value }
+            val combinedAttachments = emailResults.flatMap { it.second.value }
 
             // Update state flows
-            _emails.value.clear()
-            _attachments.value.clear()
-            _emails.value = combinedEmails.toMutableList()
-            _attachments.value = combinedAttachments.toMutableList()
+            _emails.value.addAll(combinedEmails)
+            _attachments.value.addAll(combinedAttachments)
         } catch (e: Exception) {
             // Log error or handle synchronization failure
             println("Email sync failed: ${e.message}")

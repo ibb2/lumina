@@ -13,6 +13,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
@@ -138,13 +139,16 @@ actual class EmailService actual constructor(
         println("Checking for emails and attachments...")
 
         val totalEmailsForAccount = emailDataSource.selectAllEmailsForAccount(emailAddress).size
-        println("Size $totalEmailsForAccount")
+        println("Email $emailAddress Size $totalEmailsForAccount")
         return  if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
     }
 
     actual suspend fun getEmails(
         emailAddress: String
     ): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>> {
+
+        val localEmails = MutableStateFlow<List<EmailsDAO>>(emptyList())
+        val localAttachments = MutableStateFlow<List<AttachmentsDAO>>(emptyList())
 
         val props = getProps()
         val session = Session.getInstance(props)
@@ -160,10 +164,16 @@ actual class EmailService actual constructor(
         if (emailsUpToDate) {
 
             println("Retrieving emails and attachments from database...")
-            _emails.value = emailDataSource.selectAllEmailsForAccount(emailAddress).toMutableList()
-            _attachments.value = attachmentsDataSource.selectAttachments(emails.value[0].id!!).toMutableList()
+            val dbEmails = emailDataSource.selectAllEmailsForAccount(emailAddress)
+            localEmails.value = dbEmails
 
-            return Pair(emails, attachments)
+            val dbAttachments = dbEmails.firstOrNull()?.let {
+                attachmentsDataSource.selectAttachments(it.id!!)
+            } ?: emptyList()
+            localAttachments.value = dbAttachments
+
+            return Pair(localEmails, localAttachments)
+
         }
 
         println("Retrieving emails and attachments from IMAP server...")
