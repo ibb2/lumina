@@ -85,6 +85,30 @@ class EmailsDataSource(db: LuminaDatabase) {
             )
         }).executeAsList()
 
+    fun selectAllEmailsForAccount(emailAddress: String): List<EmailsDAO> = queries.selectAllEmailsForAccount(emailAddress,
+        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+            EmailsDAO(
+                id = id,
+                messageId = messageId ?: "",
+                folderUID = folderUID,
+                compositeKey = compositeKey,
+                folderName = folderName,
+                subject = subject ?: "",
+                sender = sender ?: "",
+                recipients = recipients ?: byteArrayOf(),
+                sentDate = sentDate ?: "",
+                receivedDate = receivedDate ?: "",
+                body = body ?: "",
+                snippet = snippet ?: "",
+                size = size ?: 0,
+                isRead = isRead ,
+                isFlagged = isFlagged ,
+                attachmentsCount = attachmentsCount ,
+                hasAttachments = hasAttachments ,
+                account = account
+            )
+        }).executeAsList()
+
     fun selectAllEmailsFlow(): Flow<List<EmailsDAO>> = queries.selectAllEmails(
         mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(

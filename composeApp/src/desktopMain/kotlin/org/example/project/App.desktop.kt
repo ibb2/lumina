@@ -133,6 +133,15 @@ actual class EmailService actual constructor(
         }
     }
 
+    private fun checkForNewEmails(emailAddress: String, messagesSize: Int): Boolean {
+        // Check if emails exist in db
+        println("Checking for emails and attachments...")
+
+        val account = emailDataSource.selectAllEmailsForAccount(emailAddress).size
+
+        return account < messagesSize
+    }
+
     actual suspend fun getEmails(
         emailAddress: String
     ): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>> {
@@ -146,8 +155,20 @@ actual class EmailService actual constructor(
 
         // Check if emails exist in db
         println("Checking for emails and attachments...")
+        val emailsUpToDate = checkForNewEmails(emailAddress, messages.size)
 
-        val account = accountsDataSource.select(emailAddress).executeAsOne()
+        if (emailsUpToDate) {
+
+            println("Retrieving emails and attachments from database...")
+            _emails.value = emailDataSource.selectAllEmailsForAccount(emailAddress).toMutableList()
+            _attachments.value = attachmentsDataSource.selectAttachments(emails.value[0].id!!).toMutableList()
+
+            return Pair(emails, attachments)
+        }
+
+        println("Retrieving emails and attachments from IMAP server...")
+
+        val account = accountsDataSource.select(emailAddress)
 
         efficientGetContents(
             account,
@@ -156,6 +177,7 @@ actual class EmailService actual constructor(
         )
 
         inbox.close(false)
+        store.close()
 
         return Pair(emails, attachments)
     }

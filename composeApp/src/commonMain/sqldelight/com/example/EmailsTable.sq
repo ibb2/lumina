@@ -54,6 +54,9 @@ DELETE FROM Emails;
 selectAllEmails:
 SELECT * FROM Emails;
 
+selectAllEmailsForAccount:
+SELECT * FROM Emails WHERE account = ?;
+
 selectEmail:
 SELECT * FROM Emails WHERE composite_key = ?;
 

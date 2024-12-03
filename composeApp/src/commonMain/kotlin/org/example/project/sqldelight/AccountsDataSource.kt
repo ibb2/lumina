@@ -64,7 +64,8 @@ class AccountsDataSource(db: LuminaDatabase) {
            kind = kind
         )
     }).executeAsList()
-    fun select(emailAddress: String) = queries.selectAccount(emailAddress)
+
+    fun select(emailAddress: String) = queries.selectAccount(emailAddress).executeAsOne()
 
     fun remove(emailAddress: String) = queries.removeAccount(emailAddress)
 
