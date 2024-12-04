@@ -67,14 +67,20 @@ kotlin {
             implementation("com.composables:core:1.19.1")
 //            implementation("com.squareup.sqldelight:coroutines-extensions:2.0.2")
 //            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
-
             implementation("app.cash.sqldelight:coroutines-extensions:2.0.2")
-
+            implementation("dev.gitlive:firebase-auth:2.1.0")
+            implementation("io.ktor:ktor-server-core:3.0.1")
+            implementation("io.ktor:ktor-server-netty:3.0.1")
+            implementation("io.ktor:ktor-client-content-negotiation:3.0.1")
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
             implementation(libs.jvm.driver)
+            implementation(libs.ktor.client.okhttp)
+            implementation("net.java.dev.jna:jna:5.15.0")
+            implementation("net.java.dev.jna:jna-platform:5.15.0")
+            implementation("com.microsoft:credential-secure-storage:1.0.3")
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

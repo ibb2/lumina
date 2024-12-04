@@ -17,11 +17,34 @@ class AttachmentsDataSource(db: LuminaDatabase) {
         downloaded: Boolean = false
     ) = queries.insertAttachment(id, emailId, fileName, mimeType, size, downloadPath, downloaded)
 
-    fun selectAttachments(emailId: Long) = queries.selectAttachment(emailId)
+    fun selectAttachments(emailId: Long) = queries.selectAttachment(
+        emailId,
+        mapper = { id, emailId, fileName, mimeType, size, downloadPath, downloaded ->
+            AttachmentsDAO(
+                id,
+                emailId,
+                fileName,
+                mimeType ?: "",
+                size ?: 0,
+                downloadPath ?: "",
+                downloaded ?: false
+            )
+        }
+    ).executeAsList()
 
     fun removeAllAttachments() = queries.removeAllAttachments()
 
     fun selectAllAttachments(): List<AttachmentsDAO> = queries.selectAllAttachments(
-        mapper = { id, emailId, fileName, mimeType, size, downloadPath, downloaded -> AttachmentsDAO(id, emailId, fileName, mimeType ?: "", size ?: 0, downloadPath ?:"", downloaded ?: false) }
+        mapper = { id, emailId, fileName, mimeType, size, downloadPath, downloaded ->
+            AttachmentsDAO(
+                id,
+                emailId,
+                fileName,
+                mimeType ?: "",
+                size ?: 0,
+                downloadPath ?: "",
+                downloaded ?: false
+            )
+        }
     ).executeAsList()
 }

@@ -1,53 +1,61 @@
 package org.example.project
 
+import androidx.compose.runtime.*
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
-import com.example.AccountsTableQueries
+import com.example.Accounts
 import com.example.Emails
-import com.example.EmailsTableQueries
 import com.example.project.database.LuminaDatabase
 import jakarta.mail.*
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
-import jakarta.mail.internet.MimeMultipart
 import jakarta.mail.search.MessageIDTerm
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
+import org.example.project.networking.*
+import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.DatabaseDriverFactory
 import org.example.project.sqldelight.EmailsDataSource
+import org.example.project.utils.NetworkError
+import org.example.project.utils.onError
+import org.example.project.utils.onSuccess
+import org.example.project.windowsNative.CredentialManager
+import java.net.URI
 import java.util.*
-import kotlin.properties.Delegates
 
 
-actual class EmailService() {
+actual class EmailService actual constructor(
+    private val client: FirebaseAuthClient,
+) {
 
-    // Database
-    private lateinit var db: LuminaDatabase
-    private lateinit var emailDataSource: EmailsDataSource
-    private lateinit var attachmentsDataSource: AttachmentsDataSource
-    private lateinit var accountsDataSource: AccountsDataSource
+    private var db: LuminaDatabase
+    private var emailDataSource: EmailsDataSource
+    private var attachmentsDataSource: AttachmentsDataSource
+    private var accountsDataSource: AccountsDataSource
 
-    private var emails = mutableListOf<EmailsDAO>()
-    private val totalEmailCount = MutableStateFlow(0)
-    actual val totalEmails: StateFlow<Int> = totalEmailCount
-    private val _emailsRead = MutableStateFlow(0)
-    actual val emailsRead: StateFlow<Int> = _emailsRead
-    actual var emailCount by Delegates.observable(0) { property, oldValue, newValue ->
-        println("Value changed ${property.name} from $oldValue to $newValue")
-        _emailsRead.value = newValue
-        println("Emails read: $emailsRead")
-    }
-    private val attachments: MutableList<AttachmentsDAO> = mutableListOf()
-    private var totalAttachments = 0
+    private val _emails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
+    actual val emails = _emails.asStateFlow()
+
+    private val _attachments = MutableStateFlow<MutableList<AttachmentsDAO>>(mutableListOf())
+    actual val attachments = _attachments.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow<Boolean>(false)
+    actual val isSyncing = _isSyncing.asStateFlow()
 
     init {
         val driver = DatabaseDriverFactory().create()
+
         db = LuminaDatabase(
             driver,
             EmailsAdapter = Emails.Adapter(
@@ -59,234 +67,146 @@ actual class EmailService() {
         emailDataSource = EmailsDataSource(db)
         attachmentsDataSource = AttachmentsDataSource(db)
         accountsDataSource = AccountsDataSource(db)
-
-        // Setting counts for emails and attachments
-        totalEmailCount.value = emailDataSource.selectAllEmails().size
-        totalAttachments = attachmentsDataSource.selectAllAttachments().size
     }
 
-    actual suspend fun getEmails(
-        emailDataSource: EmailsDataSource,
-        emailTableQueries: EmailsTableQueries,
-        accountQueries: AccountsTableQueries,
-        emailAddress: String,
-        password: String
-    ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>> {
+    private fun getProps(): Properties {
+        // Return properties need for Session
 
-        val properties: Properties = Properties().apply {
+        return Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
-            put("mail.imap.username", emailAddress)
-            put("mail.imap.password", password)
+            put("mail.imap.auth.mechanisms", "XOAUTH2");
             put("mail.imap.port", "993")
             put("mail.imap.ssl.enable", "true")
             put("mail.imap.connectiontimeout", 10000)
             put("mail.imap.timeout", 10000)
             put("mail.imap.partialfetch", "false");
             put("mail.imap.fetchsize", "1048576");
-
         }
+    }
 
-        val session = Session.getInstance(properties)
-        println("Connecting...")
-        val store: Store = session.getStore("imap").apply {
-            connect(
-                properties.getProperty("mail.imap.host"),
-                properties.getProperty("mail.imap.username"),
-                properties.getProperty("mail.imap.password")
+    private suspend fun connectToStore(session: Session, props: Properties, emailAddress: String): Store {
+        // Connect to the Imap store session
+
+        try {
+            val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+
+            val password = String(atCred?.password!!)
+
+            return session.getStore("imap").apply {
+                connect(
+                    props.getProperty("mail.imap.host"),
+                    emailAddress,
+                    password
+                )
+            }
+        } catch (e: Exception) {
+
+            var results: DjangoRefreshTokenResponse? = null
+            var errors: NetworkError? = null
+
+            val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+            val refreshTokenPassword = rtCred?.password?.let { String(it) }
+
+            client.refreshAccessToken(refreshToken = refreshTokenPassword!!).onSuccess {
+                results = it
+            }.onError {
+                errors = it
+            }
+
+            if (results == null) {
+                throw Exception(errors?.name)
+            }
+
+            CredentialManager(emailAddress, "accessToken").registerUser(
+                emailAddress,
+                results!!.accessToken
             )
+            CredentialManager(emailAddress, "idToken").registerUser(emailAddress, results!!.idToken)
+
+
+            return session.getStore("imap").apply {
+                connect(
+                    props.getProperty("mail.imap.host"),
+                    emailAddress,
+                    results!!.accessToken
+                )
+            }
         }
-        println("Connected")
+    }
+
+    private fun checkForNewEmails(emailAddress: String, messagesSize: Int): Boolean {
+        // Check if emails exist in db
+        println("Checking for emails and attachments...")
+
+        val totalEmailsForAccount = emailDataSource.selectAllEmailsForAccount(emailAddress).size
+        println("Email $emailAddress Size $totalEmailsForAccount")
+        return  if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
+    }
+
+    actual suspend fun getEmails(
+        emailAddress: String
+    ): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>> {
+
+        val localEmails = MutableStateFlow<List<EmailsDAO>>(emptyList())
+        val localAttachments = MutableStateFlow<List<AttachmentsDAO>>(emptyList())
+
+        val props = getProps()
+        val session = Session.getInstance(props)
+
+        val store = connectToStore(session, props, emailAddress)
+        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
+        val messages = inbox.getMessages()
 
         // Check if emails exist in db
         println("Checking for emails and attachments...")
-        doEmailsExist(emailTableQueries, emailDataSource)
+        val emailsUpToDate = checkForNewEmails(emailAddress, messages.size)
 
-        val emailsExist = doEmailsExist(emailTableQueries, emailDataSource)
-        val attachmentsExist = doAttachmentsExist(attachmentsDataSource)
+        if (emailsUpToDate) {
 
-        var attach: MutableList<AttachmentsDAO> = mutableListOf()
+            println("Retrieving emails and attachments from database...")
+            val dbEmails = emailDataSource.selectAllEmailsForAccount(emailAddress)
+            localEmails.value = dbEmails
 
+            val dbAttachments = dbEmails.firstOrNull()?.let {
+                attachmentsDataSource.selectAttachments(it.id!!)
+            } ?: emptyList()
+            localAttachments.value = dbAttachments
 
-        if (attachmentsExist) {
-            attach = returnAttachments(attachmentsDataSource)
+            return Pair(localEmails, localAttachments)
+
         }
 
-        if (emailsExist) {
-            emails = returnEmails(emailTableQueries, emailDataSource)
+        println("Retrieving emails and attachments from IMAP server...")
 
-            println("Found em")
-            return Pair(emails, attach)
-        }
+        val account = accountsDataSource.select(emailAddress)
 
-        println("Did not find any.")
-//        fetchEmailBodies(emailAddress, emailTableQueries, emailDataSource, accountQueries, store)
-
-        println("Settings up inbox...")
-        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
-        val messages = inbox.getMessages()
-        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
-
-        println("Manually getting emails now")
         efficientGetContents(
-            emailAddress,
-            emailTableQueries,
-            emailDataSource,
-            accountQueries,
-            store,
-            emails,
             account,
             inbox,
-            inbox,
             messages,
-            properties
         )
 
         inbox.close(false)
-
-        println("Got them")
-        return Pair(emails, attachments)
-    }
-
-    fun doEmailsExist(emailTableQueries: EmailsTableQueries, emailDataSource: EmailsDataSource): Boolean {
-        val emailsExist = emailDataSource.selectAllEmails()
-        totalEmailCount.value = emailsExist.size
-        return emailsExist.isNotEmpty()
-    }
-
-    fun fetchEmailBodies(
-        emailAddress: String,
-        emailTableQueries: EmailsTableQueries,
-        emailDataSource: EmailsDataSource,
-        accountQueries: AccountsTableQueries,
-        store: Store
-    ) {
-        /**
-         * Fetches the bodies of the emails in the INBOX folder.
-         *
-         * This uses the JavaMail API to connect to the IMAP server and fetch the emails.
-         * It then uses the sqldelight library to insert the emails into the sqlite database.
-         * This should only be run on initial setup of the app.
-         *
-         * @param emailAddress The email address to use for the imap connection.
-         * @param emailTableQueries The sqldelight query object for the email table.
-         * @param emailDataSource The sqldelight data source for the email table.
-         * @param accountQueries The sqldelight query object for the account table.
-         * @param store The JavaMail store object.
-         */
-
-        val fp = FetchProfile()
-        fp.add(FetchProfile.Item.ENVELOPE)
-        fp.add(IMAPFolder.FetchProfileItem.FLAGS)
-        fp.add(IMAPFolder.FetchProfileItem.CONTENT_INFO)
-
-        val folder = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) }
-        val msgs = folder.messages
-
-        val messages: List<Message> = folder.messages.takeLast(50)
-//        folder.fetch(msgs, fp)
-        // Email UIDs
-        val uf: UIDFolder = folder as UIDFolder
-
-        // Account
-        val account = accountQueries.selectAccount(emailAddress = emailAddress).executeAsList()
-
-//        totalEmailCount = 50
-
-//        for (message in messages) {
-//            val emailUID = uf.getUID(message)
-//            println("Message: ${message.from}")
-//            emails.add(
-//                Email(
-//                    id = emailUID,
-//                    from = message.from?.joinToString(),
-//                    subject = message.subject ?: "",
-//                    body = getEmailBody(message),
-//                    to = "",
-//                    cc = null,
-//                    bcc = null,
-//                    account = account[0]
-//                )
-//            )
-//
-////            emailTableQueries.insertEmail(
-////                id = emailUID,
-////                from_user = message.from?.joinToString() ?: "",
-////                subject = message.subject ?: "",
-////                body = getEmailBody(message),
-////                to_user = "",
-////                cc = null,
-////                bcc = null,
-////                account = account[0]
-////            )
-//
-//            emailCount++
-//        }
-
-//        for (message in folder.getMessages().takeLast(50)) {
-//            val emailUID = uf.getUID(message)
-//            println("Message: ${message.from}")
-//            emails.add(
-//                Email(
-//                    id = emailUID,
-//                    from = message.from?.joinToString(),
-//                    subject = message.subject ?: "",
-//                    body = getEmailBody(message),
-//                    to = "",
-//                    cc = null,
-//                    bcc = null,
-//                    account = account[0]
-//                )
-//            )
-
-//            emailTableQueries.insertEmail(
-//                id = emailUID,
-//                from_user = message.from?.joinToString() ?: "",
-//                subject = message.subject ?: "",
-//                body = getEmailBody(message),
-//                to_user = "",
-//                cc = null,
-//                bcc = null,
-//                account = account[0]
-//            )
-//
-//            emailCount++
-//        }
-
-        folder.close(false)
         store.close()
+
+        return Pair(emails, attachments)
     }
 
     @Throws(MessagingException::class)
     fun efficientGetContents(
-        emailAddress: String,
-        emailTableQueries: EmailsTableQueries,
-        emailDataSource: EmailsDataSource,
-        accountQueries: AccountsTableQueries,
-        store: Store,
-        emails: MutableList<EmailsDAO>,
-        account: List<String>,
-        folder: Folder,
+        account: Accounts,
         inbox: IMAPFolder,
         messages: Array<Message>,
-        properties: Properties
     ): Int {
         val fp = FetchProfile()
         fp.add(FetchProfile.Item.FLAGS)
         fp.add(FetchProfile.Item.ENVELOPE)
         inbox.fetch(messages, fp)
+
         val nbMessages = inbox.getMessages().size
-        var index = nbMessages - 49
+        var index = nbMessages - 10
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
-        totalEmailCount.value = nbMessages
-
-        // Email UIDs
-        val uf: UIDFolder = inbox
-
-        // Attachments
-        val attachmentDataSource: AttachmentsDataSource = AttachmentsDataSource(db)
-
-        // Emails
 
         // Message numbers limit to fetch
         var start: Int
@@ -315,18 +235,14 @@ actual class EmailService() {
             end = messages[index - 1].messageNumber
             inbox.doCommand(
                 JavaMail(
-                    start = nbMessages - 49,
+                    start = nbMessages - 10,
                     end = nbMessages,
-                    emails,
+                    emails.value,
+                    attachments.value,
+                    emailDataSource,
+                    attachmentsDataSource,
                     account,
                     mail,
-                    attachments,
-                    emailDataSource,
-                    attachmentDataSource,
-                    emailCount,
-                    _emailsRead,
-                    folder,
-                    uf,
                 )
             )
 
@@ -340,73 +256,19 @@ actual class EmailService() {
         return nbMessages
     }
 
-
-    fun getEmailBody(message: Message): String {
-        return when (val content = message.content) {
-            is String -> content // Plain text or HTML content
-            is MimeMultipart -> getTextFromMimeMultipart(content) // Multipart email (e.g., with attachments)
-            else -> "Unsupported content type"
-        }
-    }
-
-    fun getTextFromMimeMultipart(mimeMultipart: MimeMultipart): String {
-        val result = StringBuilder()
-        for (i in 0 until mimeMultipart.count) {
-            val bodyPart = mimeMultipart.getBodyPart(i)
-
-
-
-            when {
-                bodyPart.isMimeType("text/plain") -> result.append(bodyPart.content)
-                bodyPart.isMimeType("text/html") -> result.append(bodyPart.content) // Optionally, ignore or prefer text/plain
-                bodyPart.content is MimeMultipart -> result.append(
-                    getTextFromMimeMultipart(bodyPart.content as MimeMultipart)
-                )
-            }
-        }
-        return result.toString()
-    }
-
-    actual suspend fun deleteEmails(emailDataSource: EmailsDataSource) {
-        emailDataSource.remove()
-    }
-
-    actual fun getEmailCount(emailDataSource: EmailsDataSource): StateFlow<Int> {
-//        totalEmailCount = emailDataSource.selectAllEmails().size
-        return totalEmails
-    }
-
-    actual fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean {
-        val attachments = attachmentsDataSource.selectAllAttachments()
-        return attachments.isNotEmpty()
-    }
-
-    actual fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO> {
-
-        val attach = attachmentsDataSource.selectAllAttachments()
-        attachments.addAll(attach)
-
-        return attachments
-    }
-
-    fun returnEmails(
-        emailTableQueries: EmailsTableQueries,
-        emailDataSource: EmailsDataSource
-    ): MutableList<EmailsDAO> {
-        println("Return emails from database")
-        return emailDataSource.selectAllEmails() as MutableList<EmailsDAO>
-    }
-
     actual fun readEmail(
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
         emailAddress: String,
-        password: String
     ): Pair<Boolean, Boolean?> {
+
+        val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+        val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+        val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
+
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
-            put("mail.imap.username", emailAddress)
-            put("mail.imap.password", password)
+            put("mail.imap.auth.mechanisms", "XOAUTH2")
             put("mail.imap.port", "993")
             put("mail.imap.ssl.enable", "true")
             put("mail.imap.connectiontimeout", 10000)
@@ -419,8 +281,8 @@ actual class EmailService() {
         val store: Store = session.getStore("imap").apply {
             connect(
                 properties.getProperty("mail.imap.host"),
-                properties.getProperty("mail.imap.username"),
-                properties.getProperty("mail.imap.password")
+                emailAddress,
+                atCred?.password.toString()
             )
         }
         val inboxFolder = store.getFolder("INBOX").apply { open(Folder.READ_WRITE) }
@@ -447,12 +309,15 @@ actual class EmailService() {
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
         emailAddress: String,
-        password: String
     ): Boolean {
+
+        val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+        val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+        val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
+
         val properties: Properties = Properties().apply {
             put("mail.imap.host", "imap.gmail.com")
-            put("mail.imap.username", emailAddress)
-            put("mail.imap.password", password)
+            put("mail.imap.auth.mechanisms", "XOAUTH2")
             put("mail.imap.port", "993")
             put("mail.imap.ssl.enable", "true")
             put("mail.imap.connectiontimeout", 10000)
@@ -465,8 +330,8 @@ actual class EmailService() {
         val store: Store = session.getStore("imap").apply {
             connect(
                 properties.getProperty("mail.imap.host"),
-                properties.getProperty("mail.imap.username"),
-                properties.getProperty("mail.imap.password")
+                emailAddress,
+                atCred?.password.toString()
             )
         }
 
@@ -493,8 +358,12 @@ actual class EmailService() {
         emailsDataSource: EmailsDataSource,
         newEmail: NewEmail,
         emailAddress: String,
-        password: String
     ): Boolean {
+
+        val atCred = CredentialManager(emailAddress, "accessToken").returnCredentials()
+        val rtCred = CredentialManager(emailAddress, "refreshToken").returnCredentials()
+        val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
+
 
         val props = Properties().apply {
             put("mail.smtp.host", "smtp.gmail.com")
@@ -509,7 +378,7 @@ actual class EmailService() {
         val auth: Authenticator = object : Authenticator() {
             //override the getPasswordAuthentication method
             override fun getPasswordAuthentication(): PasswordAuthentication {
-                return PasswordAuthentication(emailAddress, password)
+                return PasswordAuthentication(emailAddress, atCred?.password.toString())
             }
         }
 
@@ -544,3 +413,158 @@ actual class EmailService() {
 
 }
 
+
+actual class Authentication {
+
+
+    private var code = ""
+    private var accessToken = ""
+    private var refreshToken = ""
+    private var idToken = ""
+    private var tResponse: TokenResponse? = null
+    private var tError: NetworkError? = null
+    private var oAuthResponse: OAuthResponse? = null
+    private var oAuthErr: NetworkError? = null
+    private val deferred = CompletableDeferred<Unit>()
+
+    private val _isLoggedIn = MutableStateFlow(false)
+    actual val isLoggedIn = _isLoggedIn.asStateFlow()
+
+    private val _email = MutableStateFlow("")
+    actual val email = _email.asStateFlow()
+
+    actual suspend fun authenticateUser(
+        fAuthClient: FirebaseAuthClient,
+        accountsDataSource: AccountsDataSource
+    ): Pair<OAuthResponse?, NetworkError?> {
+
+        runBlocking {
+            val server = runKtorServer {
+                code = it
+                println("Code: $code")
+                deferred.complete(Unit)
+            }
+
+            server.start()
+
+            val scopes =
+                "openid email profile https://www.googleapis.com/auth/gmail.addons.current.action.compose https://www.googleapis.com/auth/gmail.addons.current.message.action https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.addons.current.message.metadata https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.metadata"
+            val xOAuthScopes = "openid email profile https://mail.google.com/"
+
+            val authUrl = "https://accounts.google.com/o/oauth2/v2/auth" +
+                    "?client_id=113121378086-7s0tvasib3ujgd660d5kkiod7434lp55.apps.googleusercontent.com" +
+                    "&redirect_uri=http://localhost:3000" +
+                    "&response_type=code" +
+                    "&scope=$xOAuthScopes" +
+                    "&access_type=offline" +    // Request a refresh token
+                    "&prompt=consent"           // Ensure the consent screen is displayed
+
+            val uri: URI = authUrl.toHttpUrl().toUri()
+
+            val desktop: java.awt.Desktop? =
+                if (java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop() else null
+            if (desktop != null && desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
+                try {
+                    desktop.browse(uri)
+                } catch (e: java.lang.Exception) {
+                    e.printStackTrace()
+                }
+            }
+            deferred.await()
+            server.stop()
+        }
+
+        if (code.isNotEmpty()) {
+            println("Code received: $code")
+
+            fAuthClient.googleTokenIdEndpoint(code).onSuccess {
+                tResponse = it
+                println("Initial refresh token ${it.refreshToken}")
+                accessToken = it.accessToken
+                refreshToken = it.refreshToken!!
+                idToken = it.idToken!!
+            }.onError {
+                tError = it
+            }
+
+            if (tError == null && tResponse?.idToken?.isNotEmpty() == true) {
+                fAuthClient.googleLogin(tResponse!!.idToken!!).onSuccess {
+                    oAuthResponse = it
+                    accountsDataSource.insert(
+                        null,
+                        it.federatedId,
+                        it.providerId,
+                        it.email,
+                        it.emailVerified,
+                        it.firstName,
+                        it.fullName,
+                        it.lastName,
+                        it.photoUrl,
+                        it.localId,
+                        it.displayName,
+                        it.expiresIn,
+                        it.rawUserInfo,
+                        it.kind
+                    )
+                    println("Refresh token ${it.refreshToken}")
+                    CredentialManager(it.email, "accessToken").registerUser(it.email, accessToken)
+                    CredentialManager(it.email, "refreshToken").registerUser(it.email, refreshToken)
+                    CredentialManager(it.email, "idToken").registerUser(it.email, idToken)
+                    _isLoggedIn.value = true
+                }.onError {
+                    oAuthErr = it
+                }
+
+                if (oAuthErr == null) return Pair(oAuthResponse, null)
+
+            }
+
+            return Pair(null, tError)
+        }
+
+        return Pair(null, null)
+
+    }
+
+    actual fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean {
+
+        val accounts = accountsDataSource.selectAll()
+
+        if (accounts?.isNotEmpty() == true) {
+            _isLoggedIn.value = true
+
+            _email.value = accounts[0].email
+
+            val atExists = CredentialManager(accounts[0].email, "accessToken").exists()
+            val rfExists = CredentialManager(accounts[0].email, "refreshToken").exists()
+            val idExists = CredentialManager(accounts[0].email, "idToken").exists()
+
+            return atExists && rfExists && idExists
+        }
+
+        _isLoggedIn.value = false
+
+        return false
+    }
+
+    actual fun accountsExists(accountsDataSource: AccountsDataSource): Boolean {
+        return accountsDataSource.selectAll().isNotEmpty()
+    }
+
+    actual fun getAccounts(accountsDataSource: AccountsDataSource): MutableList<AccountsDAO> {
+        return accountsDataSource.selectAll().toMutableList()
+    }
+
+    actual fun logout(accountsDataSource: AccountsDataSource, email: String) {
+        accountsDataSource.remove(email)
+        CredentialManager(email, "accessToken").unregisterUser()
+        CredentialManager(email, "refreshToken").unregisterUser()
+        CredentialManager(email, "idToken").unregisterUser()
+        if (!accountsExists(accountsDataSource)) _isLoggedIn.value = false
+    }
+
+    actual fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean {
+        return true
+    }
+
+}

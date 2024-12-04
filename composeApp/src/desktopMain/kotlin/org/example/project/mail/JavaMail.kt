@@ -1,14 +1,11 @@
 package org.example.project.mail
 
-import app.cash.sqldelight.TransactionWithReturn
+import com.example.Accounts
 import jakarta.mail.*
 import jakarta.mail.internet.MailDateFormat
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.datetime.format.DateTimeFormat
 import org.eclipse.angus.mail.iap.Argument
 import org.eclipse.angus.mail.iap.Response
 import org.eclipse.angus.mail.imap.IMAPFolder
@@ -16,14 +13,12 @@ import org.eclipse.angus.mail.imap.protocol.BODY
 import org.eclipse.angus.mail.imap.protocol.FetchResponse
 import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
-import org.eclipse.angus.mail.imap.protocol.UID
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import java.io.ByteArrayInputStream
-import java.text.SimpleDateFormat
 import java.util.*
 
 class JavaMail(
@@ -31,17 +26,13 @@ class JavaMail(
     var start: Int,
     /** Index on server of last mail to fetch  */
     var end: Int,
-    var emails: MutableList<EmailsDAO>,
-    var account: List<String>,
-    var messages: Array<Message>,
-    var attachmentsArray: MutableList<AttachmentsDAO>,
-    var emailsDataSource: EmailsDataSource,
-    var attachmentsDataSource: AttachmentsDataSource,
-    var emailCount: Int,
-    var _emailsCount: MutableStateFlow<Int>,
-    var folder: Folder,
-    var uFolder: UIDFolder,
-) : IMAPFolder.ProtocolCommand {
+    private var emails: MutableList<EmailsDAO>,
+    private var attachmentsArray: MutableList<AttachmentsDAO>,
+    private var emailsDataSource: EmailsDataSource,
+    private var attachmentsDataSource: AttachmentsDataSource,
+    private var account: Accounts,
+    private var messages: Array<Message>,
+    ) : IMAPFolder.ProtocolCommand {
     //    @Throws(ProtocolException::class)
     override fun doCommand(protocol: IMAPProtocol): Any {
 
@@ -67,7 +58,6 @@ class JavaMail(
             var mm: MimeMessage
             var `is`: ByteArrayInputStream? = null
             var message: Message
-            var uid: Long = 0
             var isRead = false
             var isFlagged = false
 
@@ -79,11 +69,11 @@ class JavaMail(
                     body = fetch.getItem(0) as BODY
                     `is` = body.getByteArrayInputStream()
                     message = messages.takeLast(50)[i]
+
                     try {
-                        println("Read...${message.subject} ${message.flags.contains(Flags.Flag.SEEN)}")
                         isRead = message.flags.contains(Flags.Flag.SEEN)
                         isFlagged = message.flags.contains(Flags.Flag.FLAGGED)
-                        println("New Read... ${isRead}")
+
                         mm = MimeMessage(session, `is`)
 
                         val (emailBody, attachments) = getEmailBody(mm, i)
@@ -96,14 +86,11 @@ class JavaMail(
                             ?: getFallbackReceivedDate(mm)?.toInstant()?.toString()
                             ?: Clock.System.now().toString()
 
-                        uid = uFolder.getUID(message)
-
-
                         emails.add(
                             EmailsDAO(
                                 id = null,
                                 messageId = mm.messageID,
-                                folderUID = uid,
+                                folderUID = null,
                                 compositeKey = createCompositeKey(mm.subject, sentDate, mm.from.toString()),
                                 folderName = message.folder.fullName,
                                 subject = mm.subject ?: "",
@@ -118,14 +105,13 @@ class JavaMail(
                                 isFlagged = isFlagged,
                                 attachmentsCount = attachments.size,
                                 hasAttachments = attachments.isNotEmpty(),
-                                account = account[0],
+                                account = account.email,
                             )
                         )
 
-
                         val emailId = emailsDataSource.insertEmail(
                             messageId = mm.messageID,
-                            folderUID = uid,
+                            folderUID = null,
                             compositeKey = mm.subject + sentDate + mm.from.toString(),
                             folderName = message.folder.fullName,
                             subject = mm.subject,
@@ -140,10 +126,8 @@ class JavaMail(
                             isFlagged = isFlagged,
                             attachmentsCount = attachments.size,
                             hasAttachments = attachments.isNotEmpty(),
-                            account = account[0]
+                            account = account.email
                         )
-
-                        println("Email ${mm.from[0]} status now read... ${message.flags.contains(Flags.Flag.SEEN)} or mm... ${mm.flags.contains(Flags.Flag.SEEN)}")
 
                         for (attachment in attachments) {
                             attachmentsArray.add(
@@ -164,10 +148,6 @@ class JavaMail(
                                 size = attachment.size,
                             )
                         }
-//                        println("Email count: $emailCount")
-//                        _emailsCount.value = emailCount
-//                        emailCount++
-
                     } catch (e: MessagingException) {
                         print("Errored out")
                         e.printStackTrace()
@@ -182,7 +162,7 @@ class JavaMail(
         return "" + (r.size - 1)
     }
 
-    fun getEmailBody(mm: MimeMessage, i: Int): Pair<String, List<AttachmentsDAO>> {
+    private fun getEmailBody(mm: MimeMessage, i: Int): Pair<String, List<AttachmentsDAO>> {
         val attachments = mutableListOf<AttachmentsDAO>()
         val emailBody = when (val content = mm.content) {
             is String -> content // Plain text or HTML content
@@ -194,23 +174,7 @@ class JavaMail(
         return Pair(emailBody, attachments)
     }
 
-    fun getTextFromMimeMultipart(mimeMultipart: MimeMultipart): String {
-        val result = StringBuilder()
-        for (i in 0 until mimeMultipart.count) {
-            val bodyPart = mimeMultipart.getBodyPart(i)
-
-            when {
-                bodyPart.isMimeType("text/plain") -> result.append(bodyPart.content)
-                bodyPart.isMimeType("text/html") -> result.append(bodyPart.content) // Optionally, ignore or prefer text/plain
-                bodyPart.content is MimeMultipart -> result.append(
-                    getTextFromMimeMultipart(bodyPart.content as MimeMultipart)
-                )
-            }
-        }
-        return result.toString()
-    }
-
-    fun processMimeMultipart(multipart: MimeMultipart, attachments: MutableList<AttachmentsDAO>): String {
+    private fun processMimeMultipart(multipart: MimeMultipart, attachments: MutableList<AttachmentsDAO>): String {
         var body = ""
         for (i in 0 until multipart.count) {
             val bodyPart = multipart.getBodyPart(i)
@@ -239,7 +203,7 @@ class JavaMail(
     }
 
 
-    fun generateSnippet(emailBody: String, snippetLength: Int = 100): String {
+    private fun generateSnippet(emailBody: String, snippetLength: Int = 100): String {
         val plainTextBody = emailBody.replace(Regex("<[^>]*>"), "") // Remove HTML tags
             .replace(Regex("\\s+"), " ") // Normalize whitespace
             .trim()
@@ -250,14 +214,14 @@ class JavaMail(
         }
     }
 
-    fun getAllRecipients(mm: MimeMessage): List<String> {
+    private fun getAllRecipients(mm: MimeMessage): List<String> {
         val toRecipients = mm.getRecipients(Message.RecipientType.TO)?.map { it.toString() } ?: emptyList()
         val ccRecipients = mm.getRecipients(Message.RecipientType.CC)?.map { it.toString() } ?: emptyList()
         val bccRecipients = mm.getRecipients(Message.RecipientType.BCC)?.map { it.toString() } ?: emptyList()
         return toRecipients + ccRecipients + bccRecipients
     }
 
-    fun getFallbackReceivedDate(mm: MimeMessage): Date? {
+    private fun getFallbackReceivedDate(mm: MimeMessage): Date? {
         val headers = mm.getHeader("Date")
         return if (headers != null && headers.isNotEmpty()) {
             MailDateFormat().parse(headers[0])

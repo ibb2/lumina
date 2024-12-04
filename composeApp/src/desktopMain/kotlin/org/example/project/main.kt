@@ -6,9 +6,13 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.example.project.database.LuminaDatabase
 import dev.datlag.kcef.KCEF
+import io.ktor.client.engine.okhttp.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.example.project.networking.FirebaseAuthClient
+import org.example.project.networking.createHttpClient
 import org.example.project.sqldelight.DatabaseDriverFactory
+import org.jetbrains.skiko.OS
 import java.io.File
 import javax.xml.crypto.Data
 import kotlin.math.max
@@ -51,7 +55,7 @@ fun main() = application {
             Text(text = "Restart required.")
         } else {
             if (initialized) {
-                App(emailService = EmailService(), driver = DatabaseDriverFactory().create())
+                App(client = FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create())), emailService = EmailService(FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create()))), authentication = Authentication(), driver = DatabaseDriverFactory().create())
             } else {
                 Text(text = "Downloading $downloading%")
             }

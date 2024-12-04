@@ -43,20 +43,30 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
+import androidx.compose.ui.text.style.TextAlign
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
-import com.russhwolf.settings.get
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.example.project.data.NewEmail
+import org.example.project.networking.FirebaseAuthClient
+import org.example.project.networking.OAuthResponse
+import org.example.project.networking.TokenResponse
+import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.utils.createCompositeKey
+import org.example.project.sqldelight.AccountsDataSource
+import org.example.project.utils.NetworkError
+import org.example.project.utils.onError
+import org.example.project.utils.onSuccess
 
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
-fun App(emailService: EmailService, driver: SqlDriver) {
+fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
     MaterialTheme {
 
         // db related stuff
@@ -67,170 +77,164 @@ fun App(emailService: EmailService, driver: SqlDriver) {
             ),
         )
 
-        // Queries
-        val accountQueries = database.accountsTableQueries
-        val emailQueries = database.emailsTableQueries
-
         // Data Sources
         val emailDataSource: EmailsDataSource = EmailsDataSource(database)
         val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
+        val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
 
-        // Basic Auth
-        val settings = Settings()
-        var showContent by remember { mutableStateOf(false) }
-        var emailAddress by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-        var loggedIn by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
 
-        val emailCount by emailService.getEmailCount(emailDataSource).collectAsState()
-
-        val observableSettings: ObservableSettings = settings.makeObservable()
-
-        observableSettings.putString("emailAddress", "")
-        observableSettings.putString("password", "")
-        observableSettings.putBoolean("login", false)
-
-        observableSettings.addBooleanListener("login", defaultValue = false) { value ->
-            loggedIn = value
-        }
-        observableSettings.addStringListener(
-            "emailAddress",
-            defaultValue = ""
-        ) { value -> emailAddress = value }
-        observableSettings.addStringListener("password", defaultValue = "") { value ->
-            password = value
+        var r by remember { mutableStateOf<OAuthResponse?>(null) }
+        var e by remember {
+            mutableStateOf<NetworkError?>(null)
         }
 
-        // Ui
+        authentication.amILoggedIn(accountsDataSource)
 
-        if (!loggedIn) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(16.dp).fillMaxWidth()
-            ) {
-                Text(
-                    "Database Email Count: $emailCount"
-                )
-                Text(
-                    "Login",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 24.dp),
-                )
-                TextField(
-                    value = emailAddress,
-                    onValueChange = { it -> emailAddress = it },
-                    label = { Text("Email Address") },
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                TextField(
-                    value = password,
-                    onValueChange = { it -> password = it },
-                    label = { Text("Password") },
-                    modifier = Modifier.padding(bottom = 8.dp)
-
-                )
-                Button(onClick = {
-                    login(observableSettings, accountQueries, emailAddress, password)
-                }) {
-                    Text("Login")
-                }
-                Button(onClick = {
-                    GlobalScope.launch(Dispatchers.IO) {
-                        emailService.deleteEmails(emailDataSource)
-                    }
-                }) {
-                    Text("Delete Emails")
-                }
-            }
-
-        } else {
-            Button(onClick = { logout(observableSettings) }) {
-                Text(
-                    "Logout"
-                )
-            }
-            Button(onClick = {
-                GlobalScope.launch(Dispatchers.IO) {
-                    emailService.deleteEmails(emailDataSource)
-                }
-            }) {
-                Text("Delete Emails")
-            }
-
-            displayEmails(
-                emailDataSource,
-                observableSettings,
-                emailQueries,
-                accountQueries,
+        val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
+        val emailServiceManager = remember {
+            EmailServiceManager(
                 emailService,
-                loggedIn,
-                emailAddress,
-                password
+                )
+        }
+
+        LaunchedEffect(accounts.value) {
+            withContext(Dispatchers.Default) {
+                emailServiceManager.syncEmails(
+                    accounts.value
+                )
+            }
+        }
+
+        val emails by emailServiceManager.emails.collectAsState()
+        val attachments by emailServiceManager.attachments.collectAsState()
+        val isSyncing by emailServiceManager.isSyncing.collectAsState()
+
+        // UI with sync indicator
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            modifier = Modifier.padding(16.dp).fillMaxSize()
+        ) {
+            if (isSyncing) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            // Use emails and attachments in your display logic
+            displayEmails(
+                accounts = accounts.value,
+                emails = emails,
+                attachments = attachments,
+                emailDataSource = emailDataSource,
+                emailService = emailService
             )
         }
+
+        Row {
+            // Add account button
+            Button(onClick = {
+                scope.launch {
+                    val re = authentication.authenticateUser(client, accountsDataSource)
+                    r = re.first
+                    e = re.second
+
+                    // Update accounts
+                    accounts.value = authentication.getAccounts(accountsDataSource)
+
+                    // Sync will happen automatically due to LaunchedEffect
+                }
+            }) {
+                Text("Add account (GMAIL)")
+            }
+
+            LazyColumn {
+                items(accounts.value) { account ->
+                    Text(account.email)
+                    // Logout button (in your existing logout logic)
+                    Button(onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            authentication.logout(accountsDataSource, account.email)
+
+                            // Update accounts
+                            withContext(Dispatchers.Main) {
+                                accounts.value = authentication.getAccounts(accountsDataSource)
+
+                                // Sync will happen automatically due to LaunchedEffect
+                            }
+                        }
+                    }) {
+                        Text("Logout")
+                    }
+                }
+            }
+        }
     }
 }
 
-fun login(
-    observableSettings: ObservableSettings,
-    accountQueries: AccountsTableQueries,
-    emailAddress: String,
-    password: String
-): Unit {
+class EmailServiceManager(
+    private val emailService: EmailService,
+) {
+    private val _emails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
+    val emails: StateFlow<MutableList<EmailsDAO>> = _emails.asStateFlow()
 
-    val em = observableSettings.getString(
-        "emailAddress",
-        defaultValue = ""
-    )
-    val pw = observableSettings.getString("password", defaultValue = "")
+    private val _attachments = MutableStateFlow<MutableList<AttachmentsDAO>>(mutableListOf())
+    val attachments: StateFlow<MutableList<AttachmentsDAO>> = _attachments.asStateFlow()
 
-    try {
-        observableSettings.putString("emailAddress", em)
-        observableSettings.putString("password", pw)
-        observableSettings.putBoolean("login", true)
-    } catch (e: NullPointerException) {
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
-        observableSettings.putString("emailAddress", emailAddress)
-        observableSettings.putString("password", password)
-        observableSettings.putBoolean("login", true)
+    suspend fun syncEmails(accounts: MutableList<AccountsDAO>) {
+        if (accounts.isEmpty()) {
+            _emails.value = mutableListOf()
+            _attachments.value = mutableListOf()
+            return
+        }
+
+        _isSyncing.value = true
+        try {
+            // Perform email sync in parallel
+            val emailResults = coroutineScope {
+                accounts.map {
+                    async {
+                        emailService.getEmails(
+                            it.email,
+                        )
+                    }
+                }.awaitAll()
+            }
+
+            emailResults
+//            _emails.value = mutableListOf()
+//            _attachments.value = mutableListOf()
+
+            // Combine results from all accounts
+            val combinedEmails = emailResults.flatMap { it.first.value }
+            val combinedAttachments = emailResults.flatMap { it.second.value }
+
+            // Update state flows
+            _emails.value.addAll(combinedEmails)
+            _attachments.value.addAll(combinedAttachments)
+        } catch (e: Exception) {
+            // Log error or handle synchronization failure
+            println("Email sync failed: ${e.message}")
+        } finally {
+            _isSyncing.value = false
+        }
     }
-    try {
-        accountQueries.selectAccount(emailAddress).executeAsOneOrNull()
-            ?: throw NullPointerException()
-    } catch (e: NullPointerException) {
-        accountQueries.insertAccount(emailAddress)
-    }
-
-    println("Logged in as $emailAddress")
-}
-
-fun logout(observableSettings: ObservableSettings): Unit {
-    observableSettings.putString("emailAddress", "")
-    observableSettings.putString("password", "")
-    observableSettings.putBoolean("login", false)
 }
 
 @Composable
 fun displayEmails(
+    accounts: List<AccountsDAO>,
+    emails: MutableList<EmailsDAO>,
+    attachments: MutableList<AttachmentsDAO>,
     emailDataSource: EmailsDataSource,
-    observableSettings: ObservableSettings,
-    emailTableQueries: EmailsTableQueries,
-    accountQueries: AccountsTableQueries,
-    emailService: EmailService,
-    loggedIn: Boolean,
-    emailAddress: String,
-    password: String
+    emailService: EmailService
 ) {
     var display: Boolean by remember { mutableStateOf(false) }
     var emailFromUser: String by remember { mutableStateOf("") }
     var emailSubject: String by remember { mutableStateOf("") }
-    var emailContet: String by remember { mutableStateOf("") }
-
-    // Coroutine Scope
-    var currentProgress by remember { mutableStateOf(0f) }
-    var loading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope() // Create a coroutine scope
+    var emailContent: String by remember { mutableStateOf("") }
 
     // Send email
     var sendEmail by remember { mutableStateOf(false) }
@@ -240,17 +244,17 @@ fun displayEmails(
 
         emailFromUser = ""
         emailSubject = ""
-        emailContet = ""
+        emailContent = ""
 
         if (show) {
             display = true
             emailFromUser = email.sender ?: ""
             emailSubject = email.subject ?: ""
-            emailContet = email.body ?: ""
+            emailContent = email.body ?: ""
         }
     }
 
-    val state = rememberWebViewStateWithHTMLData(emailContet)
+    val state = rememberWebViewStateWithHTMLData(emailContent)
     LaunchedEffect(Unit) {
         state.webSettings.apply {
             logSeverity = KLogSeverity.Debug
@@ -272,198 +276,137 @@ fun displayEmails(
         )
     }
 
-    var interger = intArrayOf(0).asFlow()
+    // Vertical scrollbar
+    val lazyListState = rememberLazyListState()
+    val scrollState = rememberScrollAreaState(lazyListState)
 
-    if (loggedIn && emailAddress.isNotEmpty() && password.isNotEmpty()) {
+    // Modify the list to remove emails from logged-out accounts
+    LaunchedEffect(accounts) {
+        // Create a set of valid account emails
+        val validAccountEmails = accounts.map { it.email }.toSet()
 
+        // Remove emails that don't belong to current accounts
+        emails.removeAll { email ->
+            email.account !in validAccountEmails
+        }
+
+        // Similarly, remove orphaned attachments
+        attachments.removeAll { attachment ->
+            // Remove attachments for emails that are no longer in the list
+            emails.none { it.id == attachment.emailId }
+        }
+    }
+
+
+    Column(verticalArrangement = Arrangement.SpaceBetween) {
         // Email
-
-
-        var isLoading by remember { mutableStateOf(false) }
-        var emails by remember { mutableStateOf<List<EmailsDAO>?>(null) } // Store emails
-        var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
-
-        val totalEmails by emailService.totalEmails.collectAsState()
-        val emailsReadCount by emailService.emailsRead.collectAsState()
-
-        // Vertical scrollbar
-        var lazyListState = rememberLazyListState()
-        val scrollState = rememberScrollAreaState(lazyListState)
-
-
-        LaunchedEffect(emailsReadCount) {
-            loadProgress(emailsReadCount, totalEmails) { progress ->
-                currentProgress = progress
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Button(
+                onClick = {
+                    sendEmail = true
+                }) {
+                Text(text = "Send Email")
             }
         }
+        ScrollArea(state = scrollState) {
+            Column(modifier = Modifier.fillMaxWidth()) {
 
-        LaunchedEffect(Unit) { // Trigger once
-            isLoading = true
-            try {
-                // Replace with your actual email retrieval logic
+                LazyColumn(state = lazyListState) {
+                    items(emails) { email ->
 
-                val startTime = Clock.System.now()
-                val returned = withContext(Dispatchers.IO) {
-                    emailService.getEmails(
-                        emailDataSource,
-                        emailTableQueries,
-                        accountQueries,
-                        emailAddress,
-                        password
-                    )
-                }
-                val endTime = Clock.System.now()
-                val duration = endTime - startTime
-                println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
-
-
-                withContext(Dispatchers.Main) {
-                    attachments = returned.second
-                    isLoading = false // Hide loading indicator after updating emails
-                }
-
-            } catch (e: Exception) {
-                // Handle error, e.g., show an error message
-                println("Error in App ${e.message}")
-                withContext(Dispatchers.Main) {
-                    isLoading = false
-                }
-            } finally {
-                isLoading = false
-            }
-        }
-
-        if (isLoading) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Loading emails...")
-                Text("Emails read: ${emailsReadCount} out of ${totalEmails}")
-                LinearProgressIndicator(
-//                    progress = currentProgress,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        } else {
-            // Display email content
-
-            emails = emailDataSource.selectAllEmailsFlow().collectAsState(initial = emptyList()).value
-
-            println("Emails: ${emails!!.size}")
-
-            if (emails != null) {
-                Column(modifier = Modifier.fillMaxHeight(0.7f), verticalArrangement = Arrangement.SpaceBetween) {
-                    // Email
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        Button(
-                            onClick = {
-                                sendEmail = true
-                            }) {
-                            Text(text = "Send Email")
-                        }
-                    }
-                    ScrollArea(state = scrollState) {
-
-                        LazyColumn(modifier = Modifier.fillMaxWidth(), state = lazyListState) {
-
-                            items(emails!!.sortedBy { it.receivedDate }.reversed()) { email ->
-
-                                var isRead by remember { mutableStateOf(email.isRead) }
-                                println("Email id...: ${email.subject} ${email.isRead}")
-                                Column(
-                                    modifier = Modifier.border(
-                                        width = 1.dp,
-                                        color = Color.DarkGray,
-                                        shape = RoundedCornerShape(4.dp)
-                                    ).background(
-                                        color = Color.LightGray
-                                    ).fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = email.sender ?: "No from",
-                                    )
-                                    Text(
-                                        text = email.subject ?: "No subject"
-                                    )
-                                    Button(
-                                        onClick = {
-                                            displayEmailBody(!display, email)
-                                        },
-                                    ) {
-                                        Text("View Email")
-                                    }
-                                    Text("Email read: ${isRead}")
-                                    Button(
-                                        onClick = {
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                isRead =
-                                                    read(email, emailDataSource, emailService, emailAddress, password)
-                                                        ?: false
-                                            }
-                                        }
-                                    ) {
-                                        Text(text = if (isRead) "Mark as unread" else "Mark as read")
-                                    }
-                                    Button(
-                                        onClick = {
-                                            CoroutineScope(Dispatchers.IO).launch {
-                                                deleteEmail(
-                                                    email,
-                                                    emailDataSource,
-                                                    emailService,
-                                                    emailAddress,
-                                                    password
-                                                )
-                                            }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
-                                    ) {
-                                        Text(text = "Delete")
-                                    }
-                                    if (attachments.any { it.emailId === email.id }) {
-                                        Row {
-                                            attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                                Row {
-                                                    Text(
-                                                        text = attachment.fileName,
-                                                        modifier = Modifier
-                                                            .padding(8.dp)
-                                                    )
-                                                    Text(
-                                                        text = attachment.size.toString(), modifier = Modifier
-                                                            .padding(8.dp)
-
-                                                    )
-                                                    Text(
-                                                        text = attachment.mimeType, modifier = Modifier
-                                                            .padding(8.dp)
-                                                    )
-                                                }
-
-                                            }
-                                        }
-                                    } else {
-                                        Text(
-                                            text = "No attachments",
-                                        )
+                        val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
+                        var isRead by remember { mutableStateOf(email.isRead) }
+                        println("Emails ${email.subject}")
+                        Column(
+                            modifier = Modifier.border(
+                                width = 1.dp,
+                                color = Color.DarkGray,
+                                shape = RoundedCornerShape(4.dp)
+                            ).background(
+                                color = Color.LightGray
+                            ).fillMaxWidth()
+                        ) {
+                            Text(text = "Account $emailAddress", color = Color.hsl(38f, 0.5f, 0.5f))
+                            Text(
+                                text = email.sender,
+                            )
+                            Text(
+                                text = email.subject
+                            )
+                            Button(
+                                onClick = {
+                                    displayEmailBody(!display, email)
+                                },
+                            ) {
+                                Text("View Email")
+                            }
+                            Text("Email read: $isRead")
+                            Button(
+                                onClick = {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        isRead =
+                                            read(email, emailDataSource, emailService, emailAddress)
+                                                ?: false
                                     }
                                 }
-
+                            ) {
+                                Text(text = if (isRead) "Mark as unread" else "Mark as read")
                             }
+                            Button(
+                                onClick = {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
+                                        // Remove email on the main thread
+                                        withContext(Dispatchers.Main) {
+                                            emails.remove(email)
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+                            ) {
+                                Text(text = "Delete")
+                            }
+                            if (attachments.any { it.emailId === email.id }) {
+                                Row {
+                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                        Row {
+                                            Text(
+                                                text = attachment.fileName,
+                                                modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                            Text(
+                                                text = attachment.size.toString(), modifier = Modifier
+                                                    .padding(8.dp)
 
-                        }
-                        VerticalScrollbar(
-                            modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
-                        ) {
-                            Thumb(Modifier.background(Color.Black))
+                                            )
+                                            Text(
+                                                text = attachment.mimeType, modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                        }
+
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "No attachments",
+                                )
+                            }
                         }
                     }
                 }
+            }
+            VerticalScrollbar(
+                modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(12.dp)
+            ) {
+                Thumb(Modifier.background(Color.Black))
             }
         }
     }
+
+
+//
 
     if (display) {
         Dialog(
@@ -587,9 +530,13 @@ fun displayEmails(
             CoroutineScope(Dispatchers.IO).launch {
                 sentEmailSuccess = emailService.sendNewEmail(
                     emailDataSource,
-                    NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
-                    emailAddress,
-                    password
+                    NewEmail(
+                        from = sendEmailFrom,
+                        to = sendEmailTo,
+                        subject = sendEmailSubject,
+                        body = sendEmailBody
+                    ),
+                    sendEmailFrom
                 )
             }
 
@@ -658,22 +605,460 @@ fun displayEmails(
 }
 
 
-@Composable
-fun newEmailDialog(sendEmail: Boolean) {
-
-}
+//@Composable
+//fun displayEmails(
+//    emailDataSource: EmailsDataSource,
+//    emailTableQueries: EmailsTableQueries,
+//    accountQueries: AccountsTableQueries,
+//    emailService: EmailService,
+//    loggedIn: Boolean,
+//    emailAddress: String,
+//    client: FirebaseAuthClient
+//) {
+//    var display: Boolean by remember { mutableStateOf(false) }
+//    var emailFromUser: String by remember { mutableStateOf("") }
+//    var emailSubject: String by remember { mutableStateOf("") }
+//    var emailContent: String by remember { mutableStateOf("") }
+//
+//    // Coroutine Scope
+//    var currentProgress by remember { mutableStateOf(0f) }
+//    var loading by remember { mutableStateOf(false) }
+//    val scope = rememberCoroutineScope() // Create a coroutine scope
+//
+//    // Send email
+//    var sendEmail by remember { mutableStateOf(false) }
+//
+//
+//    fun displayEmailBody(show: Boolean, email: EmailsDAO) {
+//
+//        emailFromUser = ""
+//        emailSubject = ""
+//        emailContent = ""
+//
+//        if (show) {
+//            display = true
+//            emailFromUser = email.sender ?: ""
+//            emailSubject = email.subject ?: ""
+//            emailContent = email.body ?: ""
+//        }
+//    }
+//
+//    val state = rememberWebViewStateWithHTMLData(emailContent)
+//    LaunchedEffect(Unit) {
+//        state.webSettings.apply {
+//            logSeverity = KLogSeverity.Debug
+//            customUserAgentString =
+//                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like Gecko) Version/14.3.43 Safari/625.20"
+//        }
+//    }
+//    val navigator = rememberWebViewNavigator()
+//    var textFieldValue by remember(state.lastLoadedUrl) {
+//        mutableStateOf(state.lastLoadedUrl)
+//    }
+//
+//
+//    val loadingState = state.loadingState
+//    if (loadingState is LoadingState.Loading) {
+//        LinearProgressIndicator(
+//            progress = loadingState.progress,
+//            modifier = Modifier.fillMaxWidth(),
+//        )
+//    }
+//
+//    var interger = intArrayOf(0).asFlow()
+//
+//    if (loggedIn && emailAddress.isNotEmpty()) {
+//
+//        // Email
+//
+//
+//        var isLoading by remember { mutableStateOf(false) }
+//        var emails by remember { mutableStateOf<List<EmailsDAO>?>(null) } // Store emails
+//        var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
+//
+//        val totalEmails by emailService.totalEmails.collectAsState()
+//        val emailsReadCount by emailService.emailsRead.collectAsState()
+//
+//        // Vertical scrollbar
+//        var lazyListState = rememberLazyListState()
+//        val scrollState = rememberScrollAreaState(lazyListState)
+//
+//
+//        LaunchedEffect(emailsReadCount) {
+//            loadProgress(emailsReadCount, totalEmails) { progress ->
+//                currentProgress = progress
+//            }
+//        }
+//
+//        LaunchedEffect(Unit) { // Trigger once
+//            isLoading = true
+//            try {
+//                // Replace with your actual email retrieval logic
+//
+//                val startTime = Clock.System.now()
+//                val returned = withContext(Dispatchers.IO) {
+//                    emailService.getEmails(
+//                        emailDataSource,
+//                        emailTableQueries,
+//                        accountQueries,
+//                        emailAddress,
+//                        client
+//                    )
+//                }
+//                val endTime = Clock.System.now()
+//                val duration = endTime - startTime
+//                println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
+//
+//
+//                withContext(Dispatchers.Main) {
+//                    attachments = returned.second
+//                    isLoading = false // Hide loading indicator after updating emails
+//                }
+//
+//            } catch (e: Exception) {
+//                // Handle error, e.g., show an error message
+//                println("Error in App ${e.message}")
+//                withContext(Dispatchers.Main) {
+//                    isLoading = false
+//                }
+//            } finally {
+//                isLoading = false
+//            }
+//        }
+//
+//        if (isLoading) {
+//            Column(
+//                modifier = Modifier.fillMaxSize(),
+//                verticalArrangement = Arrangement.Center,
+//                horizontalAlignment = Alignment.CenterHorizontally
+//            ) {
+//                Text("Loading emails...")
+//                Text("Emails read: ${emailsReadCount} out of ${totalEmails}")
+//                LinearProgressIndicator(
+////                    progress = currentProgress,
+//                    modifier = Modifier.fillMaxWidth()
+//                )
+//            }
+//        } else {
+//            // Display email content
+//
+//            emails = emailDataSource.selectAllEmailsFlow().collectAsState(initial = emptyList()).value
+//
+//            println("Emails: ${emails!!.size}")
+//
+//            if (emails != null) {
+//                Column(modifier = Modifier.fillMaxHeight(0.7f), verticalArrangement = Arrangement.SpaceBetween) {
+//                    // Email
+//                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+//                        Button(
+//                            onClick = {
+//                                sendEmail = true
+//                            }) {
+//                            Text(text = "Send Email")
+//                        }
+//                    }
+//                    ScrollArea(state = scrollState) {
+//
+//                        LazyColumn(modifier = Modifier.fillMaxWidth(), state = lazyListState) {
+//
+//                            items(emails!!.sortedBy { it.receivedDate }.reversed()) { email ->
+//
+//                                var isRead by remember { mutableStateOf(email.isRead) }
+//                                println("Email id...: ${email.subject} ${email.isRead}")
+//                                Column(
+//                                    modifier = Modifier.border(
+//                                        width = 1.dp,
+//                                        color = Color.DarkGray,
+//                                        shape = RoundedCornerShape(4.dp)
+//                                    ).background(
+//                                        color = Color.LightGray
+//                                    ).fillMaxWidth()
+//                                ) {
+//                                    Text(text = "Account $emailAddress")
+//                                    Text(
+//                                        text = email.sender ?: "No from",
+//                                    )
+//                                    Text(
+//                                        text = email.subject ?: "No subject"
+//                                    )
+//                                    Button(
+//                                        onClick = {
+//                                            displayEmailBody(!display, email)
+//                                        },
+//                                    ) {
+//                                        Text("View Email")
+//                                    }
+//                                    Text("Email read: ${isRead}")
+//                                    Button(
+//                                        onClick = {
+//                                            CoroutineScope(Dispatchers.IO).launch {
+//                                                isRead =
+//                                                    read(email, emailDataSource, emailService, emailAddress)
+//                                                        ?: false
+//                                            }
+//                                        }
+//                                    ) {
+//                                        Text(text = if (isRead) "Mark as unread" else "Mark as read")
+//                                    }
+//                                    Button(
+//                                        onClick = {
+//                                            CoroutineScope(Dispatchers.IO).launch {
+//                                                deleteEmail(
+//                                                    email,
+//                                                    emailDataSource,
+//                                                    emailService,
+//                                                    emailAddress
+//                                                )
+//                                            }
+//                                        },
+//                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+//                                    ) {
+//                                        Text(text = "Delete")
+//                                    }
+//                                    if (attachments.any { it.emailId === email.id }) {
+//                                        Row {
+//                                            attachments.filter { it.emailId === email.id }.forEach { attachment ->
+//                                                Row {
+//                                                    Text(
+//                                                        text = attachment.fileName,
+//                                                        modifier = Modifier
+//                                                            .padding(8.dp)
+//                                                    )
+//                                                    Text(
+//                                                        text = attachment.size.toString(), modifier = Modifier
+//                                                            .padding(8.dp)
+//
+//                                                    )
+//                                                    Text(
+//                                                        text = attachment.mimeType, modifier = Modifier
+//                                                            .padding(8.dp)
+//                                                    )
+//                                                }
+//
+//                                            }
+//                                        }
+//                                    } else {
+//                                        Text(
+//                                            text = "No attachments",
+//                                        )
+//                                    }
+//                                }
+//
+//                            }
+//
+//                        }
+//                        VerticalScrollbar(
+//                            modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
+//                        ) {
+//                            Thumb(Modifier.background(Color.Black))
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    if (display) {
+//        Dialog(
+//            onDismissRequest = { display = false },
+//            properties = DialogProperties(
+//                dismissOnBackPress = true,
+//                dismissOnClickOutside = true,
+//                usePlatformDefaultWidth = false
+//            ),
+//        ) {
+//            // Draw a rectangle shape with rounded corners inside the dialog
+//            Surface(modifier = Modifier.fillMaxSize(0.6f)) {
+//                Card(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(525.dp)
+//                        .padding(16.dp),
+//                    shape = RoundedCornerShape(16.dp),
+//                ) {
+//                    Column {
+//                        TopAppBar(
+//                            title = { Text(text = "WebView Sample") },
+//                            navigationIcon = {
+//                                if (navigator.canGoBack) {
+//                                    IconButton(onClick = { navigator.navigateBack() }) {
+//                                        Icon(
+//                                            imageVector = Icons.Default.ArrowBack,
+//                                            contentDescription = "Back",
+//                                        )
+//                                    }
+//                                }
+//                            },
+//                        )
+//
+//                        Row {
+//                            Box(modifier = Modifier.weight(1f)) {
+//                                if (state.errorsForCurrentRequest.isNotEmpty()) {
+//                                    Image(
+//                                        imageVector = Icons.Default.Close,
+//                                        contentDescription = "Error",
+//                                        colorFilter = ColorFilter.tint(Color.Red),
+//                                        modifier =
+//                                            Modifier
+//                                                .align(Alignment.CenterEnd)
+//                                                .padding(8.dp),
+//                                    )
+//                                }
+//
+//                                OutlinedTextField(
+//                                    value = textFieldValue ?: "",
+//                                    onValueChange = { textFieldValue = it },
+//                                    modifier = Modifier.fillMaxWidth(),
+//                                )
+//                            }
+//
+//                            Button(
+//                                onClick = {
+//                                    textFieldValue?.let {
+//                                        navigator.loadUrl(it)
+//                                    }
+//                                },
+//                                modifier = Modifier.align(Alignment.CenterVertically),
+//                            ) {
+//                                Text("Go")
+//                            }
+//                        }
+//                    }
+//
+//                    WebView(
+//                        state = state,
+//                        modifier =
+//                            Modifier
+//                                .fillMaxSize(),
+//                        navigator = navigator,
+//                    )
+//
+//                    Column(
+//                        modifier = Modifier
+//                            .fillMaxSize(),
+//                        verticalArrangement = Arrangement.Center,
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                    ) {
+//
+//                        Text(
+//                            text = "This is a dialog with buttons and an image.",
+//                            modifier = Modifier.padding(16.dp),
+//                        )
+//                        Row(
+//                            modifier = Modifier
+//                                .fillMaxWidth(),
+//                            horizontalArrangement = Arrangement.Center,
+//                        ) {
+//                            TextButton(
+//                                onClick = { /* TODO */ },
+//                                modifier = Modifier.padding(8.dp),
+//                            ) {
+//                                Text("Dismiss")
+//                            }
+//                            TextButton(
+//                                onClick = { /* TODO*/ },
+//                                modifier = Modifier.padding(8.dp),
+//                            ) {
+//                                Text("Confirm")
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    if (sendEmail) {
+//        var sendEmailFrom by remember { mutableStateOf("") }
+//        var sendEmailTo by remember { mutableStateOf("") }
+//        var sendEmailSubject by remember { mutableStateOf("") }
+//        var sendEmailBody by remember { mutableStateOf("") }
+//
+//        fun sendEmail() {
+//            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
+//            var sentEmailSuccess = false
+//            CoroutineScope(Dispatchers.IO).launch {
+//                sentEmailSuccess = emailService.sendNewEmail(
+//                    emailDataSource,
+//                    NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
+//                    emailAddress
+//                )
+//            }
+//
+//            println("Email sent successfully? $sentEmailSuccess")
+//
+//            sendEmail = false
+//        }
+//
+//        Dialog(
+//            onDismissRequest = { sendEmail = false },
+//            properties = DialogProperties(
+//                dismissOnBackPress = true,
+//                dismissOnClickOutside = true,
+//                usePlatformDefaultWidth = false
+//            ),
+//        ) {
+//            // Draw a rectangle shape with rounded corners inside the dialog
+//            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
+//                Card(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(525.dp)
+//                        .padding(16.dp),
+//                    shape = RoundedCornerShape(16.dp),
+//                ) {
+//                    Column(
+//                        modifier = Modifier
+//                            .fillMaxSize(),
+//                        verticalArrangement = Arrangement.Center,
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                    ) {
+//                        TextField(
+//                            label = { Text("From") },
+//                            value = sendEmailFrom,
+//                            onValueChange = { sendEmailFrom = it },
+//                            modifier = Modifier.padding(16.dp),
+//                        )
+//                        TextField(
+//                            label = { Text("To") },
+//                            value = sendEmailTo,
+//                            onValueChange = { sendEmailTo = it },
+//                            modifier = Modifier.padding(16.dp)
+//                        )
+//                        TextField(
+//                            label = { Text("Subject") },
+//                            value = sendEmailSubject,
+//                            onValueChange = { sendEmailSubject = it },
+//                            modifier = Modifier.padding(16.dp)
+//                        )
+//                        TextField(
+//                            label = { Text("Body") },
+//                            value = sendEmailBody,
+//                            onValueChange = { sendEmailBody = it },
+//                            modifier = Modifier.padding(16.dp),
+//                        )
+//                        Button(onClick = {
+//                            sendEmail()
+//                        }) {
+//                            Text(text = "Send")
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+//}
 
 fun read(
     email: EmailsDAO,
     emailsDataSource: EmailsDataSource,
     emailService: EmailService,
     emailAddress: String,
-    password: String,
 ): Boolean? {
 
     val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
 
-    val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress, password)
+    val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress)
 
     if (emailRead.first) {
         emailsDataSource.updateEmailReadStatus(
@@ -691,11 +1076,10 @@ fun deleteEmail(
     emailsDataSource: EmailsDataSource,
     emailService: EmailService,
     emailAddress: String,
-    password: String,
 ) {
 
     val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
-    val emailDeleted = emailService.deleteEmail(email, emailsDataSource, emailAddress, password)
+    val emailDeleted = emailService.deleteEmail(email, emailsDataSource, emailAddress)
 
 //    println("Deleting suc")
     if (emailDeleted) {
@@ -713,47 +1097,50 @@ suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Flo
 }
 
 
-expect class EmailService {
+expect class EmailService(
+    client: FirebaseAuthClient,
+) {
 
-    val emailsRead: StateFlow<Int>
-    val totalEmails: StateFlow<Int>
-    var emailCount: Int
+    val emails: StateFlow<MutableList<EmailsDAO>>
+    val attachments: StateFlow<MutableList<AttachmentsDAO>>
+    val isSyncing: StateFlow<Boolean>
 
-
-    suspend fun getEmails(
-        emailDataSource: EmailsDataSource,
-        emailTableQueries: EmailsTableQueries,
-        accountQueries: AccountsTableQueries,
-        emailAddress: String,
-        password: String
-    ): Pair<MutableList<EmailsDAO>, MutableList<AttachmentsDAO>>
-
-    suspend fun deleteEmails(emailDataSource: EmailsDataSource)
-
-    fun getEmailCount(emailDataSource: EmailsDataSource): StateFlow<Int>
-
-    fun returnAttachments(attachmentsDataSource: AttachmentsDataSource): MutableList<AttachmentsDAO>
-
-    fun doAttachmentsExist(attachmentsDataSource: AttachmentsDataSource): Boolean
+    suspend fun getEmails(emailAddress: String): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
 
     fun readEmail(
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
-        emailAddress: String,
-        password: String
+        emailAddress: String
     ): Pair<Boolean, Boolean?>
 
     fun deleteEmail(
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,
-        emailAddress: String,
-        password: String
+        emailAddress: String
     ): Boolean
 
     fun sendNewEmail(
         emailsDataSource: EmailsDataSource,
         newEmail: NewEmail,
-        emailAddress: String,
-        password: String
+        emailAddress: String
     ): Boolean
+
+
+}
+
+expect class Authentication {
+
+    val isLoggedIn: StateFlow<Boolean>
+    val email: StateFlow<String>
+
+    suspend fun authenticateUser(
+        fAuthClient: FirebaseAuthClient,
+        accountsDataSource: AccountsDataSource
+    ): Pair<OAuthResponse?, NetworkError?>
+
+    fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean
+    fun accountsExists(accountsDataSource: AccountsDataSource): Boolean
+    fun getAccounts(accountsDataSource: AccountsDataSource): MutableList<AccountsDAO>
+    fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean
+    fun logout(accountsDataSource: AccountsDataSource, email: String)
 }

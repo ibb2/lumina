@@ -1,12 +1,28 @@
+import kotlin.Boolean;
+import kotlin.Int;
+
 CREATE TABLE Accounts(
-    emailAddress TEXT NOT NULL PRIMARY KEY
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    federated_id TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    email_verified INTEGER AS Boolean NOT NULL DEFAULT 0,
+    first_name TEXT,
+    full_name TEXT,
+    last_name TEXT,
+    photo_url TEXT,
+    local_id TEXT NOT NULL,
+    display_name TEXT,
+    expires_in TEXT NOT NULL DEFAULT "3600",
+    raw_user_info TEXT NOT NULL,
+    kind TEXT NOT NULL
 );
 
 insertAccount:
-INSERT INTO Accounts(emailAddress) VALUES(?);
+INSERT INTO Accounts(id,federated_id, provider_id, email, email_verified, first_name, full_name, last_name, photo_url, local_id, display_name, expires_in, raw_user_info, kind) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 removeAccount:
-DELETE FROM Accounts WHERE emailAddress = ?;
+DELETE FROM Accounts WHERE email = ?;
 
 removeAllAccounts:
 DELETE FROM Accounts;
@@ -15,7 +31,7 @@ selectAllAccounts:
 SELECT * FROM Accounts;
 
 selectAccount:
-SELECT * FROM Accounts WHERE emailAddress = ?;
+SELECT * FROM Accounts WHERE email = ?;
 
 lastInsertedRowId:
 SELECT last_insert_rowid();

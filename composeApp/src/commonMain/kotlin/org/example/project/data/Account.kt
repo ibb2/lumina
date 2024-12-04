@@ -1,8 +1,7 @@
-package org.example.project.shared.data
+package org.example.project.data
 
-data class AccountsDAO(
-    val id: Long,
-    val federatedId: String,
+class Account (
+    val federateId: String,
     val providerId: String,
     val email: String,
     val emailVerified: Boolean,
@@ -12,7 +11,7 @@ data class AccountsDAO(
     val photoUrl: String = "",
     val localId: String,
     val displayName: String,
-    val expiresIn: String,
+    val expiresIn: Int,
     val rawUserInfo: String,
     val kind: String
 )
