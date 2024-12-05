@@ -1,0 +1,17 @@
+CREATE TABLE Folders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT
+);
+
+
+insertFolder:
+INSERT INTO Folders(id, name) VALUES(?,?);
+
+selectFolder:
+SELECT * FROM Folders WHERE id = ?;
+
+selectAllFolders:
+SELECT * FROM Folders;
+
+removeFolder:
+DELETE FROM Folders WHERE id = ?;
