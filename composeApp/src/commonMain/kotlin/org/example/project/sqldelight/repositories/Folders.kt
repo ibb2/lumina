@@ -6,7 +6,9 @@ class Folders(db: LuminaDatabase) {
 
     private val queries = db.foldersTableQueries
 
-    fun insertFolder(folderName: String) = queries.insertFolder(null, folderName)
+    fun insertFolder(folderId: String, folderName: String) = queries.insertFolder(null, folderId, folderName)
+
+    fun insertOrReplaceFolder(folderId: String, folderName: String) = queries.insertOrReplaceFolder(null, folderId, folderName)
 
     fun getFolders() = queries.selectAllFolders().executeAsList()
 

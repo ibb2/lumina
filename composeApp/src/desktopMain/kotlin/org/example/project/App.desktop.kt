@@ -145,7 +145,7 @@ actual class EmailService actual constructor(
 
         val totalEmailsForAccount = emailDataSource.selectAllEmailsForAccount(emailAddress).size
         println("Email $emailAddress Size $totalEmailsForAccount")
-        return  if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
+        return if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
     }
 
     actual suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO> {
@@ -160,12 +160,18 @@ actual class EmailService actual constructor(
         println("Showing folders")
         val folders = store.defaultFolder.list("*")
         folders.map {
-            localFolders.add(
-                FoldersDAO(
-                    null,
-                    it.name
+            println("Folder: ${it.name}")
+            try {
+                localFolders.add(
+                    FoldersDAO(
+                        null,
+                        "$emailAddress|${it.name}",
+                        it.name
+                    )
                 )
-            )
+            } catch (e: Exception) {
+                println("Folder already exists in database")
+            }
         }
 
         return localFolders

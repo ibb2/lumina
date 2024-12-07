@@ -2,6 +2,8 @@ package org.example.project
 
 import com.composables.core.VerticalScrollbar
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -94,7 +96,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val emailServiceManager = remember {
             EmailServiceManager(
                 emailService,
-                )
+            )
         }
 
         LaunchedEffect(accounts.value) {
@@ -112,6 +114,8 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val emails by emailServiceManager.emails.collectAsState()
         val attachments by emailServiceManager.attachments.collectAsState()
         val isSyncing by emailServiceManager.isSyncing.collectAsState()
+
+        val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
 
 
         // UI with sync indicator
@@ -160,13 +164,29 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             }
 
             if (folders.size > 0) {
-                LazyColumn(modifier = Modifier.fillMaxHeight(0.3f)) {
-                    itemsIndexed(folders) { index, it ->
+                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
+                    itemsIndexed(folders) { _, it ->
                         Row {
-                            Text(it.id.toString())
-                            Text(it.name)
-                            print("Index $index")
+                            val isSelected = selectedFolders.value.contains(it.name)
+                            val color = if (isSelected) Color.Green else Color.White
+                            Button(
+                                onClick = {
+                                    println("Folder selected ${it.name}")
+                                    val currentFolders = selectedFolders.value.toMutableList()
+                                    if (currentFolders.contains(it.name)) {
+                                        currentFolders.remove(it.name)
+                                    } else {
+                                        currentFolders.add(it.name)
+                                    }
+                                    // Update the entire list
+                                    selectedFolders.value = currentFolders
+                                },
+                                colors = ButtonDefaults.buttonColors(color)
+                            ) {
+                                Text(it.name)
+                            }
                         }
+                        Divider(modifier = Modifier.width(4.dp))
                     }
                 }
             }
@@ -178,6 +198,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             // Use emails and attachments in your display logic
             displayEmails(
                 accounts = accounts.value,
+                selectedFolders = selectedFolders,
                 emails = emails,
                 attachments = attachments,
                 emailDataSource = emailDataSource,
@@ -278,6 +299,7 @@ class EmailServiceManager(
 @Composable
 fun displayEmails(
     accounts: List<AccountsDAO>,
+    selectedFolders: MutableState<List<String>>,
     emails: MutableList<EmailsDAO>,
     attachments: MutableList<AttachmentsDAO>,
     emailDataSource: EmailsDataSource,
@@ -349,8 +371,17 @@ fun displayEmails(
         }
     }
 
+    val allEmails = remember(selectedFolders.value, emails) {
+        if (selectedFolders.value.isNotEmpty()) {
+            emails.filter { email -> email.folderName in selectedFolders.value }
+        } else {
+            emails
+        }
+    }
 
-    Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxHeight(0.5f)) {
+
+
+    Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxHeight(0.7f)) {
         // Email
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(
@@ -364,7 +395,7 @@ fun displayEmails(
             Column(modifier = Modifier.fillMaxWidth()) {
 
                 LazyColumn(state = lazyListState) {
-                    items(emails) { email ->
+                    items(allEmails) { email ->
 
                         val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
                         var isRead by remember { mutableStateOf(email.isRead) }

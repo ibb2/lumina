@@ -20,7 +20,7 @@ CREATE TABLE Emails (
     attachments_count INTEGER AS Int NOT NULL DEFAULT 0,                -- Number of attachments
     has_attachments INTEGER AS Boolean NOT NULL DEFAULT 0,              -- Whether the email has attachments
     account TEXT NOT NULL,                                              -- Email account
-    FOREIGN KEY(account) REFERENCES Accounts(email) ON DELETE CASCADE   -- Foreign key to the Account table
+    FOREIGN KEY(account) REFERENCES Accounts(email) ON DELETE CASCADE  -- Foreign key to the Account table
 );
 
 insertEmail:
