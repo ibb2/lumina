@@ -2,8 +2,10 @@ package org.example.project
 
 import com.composables.core.VerticalScrollbar
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -40,8 +42,6 @@ import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.ui.text.style.TextAlign
 import com.composables.core.ScrollArea
@@ -56,6 +56,7 @@ import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
 import org.example.project.networking.TokenResponse
 import org.example.project.shared.data.AccountsDAO
+import org.example.project.shared.data.FoldersDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.utils.NetworkError
@@ -95,7 +96,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val emailServiceManager = remember {
             EmailServiceManager(
                 emailService,
-                )
+            )
         }
 
         LaunchedEffect(accounts.value) {
@@ -103,19 +104,93 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 emailServiceManager.syncEmails(
                     accounts.value
                 )
+                emailServiceManager.getFolders(
+                    accounts.value
+                )
             }
         }
 
+        val folders by emailServiceManager.folders.collectAsState()
         val emails by emailServiceManager.emails.collectAsState()
         val attachments by emailServiceManager.attachments.collectAsState()
         val isSyncing by emailServiceManager.isSyncing.collectAsState()
 
+        val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
+
+
         // UI with sync indicator
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.padding(16.dp).fillMaxSize()
         ) {
+            Column {
+                // Add account button
+                Button(onClick = {
+                    scope.launch {
+                        val re = authentication.authenticateUser(client, accountsDataSource)
+                        r = re.first
+                        e = re.second
+
+                        // Update accounts
+                        accounts.value = authentication.getAccounts(accountsDataSource)
+
+                        // Sync will happen automatically due to LaunchedEffect
+                    }
+                }) {
+                    Text("Add account (GMAIL)")
+                }
+
+                LazyRow {
+                    items(accounts.value) { account ->
+                        Text(account.email)
+                        // Logout button (in your existing logout logic)
+                        Button(onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                authentication.logout(accountsDataSource, account.email)
+
+                                // Update accounts
+                                withContext(Dispatchers.Main) {
+                                    accounts.value = authentication.getAccounts(accountsDataSource)
+
+                                    // Sync will happen automatically due to LaunchedEffect
+                                }
+                            }
+                        }) {
+                            Text("Logout")
+                        }
+                    }
+                }
+            }
+
+            if (folders.size > 0) {
+                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
+                    itemsIndexed(folders) { _, it ->
+                        Row {
+                            val isSelected = selectedFolders.value.contains(it.name)
+                            val color = if (isSelected) Color.Green else Color.White
+                            Button(
+                                onClick = {
+                                    println("Folder selected ${it.name}")
+                                    val currentFolders = selectedFolders.value.toMutableList()
+                                    if (currentFolders.contains(it.name)) {
+                                        currentFolders.remove(it.name)
+                                    } else {
+                                        currentFolders.add(it.name)
+                                    }
+                                    // Update the entire list
+                                    selectedFolders.value = currentFolders
+                                },
+                                colors = ButtonDefaults.buttonColors(color)
+                            ) {
+                                Text(it.name)
+                            }
+                        }
+                        Divider(modifier = Modifier.width(4.dp))
+                    }
+                }
+            }
+
             if (isSyncing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
@@ -123,50 +198,12 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             // Use emails and attachments in your display logic
             displayEmails(
                 accounts = accounts.value,
+                selectedFolders = selectedFolders,
                 emails = emails,
                 attachments = attachments,
                 emailDataSource = emailDataSource,
                 emailService = emailService
             )
-        }
-
-        Row {
-            // Add account button
-            Button(onClick = {
-                scope.launch {
-                    val re = authentication.authenticateUser(client, accountsDataSource)
-                    r = re.first
-                    e = re.second
-
-                    // Update accounts
-                    accounts.value = authentication.getAccounts(accountsDataSource)
-
-                    // Sync will happen automatically due to LaunchedEffect
-                }
-            }) {
-                Text("Add account (GMAIL)")
-            }
-
-            LazyColumn {
-                items(accounts.value) { account ->
-                    Text(account.email)
-                    // Logout button (in your existing logout logic)
-                    Button(onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            authentication.logout(accountsDataSource, account.email)
-
-                            // Update accounts
-                            withContext(Dispatchers.Main) {
-                                accounts.value = authentication.getAccounts(accountsDataSource)
-
-                                // Sync will happen automatically due to LaunchedEffect
-                            }
-                        }
-                    }) {
-                        Text("Logout")
-                    }
-                }
-            }
         }
     }
 }
@@ -174,6 +211,9 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 class EmailServiceManager(
     private val emailService: EmailService,
 ) {
+    private val _folders = MutableStateFlow<MutableList<FoldersDAO>>(mutableListOf())
+    val folders: StateFlow<MutableList<FoldersDAO>> = _folders.asStateFlow()
+
     private val _emails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
     val emails: StateFlow<MutableList<EmailsDAO>> = _emails.asStateFlow()
 
@@ -221,11 +261,45 @@ class EmailServiceManager(
             _isSyncing.value = false
         }
     }
+
+    suspend fun getFolders(accounts: MutableList<AccountsDAO>) {
+        if (accounts.isEmpty()) {
+            _folders.value = mutableListOf()
+            return
+        }
+
+        _isSyncing.value = true
+        try {
+            // Perform email sync in parallel
+            val foldersResults = coroutineScope {
+                accounts.map {
+                    async {
+                        emailService.getFolders(
+                            it.email,
+                        )
+                    }
+                }.awaitAll()
+            }
+
+            // Combine results from all accounts
+            val combinedFolders = foldersResults.flatten()
+            println("Folders $combinedFolders")
+
+            // Update state flows
+            _folders.value.addAll(combinedFolders)
+        } catch (e: Exception) {
+            // Log error or handle synchronization failure
+            println("Fetching folders failed: ${e.message}")
+        } finally {
+            _isSyncing.value = false
+        }
+    }
 }
 
 @Composable
 fun displayEmails(
     accounts: List<AccountsDAO>,
+    selectedFolders: MutableState<List<String>>,
     emails: MutableList<EmailsDAO>,
     attachments: MutableList<AttachmentsDAO>,
     emailDataSource: EmailsDataSource,
@@ -297,8 +371,17 @@ fun displayEmails(
         }
     }
 
+    val allEmails = remember(selectedFolders.value, emails) {
+        if (selectedFolders.value.isNotEmpty()) {
+            emails.filter { email -> email.folderName in selectedFolders.value }
+        } else {
+            emails
+        }
+    }
 
-    Column(verticalArrangement = Arrangement.SpaceBetween) {
+
+
+    Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxHeight(0.7f)) {
         // Email
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(
@@ -312,7 +395,7 @@ fun displayEmails(
             Column(modifier = Modifier.fillMaxWidth()) {
 
                 LazyColumn(state = lazyListState) {
-                    items(emails) { email ->
+                    items(allEmails) { email ->
 
                         val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
                         var isRead by remember { mutableStateOf(email.isRead) }
@@ -1101,11 +1184,14 @@ expect class EmailService(
     client: FirebaseAuthClient,
 ) {
 
+    val folders: StateFlow<MutableList<FoldersDAO>>
     val emails: StateFlow<MutableList<EmailsDAO>>
     val attachments: StateFlow<MutableList<AttachmentsDAO>>
     val isSyncing: StateFlow<Boolean>
 
     suspend fun getEmails(emailAddress: String): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
+
+    suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO>
 
     fun readEmail(
         email: EmailsDAO,

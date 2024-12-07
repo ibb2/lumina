@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.Accounts
 import com.example.Emails
+import com.example.Folders
 import com.example.project.database.LuminaDatabase
 import jakarta.mail.*
 import jakarta.mail.internet.InternetAddress
@@ -23,6 +24,7 @@ import org.example.project.networking.*
 import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.shared.data.FoldersDAO
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.DatabaseDriverFactory
@@ -43,6 +45,9 @@ actual class EmailService actual constructor(
     private var emailDataSource: EmailsDataSource
     private var attachmentsDataSource: AttachmentsDataSource
     private var accountsDataSource: AccountsDataSource
+
+    private val _folders = MutableStateFlow<MutableList<FoldersDAO>>(mutableListOf())
+    actual val folders = _folders.asStateFlow()
 
     private val _emails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
     actual val emails = _emails.asStateFlow()
@@ -140,7 +145,36 @@ actual class EmailService actual constructor(
 
         val totalEmailsForAccount = emailDataSource.selectAllEmailsForAccount(emailAddress).size
         println("Email $emailAddress Size $totalEmailsForAccount")
-        return  if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
+        return if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
+    }
+
+    actual suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO> {
+
+        val props = getProps()
+        val session = Session.getInstance(props)
+        val store = connectToStore(session, props, emailAddress)
+
+        val localFolders: MutableList<FoldersDAO> = mutableListOf()
+
+        // Display the folders
+        println("Showing folders")
+        val folders = store.defaultFolder.list("*")
+        folders.map {
+            println("Folder: ${it.name}")
+            try {
+                localFolders.add(
+                    FoldersDAO(
+                        null,
+                        "$emailAddress|${it.name}",
+                        it.name
+                    )
+                )
+            } catch (e: Exception) {
+                println("Folder already exists in database")
+            }
+        }
+
+        return localFolders
     }
 
     actual suspend fun getEmails(
@@ -173,7 +207,6 @@ actual class EmailService actual constructor(
             localAttachments.value = dbAttachments
 
             return Pair(localEmails, localAttachments)
-
         }
 
         println("Retrieving emails and attachments from IMAP server...")
