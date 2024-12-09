@@ -68,7 +68,6 @@ DELETE FROM Emails WHERE id = ?;
 lastInsertedRowId:
 SELECT last_insert_rowid();
 
-
 -- FTS5 Email
 CREATE VIRTUAL TABLE VirtualEmails USING fts5(
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,                      -- Unique ID for internal use
@@ -97,7 +96,7 @@ CREATE TRIGGER launch_on_emails_insert AFTER INSERT ON Emails
     BEGIN
         INSERT INTO VirtualEmails(
             id,
-            message_id
+            message_id,
             folder_uid  ,
             composite_key ,
             folder_name ,
@@ -113,21 +112,21 @@ CREATE TRIGGER launch_on_emails_insert AFTER INSERT ON Emails
             is_flagged ,
             attachments_count ,
             has_attachments ,
-            account ,
+            account
         ) VALUES (
         ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-        )
+        );
         END;
 
 CREATE TRIGGER launch_on_emails_update AFTER UPDATE ON VirtualEmails BEGIN UPDATE VirtualEmails SET
                 is_read = ?,
-                is_flagged = ?,
+                is_flagged = ?
                WHERE id = ?;
 END;
 
-CREATE TRIGGER launch_on_email_deleted AFTER DELETE ON VirtualEmails BEGIN DELETE VirtualEmails WHERE id = ? END;
+CREATE TRIGGER launch_on_email_deleted AFTER DELETE ON VirtualEmails BEGIN DELETE FROM VirtualEmails WHERE id = ?; END;
 
 -- FTS5 Queries
 
 search:
-SELECT * FROM VirtualEmails where sender MATCH :? or subject MATCH:? or body MATCH :?;
+SELECT * FROM VirtualEmails WHERE sender MATCH :queryString OR subject MATCH :queryString OR body MATCH :queryString;
