@@ -12,7 +12,7 @@ class DesktopAppModule : AppModule {
             driver = DatabaseDriverFactory().create(),
             EmailsAdapter = Emails.Adapter(
                 attachments_countAdapter = IntColumnAdapter,
-            ),
+            )
         )
     }
 

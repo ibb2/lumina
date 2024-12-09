@@ -193,7 +193,7 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     // Search
 
-    private val all: Flow<List<EmailsDAO>>
+    private val all: List<EmailsDAO>
         get() = queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
@@ -215,11 +215,9 @@ class EmailsDataSource(db: LuminaDatabase) {
                 hasAttachments = hasAttachments ?: false,
                 account = account
             )
-        }).asFlow().mapToList(
-            context = Dispatchers.IO
-        )
+        }).executeAsList()
 
-    fun search(query: String): Flow<List<EmailsDAO>> {
+    fun search(query: String): List<EmailsDAO> {
         return if (query.isEmpty()) {
             all
         } else {
@@ -242,14 +240,12 @@ class EmailsDataSource(db: LuminaDatabase) {
                         size = size ?: 0,
                         isRead = isRead ?: false,
                         isFlagged = isFlagged ?: false,
-                        attachmentsCount = attachmentsCount ?: 0,
+                        attachmentsCount = attachmentsCount.toInt() ?: 0,
                         hasAttachments = hasAttachments ?: false,
                         account = account
                     )
                 }
-            ).asFlow().mapToList(
-                context = Dispatchers.IO
-            )
+            ).executeAsList()
         }
     }
 

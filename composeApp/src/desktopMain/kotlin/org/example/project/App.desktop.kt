@@ -11,10 +11,7 @@ import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.search.MessageIDTerm
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
@@ -65,7 +62,7 @@ actual class EmailService actual constructor(
             driver,
             EmailsAdapter = Emails.Adapter(
                 attachments_countAdapter = IntColumnAdapter
-            ),
+            )
         )
 
         // Initialising the data sources
@@ -287,6 +284,15 @@ actual class EmailService actual constructor(
         }
 
         return nbMessages
+    }
+
+    actual suspend fun searchEmails(query: String): List<EmailsDAO> {
+
+        val matchingEmails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
+
+        val search = emailDataSource.search(query)
+        println("Function $search")
+        return search
     }
 
     actual fun readEmail(
