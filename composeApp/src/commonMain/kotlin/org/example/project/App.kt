@@ -222,6 +222,9 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 //            }
 
             // Use emails and attachments in your display logic
+            if (isSearching && emails.isEmpty()) {
+                Text("No emails found :)")
+            }
             displayEmails(
                 accounts = accounts.value,
                 selectedFolders = selectedFolders,
