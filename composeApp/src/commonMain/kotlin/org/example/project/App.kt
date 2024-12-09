@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -43,6 +44,8 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.material.*
+import androidx.compose.ui.text.input.KeyboardType
+
 import androidx.compose.ui.text.style.TextAlign
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
@@ -75,7 +78,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             driver,
             EmailsAdapter = Emails.Adapter(
                 attachments_countAdapter = IntColumnAdapter
-            ),
+            )
         )
 
         // Data Sources
@@ -96,6 +99,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val emailServiceManager = remember {
             EmailServiceManager(
                 emailService,
+                emailDataSource
             )
         }
 
@@ -110,13 +114,20 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             }
         }
 
+
         val folders by emailServiceManager.folders.collectAsState()
         val emails by emailServiceManager.emails.collectAsState()
         val attachments by emailServiceManager.attachments.collectAsState()
         val isSyncing by emailServiceManager.isSyncing.collectAsState()
+        val isSearching by emailServiceManager.isSearching.collectAsState()
 
         val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
+        var searchQuery by remember { mutableStateOf("") }
+        var isDeleting by remember { mutableStateOf(false) }
 
+        LaunchedEffect(searchQuery) {
+            emailServiceManager.search(searchQuery, isDeleting)
+        }
 
         // UI with sync indicator
         Column(
@@ -195,7 +206,25 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
+//            if (emails.isNotEmpty()) {
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = {
+                            isDeleting = searchQuery.length > it.length
+                            searchQuery = it
+
+                        },
+                        label = { Text("Search") },
+//                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                    )
+                }
+//            }
+
             // Use emails and attachments in your display logic
+            if (isSearching && emails.isEmpty()) {
+                Text("No emails found :)")
+            }
             displayEmails(
                 accounts = accounts.value,
                 selectedFolders = selectedFolders,
@@ -210,6 +239,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 
 class EmailServiceManager(
     private val emailService: EmailService,
+    private val emailsDataSource: EmailsDataSource
 ) {
     private val _folders = MutableStateFlow<MutableList<FoldersDAO>>(mutableListOf())
     val folders: StateFlow<MutableList<FoldersDAO>> = _folders.asStateFlow()
@@ -222,6 +252,13 @@ class EmailServiceManager(
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
+
+    private val _search = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
+    val search: StateFlow<MutableList<EmailsDAO>> = _search.asStateFlow()
 
     suspend fun syncEmails(accounts: MutableList<AccountsDAO>) {
         if (accounts.isEmpty()) {
@@ -293,6 +330,45 @@ class EmailServiceManager(
         } finally {
             _isSyncing.value = false
         }
+    }
+
+    suspend fun search(search: String, deleting: Boolean) {
+        println("Searching... $search $deleting")
+        if (search.isEmpty()) {
+            _emails.value = mutableListOf()
+            _emails.value.addAll(_search.value)
+            _isSearching.value = false
+            return
+        }
+
+        if (search.length == 1 && !deleting) {
+            _search.value.addAll(emails.value)
+        }
+
+        _isSearching.value = true
+
+        try {
+
+            // Perform email sync in parallel
+            val searchResults = coroutineScope {
+                async {
+                    emailService.searchEmails(
+                        query = search,
+                    )
+                }.await()
+            }
+
+            println("Results ${searchResults}")
+
+            _emails.value.clear()
+            _emails.value.addAll(searchResults)
+        } catch (e: Exception) {
+            // Log error or handle synchronization failure
+            println("Search failed: ${e.message}")
+        } finally {
+            _isSyncing.value = false
+        }
+
     }
 }
 
@@ -1191,6 +1267,8 @@ expect class EmailService(
 
     suspend fun getEmails(emailAddress: String): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
 
+    suspend fun searchEmails(query: String): List<EmailsDAO>
+
     suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO>
 
     fun readEmail(
@@ -1210,7 +1288,6 @@ expect class EmailService(
         newEmail: NewEmail,
         emailAddress: String
     ): Boolean
-
 
 }
 

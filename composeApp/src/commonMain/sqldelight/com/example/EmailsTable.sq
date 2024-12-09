@@ -23,6 +23,29 @@ CREATE TABLE Emails (
     FOREIGN KEY(account) REFERENCES Accounts(email) ON DELETE CASCADE  -- Foreign key to the Account table
 );
 
+CREATE VIRTUAL TABLE VirtualEmails USING fts5(
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,                      -- Unique ID for internal use
+    message_id TEXT NOT NULL UNIQUE,                                    -- A message-id for Internet messages that is supposed to be unique per message
+    folder_uid INTEGER ,                                                -- Emails Folder specific unique ID
+    composite_key TEXT NOT NULL UNIQUE,                                 -- Composite key for uniqueness
+    folder_name TEXT NOT NULL,                                          -- Folder where the email is located
+    subject TEXT,                                                       -- Email subject
+    sender TEXT,                                                        -- Sender's email address
+    recipients BLOB,                                                    -- Recipients' email addresses (comma-separated or JSON array)
+    sent_date TEXT,                                                     -- Sent date in ISO 8601 format
+    received_date TEXT,                                                 -- Received date in ISO 8601 format
+    body TEXT,                                                          -- Email body (plain text)
+    snippet TEXT,                                                       -- Short preview/snippet of the body
+    size INTEGER,                                                       -- Email size in bytes
+    is_read INTEGER AS Boolean NOT NULL DEFAULT 0,                      -- Read/unread status
+    is_flagged INTEGER AS Boolean NOT NULL DEFAULT 0,                   -- Flagged/important status
+    attachments_count INTEGER NOT NULL DEFAULT 0,                -- Number of attachments
+    has_attachments INTEGER AS Boolean NOT NULL DEFAULT 0,              -- Whether the email has attachments
+    account TEXT NOT NULL,                                              -- Email account
+);
+
+-- SQL queries
+
 insertEmail:
 INSERT OR REPLACE INTO Emails(
     id,
@@ -65,3 +88,103 @@ DELETE FROM Emails WHERE id = ?;
 
 lastInsertedRowId:
 SELECT last_insert_rowid();
+
+-- FTS5 Email triggers
+
+CREATE TRIGGER launch_on_emails_insert AFTER INSERT ON Emails
+    BEGIN
+        INSERT INTO VirtualEmails(
+    id,
+    message_id,
+    folder_uid,
+    composite_key,
+    folder_name,
+    subject,
+    sender,
+    recipients,
+    sent_date,
+    received_date,
+    body,
+    snippet,
+    size,
+    is_read,
+    is_flagged,
+    attachments_count,
+    has_attachments,
+    account
+) VALUES(      new.id,
+               new.message_id,
+               new.folder_uid,
+               new.composite_key,
+               new.folder_name,
+               new.subject,
+               new.sender,
+               new.recipients,
+               new.sent_date,
+               new.received_date,
+               new.body,
+               new.snippet,
+               new.size,
+               new.is_read,
+               new.is_flagged,
+               new.attachments_count,
+               new.has_attachments,
+               new.account);    END;
+
+CREATE TRIGGER launch_after_update
+AFTER UPDATE ON Emails
+BEGIN
+  DELETE FROM VirtualEmails WHERE composite_key = old.composite_key;
+
+  INSERT INTO VirtualEmails(
+     id,
+     message_id,
+     folder_uid,
+     composite_key,
+     folder_name,
+     subject,
+     sender,
+     recipients,
+     sent_date,
+     received_date,
+     body,
+     snippet,
+     size,
+     is_read,
+     is_flagged,
+     attachments_count,
+     has_attachments,
+     account
+  ) VALUES(
+      new.id,
+      new.message_id,
+      new.folder_uid,
+      new.composite_key,
+      new.folder_name,
+      new.subject,
+      new.sender,
+      new.recipients,
+      new.sent_date,
+      new.received_date,
+      new.body,
+      new.snippet,
+      new.size,
+      new.is_read,
+      new.is_flagged,
+      new.attachments_count,
+      new.has_attachments,
+      new.account
+  );
+END;
+
+CREATE TRIGGER launch_on_email_deleted
+AFTER DELETE ON Emails
+BEGIN
+    DELETE FROM VirtualEmails WHERE composite_key = old.composite_key;
+END;
+
+-- FTS5 Queries
+
+search:
+-- SELECT * FROM Emails WHERE size > 0;
+SELECT * FROM VirtualEmails WHERE sender MATCH :query OR subject MATCH :query OR body MATCH :query;
