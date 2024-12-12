@@ -123,6 +123,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
         val attachments by emailServiceManager.attachments.collectAsState()
         val isSyncing by emailServiceManager.isSyncing.collectAsState()
         val isSearching by emailServiceManager.isSearching.collectAsState()
+        val allEmails by emailDataSource.selectAllEmailsFlow().collectAsState(emptyList())
 
         val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
         var searchQuery by remember { mutableStateOf("") }
@@ -231,7 +232,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             displayEmails(
                 accounts = accounts.value,
                 selectedFolders = selectedFolders,
-                emails = emails,
+                emails = allEmails.toMutableList(),
                 attachments = attachments,
                 emailDataSource = emailDataSource,
                 emailService = emailService

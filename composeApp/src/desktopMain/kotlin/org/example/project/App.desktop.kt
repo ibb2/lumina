@@ -246,6 +246,13 @@ actual class EmailService actual constructor(
             override fun messagesAdded(ev: MessageCountEvent) {
                 val msgs = ev.messages
                 for (msg in msgs) println("Message ${msg.messageNumber} added to folder ${msg.subject}")
+                efficientGetContents(
+                    account,
+                    inbox,
+                    msgs,
+                    msgs[0].messageNumber,
+                    msgs.last().messageNumber
+                )
             }
         })
 
@@ -257,6 +264,8 @@ actual class EmailService actual constructor(
         account: Accounts,
         inbox: IMAPFolder,
         messages: Array<Message>,
+        startNo: Int? = null,
+        endNo: Int? = null
     ): Int {
         val fp = FetchProfile()
         fp.add(FetchProfile.Item.FLAGS)
@@ -264,7 +273,7 @@ actual class EmailService actual constructor(
         inbox.fetch(messages, fp)
 
         val nbMessages = inbox.getMessages().size
-        var index = nbMessages - 10
+        var index = startNo ?: (nbMessages - 10)
         val maxDoc = 5000
         val maxSize: Long = 100000000 // 100Mo
 
@@ -295,8 +304,8 @@ actual class EmailService actual constructor(
             end = messages[index - 1].messageNumber
             inbox.doCommand(
                 JavaMail(
-                    start = nbMessages - 10,
-                    end = nbMessages,
+                    start = startNo ?: (nbMessages - 10),
+                    end = endNo ?: nbMessages,
                     emails.value,
                     attachments.value,
                     emailDataSource,
