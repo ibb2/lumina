@@ -4,9 +4,10 @@ import androidx.compose.runtime.*
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.Accounts
 import com.example.Emails
-import com.example.Folders
 import com.example.project.database.LuminaDatabase
 import jakarta.mail.*
+import jakarta.mail.event.MessageCountAdapter
+import jakarta.mail.event.MessageCountEvent
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.search.MessageIDTerm
@@ -220,6 +221,35 @@ actual class EmailService actual constructor(
         store.close()
 
         return Pair(emails, attachments)
+    }
+
+    actual suspend fun watchEmails(emailAddress: String) {
+        val props = getProps()
+        val session = Session.getInstance(props)
+
+        val store = connectToStore(session, props, emailAddress)
+        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
+        val messages = inbox.getMessages()
+
+        val account = accountsDataSource.select(emailAddress)
+
+        efficientGetContents(
+            account,
+            inbox,
+            messages,
+        )
+
+        // Watch for new emails
+        println("Watching for new emails...")
+
+        inbox.addMessageCountListener(object : MessageCountAdapter() {
+            override fun messagesAdded(ev: MessageCountEvent) {
+                val msgs = ev.messages
+                for (msg in msgs) println("Message ${msg.messageNumber} added to folder ${msg.subject}")
+            }
+        })
+
+        inbox.idle()
     }
 
     @Throws(MessagingException::class)

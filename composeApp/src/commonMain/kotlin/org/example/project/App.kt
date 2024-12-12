@@ -111,6 +111,9 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 emailServiceManager.getFolders(
                     accounts.value
                 )
+                emailServiceManager.watchEmails(
+                    accounts.value
+                )
             }
         }
 
@@ -368,6 +371,14 @@ class EmailServiceManager(
         } finally {
             _isSyncing.value = false
         }
+
+    }
+
+    suspend fun watchEmails(accounts: MutableList<AccountsDAO>) {
+        accounts.map {
+            emailService.watchEmails(it.email)
+        }
+
 
     }
 }
@@ -1266,6 +1277,8 @@ expect class EmailService(
     val isSyncing: StateFlow<Boolean>
 
     suspend fun getEmails(emailAddress: String): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
+
+    suspend fun watchEmails(emailAddress: String)
 
     suspend fun searchEmails(query: String): List<EmailsDAO>
 
