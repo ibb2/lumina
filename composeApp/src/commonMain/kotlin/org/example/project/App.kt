@@ -36,7 +36,6 @@ import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.observable.makeObservable
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.Clock
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
@@ -51,9 +50,7 @@ import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
@@ -112,18 +109,40 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                     accounts.value
                 )
                 emailServiceManager.watchEmails(
-                    accounts.value
+                    accounts.value,
+                    emailDataSource
                 )
             }
         }
-
 
         val folders by emailServiceManager.folders.collectAsState()
         val emails by emailServiceManager.emails.collectAsState()
         val attachments by emailServiceManager.attachments.collectAsState()
         val isSyncing by emailServiceManager.isSyncing.collectAsState()
         val isSearching by emailServiceManager.isSearching.collectAsState()
-        val allEmails by emailDataSource.selectAllEmailsFlow().collectAsState(emptyList())
+        val allEmails = remember { mutableStateOf<List<EmailsDAO>>(emptyList()) }
+
+        // Change how you handle emailsFlow
+        LaunchedEffect(Unit) {
+            println("Setting up email flow collection")
+            emailDataSource.emailsFlow
+                .collect { emails ->
+                    println("CRITICAL DEBUG: Collected ${emails.size} emails")
+                    // Use withContext to ensure UI update happens on Main dispatcher
+                    withContext(Dispatchers.Main) {
+                        allEmails.value = emails
+                    }
+                }
+        }
+
+
+
+        LazyColumn {
+            items(allEmails.value.takeLast(10)) { email ->
+                Text(text = "Subject: ${email.subject}")
+            }
+        }
+
 
         val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
         var searchQuery by remember { mutableStateOf("") }
@@ -211,18 +230,18 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             }
 
 //            if (emails.isNotEmpty()) {
-                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    TextField(
-                        value = searchQuery,
-                        onValueChange = {
-                            isDeleting = searchQuery.length > it.length
-                            searchQuery = it
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        isDeleting = searchQuery.length > it.length
+                        searchQuery = it
 
-                        },
-                        label = { Text("Search") },
+                    },
+                    label = { Text("Search") },
 //                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-                    )
-                }
+                )
+            }
 //            }
 
             // Use emails and attachments in your display logic
@@ -232,7 +251,7 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             displayEmails(
                 accounts = accounts.value,
                 selectedFolders = selectedFolders,
-                emails = allEmails.toMutableList(),
+                emails = allEmails.value.toMutableList(),
                 attachments = attachments,
                 emailDataSource = emailDataSource,
                 emailService = emailService
@@ -375,12 +394,10 @@ class EmailServiceManager(
 
     }
 
-    suspend fun watchEmails(accounts: MutableList<AccountsDAO>) {
+    suspend fun watchEmails(accounts: MutableList<AccountsDAO>, emailsDataSource: EmailsDataSource) {
         accounts.map {
-            emailService.watchEmails(it.email)
+            emailService.watchEmails(it.email, emailsDataSource)
         }
-
-
     }
 }
 
@@ -483,7 +500,7 @@ fun displayEmails(
             Column(modifier = Modifier.fillMaxWidth()) {
 
                 LazyColumn(state = lazyListState) {
-                    items(allEmails) { email ->
+                    itemsIndexed(allEmails) { index, email ->
 
                         val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
                         var isRead by remember { mutableStateOf(email.isRead) }
@@ -1279,7 +1296,7 @@ expect class EmailService(
 
     suspend fun getEmails(emailAddress: String): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
 
-    suspend fun watchEmails(emailAddress: String)
+    suspend fun watchEmails(emailAddress: String, dataSource: EmailsDataSource)
 
     suspend fun searchEmails(query: String): List<EmailsDAO>
 

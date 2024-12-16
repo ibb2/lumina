@@ -11,9 +11,8 @@ import jakarta.mail.event.MessageCountEvent
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.search.MessageIDTerm
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
 import org.example.project.data.NewEmail
@@ -193,23 +192,59 @@ actual class EmailService actual constructor(
         println("Checking for emails and attachments...")
         val emailsUpToDate = checkForNewEmails(emailAddress, messages.size)
 
+        val account = accountsDataSource.select(emailAddress)
+
         if (emailsUpToDate) {
 
             println("Retrieving emails and attachments from database...")
             val dbEmails = emailDataSource.selectAllEmailsForAccount(emailAddress)
             localEmails.value = dbEmails
 
+            if (messages.size > dbEmails.size) {
+                println("Found new emails in IMAP server updating database...")
+
+                // Safely get new messages
+                val startIndex = maxOf( messages.size - dbEmails.size - 1, messages.size)
+                val newMsgs = inbox.getMessages(messages.size, messages.size)
+
+                println("New messages ${newMsgs.size}")
+
+                // Safely pass parameters to efficientGetContents
+//                efficientGetContents(
+//                    account,
+//                    inbox,
+//                    newMsgs,
+//                    startNo = newMsgs.firstOrNull()?.messageNumber,
+//                    endNo = newMsgs.lastOrNull()?.messageNumber
+//                )
+
+                inbox.doCommand(
+                    JavaMail(
+                        start = messages.size - 1,
+                        end = messages.size,
+                        _emails,
+                        _attachments,
+                        emailDataSource,
+                        attachmentsDataSource,
+                        account,
+                        inbox.getMessages()
+                    )
+                )
+
+            }
+
             val dbAttachments = dbEmails.firstOrNull()?.let {
                 attachmentsDataSource.selectAttachments(it.id!!)
             } ?: emptyList()
             localAttachments.value = dbAttachments
 
+            _emails.value = localEmails.value.toMutableList()
+            _attachments.value = localAttachments.value.toMutableList()
+
             return Pair(localEmails, localAttachments)
         }
 
         println("Retrieving emails and attachments from IMAP server...")
-
-        val account = accountsDataSource.select(emailAddress)
 
         efficientGetContents(
             account,
@@ -223,40 +258,55 @@ actual class EmailService actual constructor(
         return Pair(emails, attachments)
     }
 
-    actual suspend fun watchEmails(emailAddress: String) {
-        val props = getProps()
-        val session = Session.getInstance(props)
+    actual suspend fun watchEmails(emailAddress: String, dataSource: EmailsDataSource) {
+        coroutineScope {
+            launch(Dispatchers.IO) {
+                val props = getProps()
+                val session = Session.getInstance(props)
+                val store = connectToStore(session, props, emailAddress)
+                val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
 
-        val store = connectToStore(session, props, emailAddress)
-        val inbox = store.getFolder("INBOX").apply { open(Folder.READ_ONLY) } as IMAPFolder
-        val messages = inbox.getMessages()
+                val account = accountsDataSource.select(emailAddress)
 
-        val account = accountsDataSource.select(emailAddress)
+                inbox.addMessageCountListener(object : MessageCountAdapter() {
+                    override fun messagesAdded(ev: MessageCountEvent) {
+                        launch {
+                            val msgs = ev.messages
+                            println("New messages detected: ${msgs.size}")
 
-        efficientGetContents(
-            account,
-            inbox,
-            messages,
-        )
+                            try {
+                                inbox.doCommand(
+                                    JavaMail(
+                                        start = msgs[0].messageNumber,
+                                        end = msgs.last().messageNumber,
+                                        _emails,
+                                        _attachments,
+                                        dataSource,
+                                        attachmentsDataSource,
+                                        account,
+                                        inbox.getMessages()
+                                    )
+                                )
 
-        // Watch for new emails
-        println("Watching for new emails...")
+                                println("Database updated")
+                            } catch (e: Exception) {
+                                println("Error processing new messages: ${e.printStackTrace()}")
+                            }
+                        }
+                    }
+                })
 
-        inbox.addMessageCountListener(object : MessageCountAdapter() {
-            override fun messagesAdded(ev: MessageCountEvent) {
-                val msgs = ev.messages
-                for (msg in msgs) println("Message ${msg.messageNumber} added to folder ${msg.subject}")
-                efficientGetContents(
-                    account,
-                    inbox,
-                    msgs,
-                    msgs[0].messageNumber,
-                    msgs.last().messageNumber
-                )
+                // Maintain IDLE connection with reconnection logic
+                while (isActive) {
+                    try {
+                        inbox.idle()
+                    } catch (e: Exception) {
+                        println("IDLE connection lost, reconnecting in 5 seconds...")
+                        delay(5000)
+                    }
+                }
             }
-        })
-
-        inbox.idle()
+        }
     }
 
     @Throws(MessagingException::class)
@@ -281,8 +331,8 @@ actual class EmailService actual constructor(
         var start: Int
         var end: Int
 
-        while (index < nbMessages) {
-            start = messages[index].messageNumber
+        while (index <= nbMessages) {
+            start = startNo ?: messages[index].messageNumber
             var docs = 0
             var totalSize = 0
             var noskip = true // There are no jumps in the message numbers
@@ -294,20 +344,19 @@ actual class EmailService actual constructor(
                 totalSize += messages[index].size
                 index++
                 if ((index < nbMessages).also { notend = it }) {
-                    noskip = (messages[index - 1].messageNumber + 1 === messages[index]
-                        .messageNumber)
+                    noskip = (messages[index - 1].messageNumber + 1 === messages[index].messageNumber)
                 }
             }
 
             val mail = inbox.getMessages()
 
-            end = messages[index - 1].messageNumber
+            end = endNo ?: messages[index - 1].messageNumber
             inbox.doCommand(
                 JavaMail(
                     start = startNo ?: (nbMessages - 10),
-                    end = endNo ?: nbMessages,
-                    emails.value,
-                    attachments.value,
+                    end = nbMessages,
+                    _emails,
+                    _attachments,
                     emailDataSource,
                     attachmentsDataSource,
                     account,

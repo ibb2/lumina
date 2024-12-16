@@ -5,6 +5,7 @@ import jakarta.mail.*
 import jakarta.mail.internet.MailDateFormat
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.Clock
 import org.eclipse.angus.mail.iap.Argument
 import org.eclipse.angus.mail.iap.Response
@@ -26,11 +27,17 @@ class JavaMail(
     var start: Int,
     /** Index on server of last mail to fetch  */
     var end: Int,
-    private var emails: MutableList<EmailsDAO>,
-    private var attachmentsArray: MutableList<AttachmentsDAO>,
+    /** Emails list to update  */
+    private var _emails: MutableStateFlow<MutableList<EmailsDAO>>,
+    /** Attachments list to update  */
+    private var _attachments: MutableStateFlow<MutableList<AttachmentsDAO>>,
+    /** Emails data source  */
     private var emailsDataSource: EmailsDataSource,
+    /** Attachments data source  */
     private var attachmentsDataSource: AttachmentsDataSource,
+    /** Account  */
     private var account: Accounts,
+    /** Messages to fetch  */
     private var messages: Array<Message>,
     ) : IMAPFolder.ProtocolCommand {
     //    @Throws(ProtocolException::class)
@@ -86,7 +93,7 @@ class JavaMail(
                             ?: getFallbackReceivedDate(mm)?.toInstant()?.toString()
                             ?: Clock.System.now().toString()
 
-                        emails.add(
+                        _emails.value.add(
                             EmailsDAO(
                                 id = null,
                                 messageId = mm.messageID,
@@ -130,7 +137,7 @@ class JavaMail(
                         )
 
                         for (attachment in attachments) {
-                            attachmentsArray.add(
+                            _attachments.value.add(
                                 AttachmentsDAO(
                                     id = null,
                                     emailId = emailId,
@@ -148,6 +155,8 @@ class JavaMail(
                                 size = attachment.size,
                             )
                         }
+
+                        println("Email added to database")
                     } catch (e: MessagingException) {
                         print("Errored out")
                         e.printStackTrace()
