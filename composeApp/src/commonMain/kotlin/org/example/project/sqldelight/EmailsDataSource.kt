@@ -1,18 +1,89 @@
 package org.example.project.sqldelight
 
+import androidx.compose.runtime.LaunchedEffect
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.*
 import org.example.project.shared.data.EmailsDAO
 
 class EmailsDataSource(db: LuminaDatabase) {
 
     private val queries = db.emailsTableQueries
+
+    // Create a private MutableStateFlow to manage email updates
+    private val initEmails = queries.selectAllEmails(
+        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+            EmailsDAO(
+                id = id,
+                messageId = messageId ?: "",
+                folderUID = folderUID,
+                compositeKey = compositeKey,
+                folderName = folderName,
+                subject = subject ?: "",
+                sender = sender ?: "",
+                recipients = recipients ?: byteArrayOf(),
+                sentDate = sentDate ?: "",
+                receivedDate = receivedDate ?: "",
+                body = body ?: "",
+                snippet = snippet ?: "",
+                size = size ?: 0,
+                isRead = isRead,
+                isFlagged = isFlagged,
+                attachmentsCount = attachmentsCount,
+                hasAttachments = hasAttachments,
+                account = account
+            )
+        }
+    ).executeAsList()
+    private val _emailsFlow = MutableStateFlow<List<EmailsDAO>>(initEmails)
+
+    // Public immutable flow for observing
+    val emailsFlow: StateFlow<List<EmailsDAO>> = _emailsFlow.asStateFlow()
+
+    // Method to trigger updates
+    fun notifyEmailsUpdated() {
+        println("Emitting")
+        // Fetch the latest emails and update the flow
+        val updatedEmails = queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+            EmailsDAO(
+                id = id,
+                messageId = messageId ?: "",
+                folderUID = folderUID,
+                compositeKey = compositeKey,
+                folderName = folderName,
+                subject = subject ?: "",
+                sender = sender ?: "",
+                recipients = recipients ?: byteArrayOf(),
+                sentDate = sentDate ?: "",
+                receivedDate = receivedDate ?: "",
+                body = body ?: "",
+                snippet = snippet ?: "",
+                size = size ?: 0,
+                isRead = isRead,
+                isFlagged = isFlagged,
+                attachmentsCount = attachmentsCount,
+                hasAttachments = hasAttachments,
+                account = account
+            )
+        }).executeAsList()
+
+        CoroutineScope(Dispatchers.Default).launch {
+            try {
+                println("Emitting: Attempting to emit emails")
+                _emailsFlow.emit(updatedEmails)
+                println("Emitting: Successfully emitted emails")
+            } catch (e: Exception) {
+                println("Emitting: Error during emission - ${e.message}")
+                e.printStackTrace()
+            }
+        }
+
+        println("Emails updated: ${updatedEmails.size}")
+    }
 
     fun insertEmail(
         id: Long? = null,
@@ -56,7 +127,11 @@ class EmailsDataSource(db: LuminaDatabase) {
                 hasAttachments,
                 account
             )
-            queries.lastInsertedRowId().executeAsOne()
+            val insertedId = queries.lastInsertedRowId().executeAsOne()
+            // Notify that emails have been updated
+            notifyEmailsUpdated()
+
+            insertedId
         }
     }
 
@@ -111,6 +186,10 @@ class EmailsDataSource(db: LuminaDatabase) {
             )
         }).executeAsList()
 
+    // Alternative flow method using the StateFlow
+    fun selectAllFlow(): StateFlow<List<EmailsDAO>> = emailsFlow
+
+
     fun selectAllEmailsFlow(): Flow<List<EmailsDAO>> = queries.selectAllEmails(
         mapper = { id, messageId, folderUID, compositeKey, folderName, subject, sender, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
@@ -133,7 +212,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                 hasAttachments = hasAttachments,
                 account = account
             )
-        }).asFlow().mapToList(context = Dispatchers.IO)
+        }).asFlow().mapToList(context = Dispatchers.IO).distinctUntilChanged().flowOn(Dispatchers.Main)
 
 
 //    fun selectEmail(compositeKey: String): Flow<EmailsDAO> = queries.selectEmail(
