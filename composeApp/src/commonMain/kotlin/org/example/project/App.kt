@@ -2,9 +2,7 @@ package org.example.project
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,7 +19,7 @@ import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.material.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.example.project.data.NewEmail
@@ -32,6 +30,7 @@ import org.example.project.shared.data.FoldersDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.ui.displayEmails
+import org.example.project.ui.platformSpecific.PlatformSpecificTextField
 import org.example.project.utils.NetworkError
 
 @OptIn(ExperimentalSettingsApi::class)
@@ -51,7 +50,8 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 }
 
 @Composable
-expect fun PlatformSpecificUI(modifier: Modifier,currentSystemTheme: Boolean, content: @Composable () -> Unit, ): Unit
+expect fun PlatformSpecificUI(modifier: Modifier, currentSystemTheme: Boolean, content: @Composable () -> Unit): Unit
+
 
 @Composable
 fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
@@ -139,22 +139,30 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
         modifier = Modifier.padding(16.dp).fillMaxSize()
     ) {
 
-            Box(modifier = Modifier.clip(CircleShape)) {
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
 
-            Surface {
-                    TextField(
-                        modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
-                        value = searchQuery,
-                        onValueChange = {
-                            isDeleting = searchQuery.length > it.length
-                            searchQuery = it
+//                TextField(
+//                    modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
+//                    value = searchQuery,
+//                    onValueChange = {
+//                        isDeleting = searchQuery.length > it.length
+//                        searchQuery = it
+//
+//                    },
+//                    label = { Text("Search") },
+////                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+//                )
 
-                        },
-                        label = { Text("Search") },
-//                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-                    )
+                var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+
+                fun updateTextFieldValue(newValue: TextFieldValue) {
+                    textFieldValue = newValue
                 }
-            }
+
+                PlatformSpecificTextField(Modifier, textFieldValue) {
+                    updateTextFieldValue(it)
+                }
+        }
 
 
 //        Column {
@@ -384,8 +392,6 @@ class EmailServiceManager(
         }
     }
 }
-
-
 
 
 //@Composable
