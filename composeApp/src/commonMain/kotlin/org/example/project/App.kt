@@ -202,33 +202,33 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 }
             }
 
-            if (folders.size > 0) {
-                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
-                    itemsIndexed(folders) { _, it ->
-                        Row {
-                            val isSelected = selectedFolders.value.contains(it.name)
-                            val color = if (isSelected) Color.Green else Color.White
-                            Button(
-                                onClick = {
-                                    println("Folder selected ${it.name}")
-                                    val currentFolders = selectedFolders.value.toMutableList()
-                                    if (currentFolders.contains(it.name)) {
-                                        currentFolders.remove(it.name)
-                                    } else {
-                                        currentFolders.add(it.name)
-                                    }
-                                    // Update the entire list
-                                    selectedFolders.value = currentFolders
-                                },
-                                colors = ButtonDefaults.buttonColors(color)
-                            ) {
-                                Text(it.name)
-                            }
-                        }
-                        Divider(modifier = Modifier.width(4.dp))
-                    }
-                }
-            }
+//            if (folders.size > 0) {
+//                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
+//                    itemsIndexed(folders) { _, it ->
+//                        Row {
+//                            val isSelected = selectedFolders.value.contains(it.name)
+//                            val color = if (isSelected) Color.Green else Color.White
+//                            Button(
+//                                onClick = {
+//                                    println("Folder selected ${it.name}")
+//                                    val currentFolders = selectedFolders.value.toMutableList()
+//                                    if (currentFolders.contains(it.name)) {
+//                                        currentFolders.remove(it.name)
+//                                    } else {
+//                                        currentFolders.add(it.name)
+//                                    }
+//                                    // Update the entire list
+//                                    selectedFolders.value = currentFolders
+//                                },
+//                                colors = ButtonDefaults.buttonColors(color)
+//                            ) {
+//                                Text(it.name)
+//                            }
+//                        }
+//                        Divider(modifier = Modifier.width(4.dp))
+//                    }
+//                }
+//            }
 
             if (isSyncing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
