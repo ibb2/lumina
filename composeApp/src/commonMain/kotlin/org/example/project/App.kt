@@ -135,15 +135,6 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
                 }
         }
 
-
-
-        LazyColumn {
-            items(allEmails.value.takeLast(10)) { email ->
-                Text(text = "Subject: ${email.subject}")
-            }
-        }
-
-
         val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
         var searchQuery by remember { mutableStateOf("") }
         var isDeleting by remember { mutableStateOf(false) }
@@ -158,6 +149,20 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             verticalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.padding(16.dp).fillMaxSize()
         ) {
+
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        isDeleting = searchQuery.length > it.length
+                        searchQuery = it
+
+                    },
+                    label = { Text("Search") },
+//                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                )
+            }
+
             Column {
                 // Add account button
                 Button(onClick = {
@@ -228,21 +233,6 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
             if (isSyncing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
-
-//            if (emails.isNotEmpty()) {
-            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                TextField(
-                    value = searchQuery,
-                    onValueChange = {
-                        isDeleting = searchQuery.length > it.length
-                        searchQuery = it
-
-                    },
-                    label = { Text("Search") },
-//                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-                )
-            }
-//            }
 
             // Use emails and attachments in your display logic
             if (isSearching && emails.isEmpty()) {
