@@ -3,6 +3,8 @@ package org.example.project
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +20,8 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.material.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.example.project.data.NewEmail
@@ -59,6 +63,9 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
             attachments_countAdapter = IntColumnAdapter
         )
     )
+
+    // Theme
+    val isSystemInDarkMode = isSystemInDarkTheme()
 
     // Data Sources
     val emailDataSource: EmailsDataSource = EmailsDataSource(database)
@@ -132,18 +139,23 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
         modifier = Modifier.padding(16.dp).fillMaxSize()
     ) {
 
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            TextField(
-                value = searchQuery,
-                onValueChange = {
-                    isDeleting = searchQuery.length > it.length
-                    searchQuery = it
+            Box(modifier = Modifier.clip(CircleShape)) {
 
-                },
-                label = { Text("Search") },
+            Surface {
+                    TextField(
+                        modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
+                        value = searchQuery,
+                        onValueChange = {
+                            isDeleting = searchQuery.length > it.length
+                            searchQuery = it
+
+                        },
+                        label = { Text("Search") },
 //                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-            )
-        }
+                    )
+                }
+            }
+
 
         Column {
             // Add account button
