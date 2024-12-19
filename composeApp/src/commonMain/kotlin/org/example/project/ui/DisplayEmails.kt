@@ -38,6 +38,8 @@ import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
+import org.example.project.ui.platformSpecific.PlatformSpecificCard
+import org.example.project.ui.platformSpecific.PlatformSpecificDelete
 
 @Composable
 fun displayEmails(
@@ -143,16 +145,7 @@ fun displayEmails(
                         val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
                         var isRead by remember { mutableStateOf(email.isRead) }
                         println("Emails ${email.subject}")
-                        Column(
-                            modifier = Modifier.border(
-                                width = 1.dp,
-                                color = Color.DarkGray,
-                                shape = RoundedCornerShape(4.dp)
-                            ).background(
-                                color = Color.LightGray
-                            ).fillMaxWidth()
-                        ) {
-                            Text(text = "Account $emailAddress", color = Color.hsl(38f, 0.5f, 0.5f))
+                        PlatformSpecificCard(Modifier) {
                             Text(
                                 text = email.sender,
                             )
@@ -166,7 +159,6 @@ fun displayEmails(
                             ) {
                                 Text("View Email")
                             }
-                            Text("Email read: $isRead")
                             Button(
                                 onClick = {
                                     CoroutineScope(Dispatchers.IO).launch {
@@ -178,20 +170,15 @@ fun displayEmails(
                             ) {
                                 Text(text = if (isRead) "Mark as unread" else "Mark as read")
                             }
-                            Button(
-                                onClick = {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
-                                        // Remove email on the main thread
-                                        withContext(Dispatchers.Main) {
-                                            emails.remove(email)
-                                        }
+                            PlatformSpecificDelete(Modifier, onClick = {
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    deleteEmail(email, emailDataSource, emailService, emailAddress)
+                                    // Remove email on the main thread
+                                    withContext(Dispatchers.Main) {
+                                        emails.remove(email)
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
-                            ) {
-                                Text(text = "Delete")
-                            }
+                                }
+                            })
                             if (attachments.any { it.emailId === email.id }) {
                                 Row {
                                     attachments.filter { it.emailId === email.id }.forEach { attachment ->
@@ -214,12 +201,86 @@ fun displayEmails(
 
                                     }
                                 }
-                            } else {
-                                Text(
-                                    text = "No attachments",
-                                )
                             }
+
                         }
+//                        Column(
+//                            modifier = Modifier.border(
+//                                width = 1.dp,
+//                                color = Color.DarkGray,
+//                                shape = RoundedCornerShape(4.dp)
+//                            ).background(
+//                                color = Color.LightGray
+//                            ).fillMaxWidth()
+//                        ) {
+//                            Text(text = "Account $emailAddress", color = Color.hsl(38f, 0.5f, 0.5f))
+//                            Text(
+//                                text = email.sender,
+//                            )
+//                            Text(
+//                                text = email.subject
+//                            )
+//                            Button(
+//                                onClick = {
+//                                    displayEmailBody(!display, email)
+//                                },
+//                            ) {
+//                                Text("View Email")
+//                            }
+//                            Text("Email read: $isRead")
+//                            Button(
+//                                onClick = {
+//                                    CoroutineScope(Dispatchers.IO).launch {
+//                                        isRead =
+//                                            read(email, emailDataSource, emailService, emailAddress)
+//                                                ?: false
+//                                    }
+//                                }
+//                            ) {
+//                                Text(text = if (isRead) "Mark as unread" else "Mark as read")
+//                            }
+//                            Button(
+//                                onClick = {
+//                                    CoroutineScope(Dispatchers.IO).launch {
+//                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
+//                                        // Remove email on the main thread
+//                                        withContext(Dispatchers.Main) {
+//                                            emails.remove(email)
+//                                        }
+//                                    }
+//                                },
+//                                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+//                            ) {
+//                                Text(text = "Delete")
+//                            }
+//                            if (attachments.any { it.emailId === email.id }) {
+//                                Row {
+//                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+//                                        Row {
+//                                            Text(
+//                                                text = attachment.fileName,
+//                                                modifier = Modifier
+//                                                    .padding(8.dp)
+//                                            )
+//                                            Text(
+//                                                text = attachment.size.toString(), modifier = Modifier
+//                                                    .padding(8.dp)
+//
+//                                            )
+//                                            Text(
+//                                                text = attachment.mimeType, modifier = Modifier
+//                                                    .padding(8.dp)
+//                                            )
+//                                        }
+//
+//                                    }
+//                                }
+//                            } else {
+//                                Text(
+//                                    text = "No attachments",
+//                                )
+//                            }
+//                        }
                     }
                 }
             }
