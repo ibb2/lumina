@@ -9,6 +9,8 @@ import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import com.konyaco.fluent.FluentTheme
 import com.konyaco.fluent.background.Mica
+import com.konyaco.fluent.darkColors
+import com.konyaco.fluent.lightColors
 import jakarta.mail.*
 import jakarta.mail.event.MessageCountAdapter
 import jakarta.mail.event.MessageCountEvent
@@ -703,10 +705,11 @@ actual class Authentication {
 @Composable
 actual fun PlatformSpecificUI(
     modifier: Modifier,
-    content: @Composable () -> Unit
+    currentSystemTheme: Boolean,
+    content: @Composable () -> Unit,
 ) {
 
-    FluentTheme {
+    FluentTheme( colors = if (currentSystemTheme) darkColors() else lightColors()) {
         Mica(modifier.fillMaxSize()) {
             content()
         }
