@@ -1,10 +1,14 @@
 package org.example.project
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.Accounts
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
+import com.konyaco.fluent.FluentTheme
+import com.konyaco.fluent.background.Mica
 import jakarta.mail.*
 import jakarta.mail.event.MessageCountAdapter
 import jakarta.mail.event.MessageCountEvent
@@ -204,7 +208,7 @@ actual class EmailService actual constructor(
                 println("Found new emails in IMAP server updating database...")
 
                 // Safely get new messages
-                val startIndex = maxOf( messages.size - dbEmails.size - 1, messages.size)
+                val startIndex = maxOf(messages.size - dbEmails.size - 1, messages.size)
                 val newMsgs = inbox.getMessages(messages.size, messages.size)
 
                 println("New messages ${newMsgs.size}")
@@ -692,6 +696,20 @@ actual class Authentication {
 
     actual fun checkIfTokenExpired(accountsDataSource: AccountsDataSource): Boolean {
         return true
+    }
+
+}
+
+@Composable
+actual fun PlatformSpecificUI(
+    modifier: Modifier,
+    content: @Composable () -> Unit
+) {
+
+    FluentTheme {
+        Mica(modifier.fillMaxSize()) {
+            content()
+        }
     }
 
 }

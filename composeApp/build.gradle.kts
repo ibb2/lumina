@@ -72,9 +72,6 @@ kotlin {
             implementation("io.ktor:ktor-server-core:3.0.1")
             implementation("io.ktor:ktor-server-netty:3.0.1")
             implementation("io.ktor:ktor-client-content-negotiation:3.0.1")
-            implementation("com.konyaco:fluent:0.0.1-dev.8")
-            implementation("com.konyaco:fluent-icons-extended:0.0.1-dev.8") // If you want to use full fluent icons.
-
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -84,6 +81,9 @@ kotlin {
             implementation("net.java.dev.jna:jna:5.15.0")
             implementation("net.java.dev.jna:jna-platform:5.15.0")
             implementation("com.microsoft:credential-secure-storage:1.0.3")
+            // UI
+            implementation("com.konyaco:fluent:0.0.1-dev.8")
+            implementation("com.konyaco:fluent-icons-extended:0.0.1-dev.8") // If you want to use full fluent icons.
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

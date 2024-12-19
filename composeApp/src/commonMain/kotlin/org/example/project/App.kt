@@ -2,12 +2,9 @@ package org.example.project
 
 import com.composables.core.VerticalScrollbar
 import androidx.compose.foundation.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -16,15 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
-import com.example.AccountsTableQueries
-import com.example.EmailsTableQueries
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import com.multiplatform.webview.util.KLogSeverity
@@ -33,19 +26,12 @@ import com.multiplatform.webview.web.WebView
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
 import com.russhwolf.settings.ExperimentalSettingsApi
-import com.russhwolf.settings.ObservableSettings
-import com.russhwolf.settings.Settings
-import com.russhwolf.settings.observable.makeObservable
-import kotlinx.datetime.Clock
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.material.*
-import androidx.compose.ui.text.input.KeyboardType
-
-import androidx.compose.ui.text.style.TextAlign
 import com.composables.core.ScrollArea
 import com.composables.core.Thumb
 import com.composables.core.rememberScrollAreaState
@@ -54,153 +40,161 @@ import kotlinx.coroutines.flow.*
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
-import org.example.project.networking.TokenResponse
 import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.FoldersDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.utils.NetworkError
-import org.example.project.utils.onError
-import org.example.project.utils.onSuccess
-
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
 fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
-    MaterialTheme {
+    PlatformSpecificUI(
+        modifier = Modifier
+    )
+    {
+        Main(client, emailService, authentication, driver)
+    }
+}
 
-        // db related stuff
-        val database = LuminaDatabase(
-            driver,
-            EmailsAdapter = Emails.Adapter(
-                attachments_countAdapter = IntColumnAdapter
-            )
+@Composable
+expect fun PlatformSpecificUI(modifier: Modifier, content: @Composable () -> Unit): Unit
+
+@Composable
+fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
+
+    // db related stuff
+    val database = LuminaDatabase(
+        driver,
+        EmailsAdapter = Emails.Adapter(
+            attachments_countAdapter = IntColumnAdapter
         )
+    )
 
-        // Data Sources
-        val emailDataSource: EmailsDataSource = EmailsDataSource(database)
-        val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
-        val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
+    // Data Sources
+    val emailDataSource: EmailsDataSource = EmailsDataSource(database)
+    val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
+    val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
 
-        val scope = rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
 
-        var r by remember { mutableStateOf<OAuthResponse?>(null) }
-        var e by remember {
-            mutableStateOf<NetworkError?>(null)
-        }
+    var r by remember { mutableStateOf<OAuthResponse?>(null) }
+    var e by remember {
+        mutableStateOf<NetworkError?>(null)
+    }
 
-        authentication.amILoggedIn(accountsDataSource)
+    authentication.amILoggedIn(accountsDataSource)
 
-        val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
-        val emailServiceManager = remember {
-            EmailServiceManager(
-                emailService,
+    val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
+    val emailServiceManager = remember {
+        EmailServiceManager(
+            emailService,
+            emailDataSource
+        )
+    }
+
+    LaunchedEffect(accounts.value) {
+        withContext(Dispatchers.Default) {
+            emailServiceManager.syncEmails(
+                accounts.value
+            )
+            emailServiceManager.getFolders(
+                accounts.value
+            )
+            emailServiceManager.watchEmails(
+                accounts.value,
                 emailDataSource
             )
         }
+    }
 
-        LaunchedEffect(accounts.value) {
-            withContext(Dispatchers.Default) {
-                emailServiceManager.syncEmails(
-                    accounts.value
-                )
-                emailServiceManager.getFolders(
-                    accounts.value
-                )
-                emailServiceManager.watchEmails(
-                    accounts.value,
-                    emailDataSource
-                )
-            }
-        }
+    val folders by emailServiceManager.folders.collectAsState()
+    val emails by emailServiceManager.emails.collectAsState()
+    val attachments by emailServiceManager.attachments.collectAsState()
+    val isSyncing by emailServiceManager.isSyncing.collectAsState()
+    val isSearching by emailServiceManager.isSearching.collectAsState()
+    val allEmails = remember { mutableStateOf<List<EmailsDAO>>(emptyList()) }
 
-        val folders by emailServiceManager.folders.collectAsState()
-        val emails by emailServiceManager.emails.collectAsState()
-        val attachments by emailServiceManager.attachments.collectAsState()
-        val isSyncing by emailServiceManager.isSyncing.collectAsState()
-        val isSearching by emailServiceManager.isSearching.collectAsState()
-        val allEmails = remember { mutableStateOf<List<EmailsDAO>>(emptyList()) }
-
-        // Change how you handle emailsFlow
-        LaunchedEffect(Unit) {
-            println("Setting up email flow collection")
-            emailDataSource.emailsFlow
-                .collect { emails ->
-                    println("CRITICAL DEBUG: Collected ${emails.size} emails")
-                    // Use withContext to ensure UI update happens on Main dispatcher
-                    withContext(Dispatchers.Main) {
-                        allEmails.value = emails
-                    }
+    // Change how you handle emailsFlow
+    LaunchedEffect(Unit) {
+        println("Setting up email flow collection")
+        emailDataSource.emailsFlow
+            .collect { emails ->
+                println("CRITICAL DEBUG: Collected ${emails.size} emails")
+                // Use withContext to ensure UI update happens on Main dispatcher
+                withContext(Dispatchers.Main) {
+                    allEmails.value = emails
                 }
-        }
+            }
+    }
 
-        val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
-        var searchQuery by remember { mutableStateOf("") }
-        var isDeleting by remember { mutableStateOf(false) }
+    val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
+    var searchQuery by remember { mutableStateOf("") }
+    var isDeleting by remember { mutableStateOf(false) }
 
-        LaunchedEffect(searchQuery) {
-            emailServiceManager.search(searchQuery, isDeleting)
-        }
+    LaunchedEffect(searchQuery) {
+        emailServiceManager.search(searchQuery, isDeleting)
+    }
 
-        // UI with sync indicator
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
-        ) {
+    // UI with sync indicator
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.padding(16.dp).fillMaxSize()
+    ) {
 
-            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                TextField(
-                    value = searchQuery,
-                    onValueChange = {
-                        isDeleting = searchQuery.length > it.length
-                        searchQuery = it
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            TextField(
+                value = searchQuery,
+                onValueChange = {
+                    isDeleting = searchQuery.length > it.length
+                    searchQuery = it
 
-                    },
-                    label = { Text("Search") },
+                },
+                label = { Text("Search") },
 //                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-                )
+            )
+        }
+
+        Column {
+            // Add account button
+            Button(onClick = {
+                scope.launch {
+                    val re = authentication.authenticateUser(client, accountsDataSource)
+                    r = re.first
+                    e = re.second
+
+                    // Update accounts
+                    accounts.value = authentication.getAccounts(accountsDataSource)
+
+                    // Sync will happen automatically due to LaunchedEffect
+                }
+            }) {
+                Text("Add account (GMAIL)")
             }
 
-            Column {
-                // Add account button
-                Button(onClick = {
-                    scope.launch {
-                        val re = authentication.authenticateUser(client, accountsDataSource)
-                        r = re.first
-                        e = re.second
+            LazyRow {
+                items(accounts.value) { account ->
+                    Text(account.email)
+                    // Logout button (in your existing logout logic)
+                    Button(onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            authentication.logout(accountsDataSource, account.email)
 
-                        // Update accounts
-                        accounts.value = authentication.getAccounts(accountsDataSource)
+                            // Update accounts
+                            withContext(Dispatchers.Main) {
+                                accounts.value = authentication.getAccounts(accountsDataSource)
 
-                        // Sync will happen automatically due to LaunchedEffect
-                    }
-                }) {
-                    Text("Add account (GMAIL)")
-                }
-
-                LazyRow {
-                    items(accounts.value) { account ->
-                        Text(account.email)
-                        // Logout button (in your existing logout logic)
-                        Button(onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                authentication.logout(accountsDataSource, account.email)
-
-                                // Update accounts
-                                withContext(Dispatchers.Main) {
-                                    accounts.value = authentication.getAccounts(accountsDataSource)
-
-                                    // Sync will happen automatically due to LaunchedEffect
-                                }
+                                // Sync will happen automatically due to LaunchedEffect
                             }
-                        }) {
-                            Text("Logout")
                         }
+                    }) {
+                        Text("Logout")
                     }
                 }
             }
+        }
 
 //            if (folders.size > 0) {
 //                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
@@ -230,23 +224,22 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 //                }
 //            }
 
-            if (isSyncing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
-            // Use emails and attachments in your display logic
-            if (isSearching && emails.isEmpty()) {
-                Text("No emails found :)")
-            }
-            displayEmails(
-                accounts = accounts.value,
-                selectedFolders = selectedFolders,
-                emails = allEmails.value.toMutableList(),
-                attachments = attachments,
-                emailDataSource = emailDataSource,
-                emailService = emailService
-            )
+        if (isSyncing) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
+
+        // Use emails and attachments in your display logic
+        if (isSearching && emails.isEmpty()) {
+            Text("No emails found :)")
+        }
+        displayEmails(
+            accounts = accounts.value,
+            selectedFolders = selectedFolders,
+            emails = allEmails.value.toMutableList(),
+            attachments = attachments,
+            emailDataSource = emailDataSource,
+            emailService = emailService
+        )
     }
 }
 
