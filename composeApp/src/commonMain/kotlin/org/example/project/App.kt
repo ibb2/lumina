@@ -157,44 +157,44 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
             }
 
 
-        Column {
-            // Add account button
-            Button(onClick = {
-                scope.launch {
-                    val re = authentication.authenticateUser(client, accountsDataSource)
-                    r = re.first
-                    e = re.second
-
-                    // Update accounts
-                    accounts.value = authentication.getAccounts(accountsDataSource)
-
-                    // Sync will happen automatically due to LaunchedEffect
-                }
-            }) {
-                Text("Add account (GMAIL)")
-            }
-
-            LazyRow {
-                items(accounts.value) { account ->
-                    Text(account.email)
-                    // Logout button (in your existing logout logic)
-                    Button(onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            authentication.logout(accountsDataSource, account.email)
-
-                            // Update accounts
-                            withContext(Dispatchers.Main) {
-                                accounts.value = authentication.getAccounts(accountsDataSource)
-
-                                // Sync will happen automatically due to LaunchedEffect
-                            }
-                        }
-                    }) {
-                        Text("Logout")
-                    }
-                }
-            }
-        }
+//        Column {
+//            // Add account button
+//            Button(onClick = {
+//                scope.launch {
+//                    val re = authentication.authenticateUser(client, accountsDataSource)
+//                    r = re.first
+//                    e = re.second
+//
+//                    // Update accounts
+//                    accounts.value = authentication.getAccounts(accountsDataSource)
+//
+//                    // Sync will happen automatically due to LaunchedEffect
+//                }
+//            }) {
+//                Text("Add account (GMAIL)")
+//            }
+//
+//            LazyRow {
+//                items(accounts.value) { account ->
+//                    Text(account.email)
+//                    // Logout button (in your existing logout logic)
+//                    Button(onClick = {
+//                        scope.launch(Dispatchers.IO) {
+//                            authentication.logout(accountsDataSource, account.email)
+//
+//                            // Update accounts
+//                            withContext(Dispatchers.Main) {
+//                                accounts.value = authentication.getAccounts(accountsDataSource)
+//
+//                                // Sync will happen automatically due to LaunchedEffect
+//                            }
+//                        }
+//                    }) {
+//                        Text("Logout")
+//                    }
+//                }
+//            }
+//        }
 
 //            if (folders.size > 0) {
 //                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
