@@ -71,7 +71,6 @@ class JavaMail(
             var message: Message
             var isRead = false
             var isFlagged = false
-            var internetAddress: InternetAddress
 
             // last response is only result summary: not contents
             for (i in 0..<r.size - 1) {
@@ -99,8 +98,7 @@ class JavaMail(
                             ?: Clock.System.now().toString()
 
                         val send = message.from
-                         internetAddress = send[0] as InternetAddress
-
+                        val internetAddress = send[0] as InternetAddress
 
                         _emails.value.add(
                             EmailsDAO(

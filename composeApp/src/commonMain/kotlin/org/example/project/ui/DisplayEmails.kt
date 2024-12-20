@@ -157,20 +157,24 @@ fun displayEmails(
                             }
                         }
                         PlatformSpecificCard(Modifier, displayEmail) {
-//                            Column(
-//                                modifier = Modifier.clickable {
-//                                    displayEmailBody(!display, email)
-//                                },
-//                            ) {
-//                                Row {
-//                                    Text(text = "${email.senderAddress} -> $emailAddress")
-//                                }
-//                                Text(
-//                                    text = email.subject
-//                                )
-//                            }
-                            Text(text = email.senderAddress)
-                            Text(text = email.subject)
+                            Column {
+                                Row {
+                                    Text(text = "${email.senderAddress} -> $emailAddress")
+                                }
+                                Text(
+                                    text = email.subject
+                                )
+                                Text(
+                                    text = if (email.body.length > 100) {
+                                        // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
+                                        email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) + "..."
+                                    } else {
+                                        email.body
+                                    }
+                                )
+                            }
+//                            Text(text = email.senderAddress)
+//                            Text(text = email.subject)
                             PlatformSpecificMarkAsRead(Modifier, isRead, {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     isRead =
