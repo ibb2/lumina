@@ -41,6 +41,7 @@ import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.PlatformSpecificCard
 import org.example.project.ui.platformSpecific.PlatformSpecificDelete
+import org.example.project.ui.platformSpecific.PlatformSpecificMarkAsRead
 
 @Composable
 fun displayEmails(
@@ -148,6 +149,13 @@ fun displayEmails(
                         println("Emails ${email.subject}")
 
                         val displayEmail = { displayEmailBody(!display, email) }
+                        val markAsRead = {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                isRead =
+                                    read(email, emailDataSource, emailService, emailAddress)
+                                        ?: false
+                            }
+                        }
                         PlatformSpecificCard(Modifier, displayEmail) {
 //                            Column(
 //                                modifier = Modifier.clickable {
@@ -163,17 +171,13 @@ fun displayEmails(
 //                            }
                             Text(text = email.senderAddress)
                             Text(text = email.subject)
-                            Button(
-                                onClick = {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        isRead =
-                                            read(email, emailDataSource, emailService, emailAddress)
-                                                ?: false
-                                    }
+                            PlatformSpecificMarkAsRead(Modifier, isRead, {
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    isRead =
+                                        read(email, emailDataSource, emailService, emailAddress)
+                                            ?: false
                                 }
-                            ) {
-                                Text(text = if (isRead) "Mark as unread" else "Mark as read")
-                            }
+                            })
                             PlatformSpecificDelete(Modifier, onClick = {
                                 CoroutineScope(Dispatchers.IO).launch {
                                     deleteEmail(email, emailDataSource, emailService, emailAddress)
@@ -202,7 +206,6 @@ fun displayEmails(
                                                     .padding(8.dp)
                                             )
                                         }
-
                                     }
                                 }
                             }
