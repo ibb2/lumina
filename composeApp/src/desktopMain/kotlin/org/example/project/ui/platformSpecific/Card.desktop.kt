@@ -18,7 +18,7 @@ import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 actual fun PlatformSpecificCard(modifier: Modifier, displayEmail: () -> Unit, content: @Composable () -> Unit) {
 
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Row(modifier.widthIn(max = 700.dp)) {
+        Row(modifier.widthIn(max = 1000.dp)) {
             Card(modifier.clickable {
                 displayEmail()
             }) {

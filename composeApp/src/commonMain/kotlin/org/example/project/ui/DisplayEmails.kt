@@ -136,40 +136,37 @@ fun displayEmails(
                 Text(text = "New Email")
             }
         }
-        Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxHeight(0.7f)) {
-            // Email
+        ScrollArea(state = scrollState) {
+            Column(modifier = Modifier.fillMaxWidth()) {
 
-            ScrollArea(state = scrollState) {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    itemsIndexed(allEmails) { index, email ->
 
-                    LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        itemsIndexed(allEmails) { index, email ->
+                        val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
+                        var isRead by remember { mutableStateOf(email.isRead) }
+                        println("Emails ${email.subject}")
 
-                            val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
-                            var isRead by remember { mutableStateOf(email.isRead) }
-                            println("Emails ${email.subject}")
-
-                            val displayEmail = { displayEmailBody(!display, email) }
-                            val markAsRead = {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    isRead =
-                                        read(email, emailDataSource, emailService, emailAddress)
-                                            ?: false
-                                }
+                        val displayEmail = { displayEmailBody(!display, email) }
+                        val markAsRead = {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                isRead =
+                                    read(email, emailDataSource, emailService, emailAddress)
+                                        ?: false
                             }
-                            PlatformSpecificCard(Modifier, displayEmail) {
-                                Column {
-                                    Row {
-                                        Text(text = "${email.senderAddress} -> $emailAddress")
+                        }
+                        PlatformSpecificCard(Modifier, displayEmail) {
+                            Column {
+                                Row {
+                                    Text(text = "${email.senderAddress} -> $emailAddress")
+                                }
+                                Text(
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    text = if (email.subject.length > 60) {
+                                        email.subject.substring(0, 50) + "..."
+                                    } else {
+                                        email.subject
                                     }
-                                    Text(
-                                        modifier = Modifier.padding(vertical = 4.dp),
-                                        text = if (email.subject.length > 60) {
-                                            email.subject.substring(0, 50) + "..."
-                                        } else {
-                                            email.subject
-                                        }
-                                    )
+                                )
 //                                Text(
 //                                    modifier = Modifier.padding(vertical = 8.dp),
 //                                    text = if (email.body.length > 100) {
@@ -179,49 +176,49 @@ fun displayEmails(
 //                                        email.body
 //                                    }
 //                                )
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    PlatformSpecificMarkAsRead(Modifier, isRead, {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            isRead =
-                                                read(email, emailDataSource, emailService, emailAddress)
-                                                    ?: false
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                PlatformSpecificMarkAsRead(Modifier, isRead, {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        isRead =
+                                            read(email, emailDataSource, emailService, emailAddress)
+                                                ?: false
+                                    }
+                                })
+                                PlatformSpecificDelete(Modifier, onClick = {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
+                                        // Remove email on the main thread
+                                        withContext(Dispatchers.Main) {
+                                            emails.remove(email)
                                         }
-                                    })
-                                    PlatformSpecificDelete(Modifier, onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            deleteEmail(email, emailDataSource, emailService, emailAddress)
-                                            // Remove email on the main thread
-                                            withContext(Dispatchers.Main) {
-                                                emails.remove(email)
-                                            }
-                                        }
-                                    })
-                                }
-                                if (attachments.any { it.emailId === email.id }) {
-                                    Row {
-                                        attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                            Row {
-                                                Text(
-                                                    text = attachment.fileName,
-                                                    modifier = Modifier
-                                                        .padding(8.dp)
-                                                )
-                                                Text(
-                                                    text = attachment.size.toString(), modifier = Modifier
-                                                        .padding(8.dp)
+                                    }
+                                })
+                            }
+                            if (attachments.any { it.emailId === email.id }) {
+                                Row {
+                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                        Row {
+                                            Text(
+                                                text = attachment.fileName,
+                                                modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                            Text(
+                                                text = attachment.size.toString(), modifier = Modifier
+                                                    .padding(8.dp)
 
-                                                )
-                                                Text(
-                                                    text = attachment.mimeType, modifier = Modifier
-                                                        .padding(8.dp)
-                                                )
-                                            }
+                                            )
+                                            Text(
+                                                text = attachment.mimeType, modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
                                         }
                                     }
                                 }
-
                             }
+
+                        }
 //                        Column(
 //                            modifier = Modifier.border(
 //                                width = 1.dp,
@@ -299,14 +296,13 @@ fun displayEmails(
 //                                )
 //                            }
 //                        }
-                        }
                     }
                 }
-                VerticalScrollbar(
-                    modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(12.dp)
-                ) {
-                    Thumb(Modifier.background(Color.Black))
-                }
+            }
+            VerticalScrollbar(
+                modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(12.dp)
+            ) {
+                Thumb(Modifier.background(Color.Black))
             }
         }
     }
