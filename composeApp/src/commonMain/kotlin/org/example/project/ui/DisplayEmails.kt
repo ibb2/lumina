@@ -3,6 +3,7 @@ package org.example.project.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -67,9 +68,9 @@ fun displayEmails(
 
         if (show) {
             display = true
-            emailFromUser = email.sender ?: ""
-            emailSubject = email.subject ?: ""
-            emailContent = email.body ?: ""
+            emailFromUser = email.senderAddress
+            emailSubject = email.subject
+            emailContent = email.body
         }
     }
 
@@ -145,20 +146,23 @@ fun displayEmails(
                         val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
                         var isRead by remember { mutableStateOf(email.isRead) }
                         println("Emails ${email.subject}")
-                        PlatformSpecificCard(Modifier) {
-                            Text(
-                                text = email.sender,
-                            )
-                            Text(
-                                text = email.subject
-                            )
-                            Button(
-                                onClick = {
-                                    displayEmailBody(!display, email)
-                                },
-                            ) {
-                                Text("View Email")
-                            }
+
+                        val displayEmail = { displayEmailBody(!display, email) }
+                        PlatformSpecificCard(Modifier, displayEmail) {
+//                            Column(
+//                                modifier = Modifier.clickable {
+//                                    displayEmailBody(!display, email)
+//                                },
+//                            ) {
+//                                Row {
+//                                    Text(text = "${email.senderAddress} -> $emailAddress")
+//                                }
+//                                Text(
+//                                    text = email.subject
+//                                )
+//                            }
+                            Text(text = email.senderAddress)
+                            Text(text = email.subject)
                             Button(
                                 onClick = {
                                     CoroutineScope(Dispatchers.IO).launch {

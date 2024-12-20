@@ -7,7 +7,8 @@ data class EmailsDAO(
     val compositeKey: String,
     val folderName: String,
     val subject: String,
-    val sender: String,
+    val senderAddress: String,
+    val senderPersonal: String,
     val recipients: ByteArray,
     val sentDate: String,
     val receivedDate: String,
@@ -27,15 +28,18 @@ data class EmailsDAO(
         other as EmailsDAO
 
         if (id != other.id) return false
+        if (folderUID != other.folderUID) return false
         if (size != other.size) return false
         if (isRead != other.isRead) return false
         if (isFlagged != other.isFlagged) return false
         if (attachmentsCount != other.attachmentsCount) return false
         if (hasAttachments != other.hasAttachments) return false
+        if (messageId != other.messageId) return false
         if (compositeKey != other.compositeKey) return false
         if (folderName != other.folderName) return false
         if (subject != other.subject) return false
-        if (sender != other.sender) return false
+        if (senderAddress != other.senderAddress) return false
+        if (senderPersonal != other.senderPersonal) return false
         if (!recipients.contentEquals(other.recipients)) return false
         if (sentDate != other.sentDate) return false
         if (receivedDate != other.receivedDate) return false
@@ -47,16 +51,19 @@ data class EmailsDAO(
     }
 
     override fun hashCode(): Int {
-        var result = id.hashCode()
+        var result = id?.hashCode() ?: 0
+        result = 31 * result + (folderUID?.hashCode() ?: 0)
         result = 31 * result + size.hashCode()
         result = 31 * result + isRead.hashCode()
         result = 31 * result + isFlagged.hashCode()
         result = 31 * result + attachmentsCount
         result = 31 * result + hasAttachments.hashCode()
+        result = 31 * result + messageId.hashCode()
         result = 31 * result + compositeKey.hashCode()
         result = 31 * result + folderName.hashCode()
         result = 31 * result + subject.hashCode()
-        result = 31 * result + sender.hashCode()
+        result = 31 * result + senderAddress.hashCode()
+        result = 31 * result + senderPersonal.hashCode()
         result = 31 * result + recipients.contentHashCode()
         result = 31 * result + sentDate.hashCode()
         result = 31 * result + receivedDate.hashCode()
@@ -65,5 +72,4 @@ data class EmailsDAO(
         result = 31 * result + account.hashCode()
         return result
     }
-
 }

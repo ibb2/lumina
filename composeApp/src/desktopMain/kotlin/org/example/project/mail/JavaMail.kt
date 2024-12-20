@@ -2,11 +2,15 @@ package org.example.project.mail
 
 import com.example.Accounts
 import jakarta.mail.*
+import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MailDateFormat
 import jakarta.mail.internet.MimeMessage
 import jakarta.mail.internet.MimeMultipart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.Clock
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.eclipse.angus.mail.iap.Argument
 import org.eclipse.angus.mail.iap.Response
 import org.eclipse.angus.mail.imap.IMAPFolder
@@ -67,6 +71,7 @@ class JavaMail(
             var message: Message
             var isRead = false
             var isFlagged = false
+            var internetAddress: InternetAddress
 
             // last response is only result summary: not contents
             for (i in 0..<r.size - 1) {
@@ -93,6 +98,10 @@ class JavaMail(
                             ?: getFallbackReceivedDate(mm)?.toInstant()?.toString()
                             ?: Clock.System.now().toString()
 
+                        val send = message.from
+                         internetAddress = send[0] as InternetAddress
+
+
                         _emails.value.add(
                             EmailsDAO(
                                 id = null,
@@ -101,7 +110,8 @@ class JavaMail(
                                 compositeKey = createCompositeKey(mm.subject, sentDate, mm.from.toString()),
                                 folderName = message.folder.fullName,
                                 subject = mm.subject ?: "",
-                                sender = mm.from[0].toString(),
+                                senderAddress = internetAddress.address ?: "",
+                                senderPersonal = internetAddress.personal ?: "",
                                 recipients = getAllRecipients(mm).toString().toByteArray(),
                                 sentDate = sentDate,
                                 receivedDate = receivedDate,
@@ -116,13 +126,22 @@ class JavaMail(
                             )
                         )
 
+                        @Serializable
+                        data class SerializableAddress(val address: String, val personal: String)
+
+                        fun Address.toSerializableAddress(): SerializableAddress = SerializableAddress(this.toString(), this.toString())
+                        fun SerializableAddress.toAddress(): Address = InternetAddress(this.address, this.personal)
+
+
+
                         val emailId = emailsDataSource.insertEmail(
                             messageId = mm.messageID,
                             folderUID = null,
                             compositeKey = mm.subject + sentDate + mm.from.toString(),
                             folderName = message.folder.fullName,
                             subject = mm.subject,
-                            sender = mm.from[0].toString(),
+                            address = internetAddress.address ?: "",
+                            personal = internetAddress.personal ?: "",
                             recipients = getAllRecipients(mm).toString().toByteArray(),
                             sentDate = sentDate,
                             receivedDate = receivedDate,

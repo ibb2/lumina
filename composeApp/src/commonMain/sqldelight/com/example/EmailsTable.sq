@@ -8,7 +8,8 @@ CREATE TABLE Emails (
     composite_key TEXT NOT NULL UNIQUE,                                 -- Composite key for uniqueness
     folder_name TEXT NOT NULL,                                          -- Folder where the email is located
     subject TEXT,                                                       -- Email subject
-    sender TEXT,                                                        -- Sender's email address
+    address TEXT,                                                       -- Sender's email address
+    personal TEXT,                                                      -- Sender's personal name
     recipients BLOB,                                                    -- Recipients' email addresses (comma-separated or JSON array)
     sent_date TEXT,                                                     -- Sent date in ISO 8601 format
     received_date TEXT,                                                 -- Received date in ISO 8601 format
@@ -30,7 +31,8 @@ CREATE VIRTUAL TABLE VirtualEmails USING fts5(
     composite_key TEXT NOT NULL UNIQUE,                                 -- Composite key for uniqueness
     folder_name TEXT NOT NULL,                                          -- Folder where the email is located
     subject TEXT,                                                       -- Email subject
-    sender TEXT,                                                        -- Sender's email address
+    address TEXT,                                                       -- Sender's email address
+    personal TEXT,                                                      -- Sender's personal name
     recipients BLOB,                                                    -- Recipients' email addresses (comma-separated or JSON array)
     sent_date TEXT,                                                     -- Sent date in ISO 8601 format
     received_date TEXT,                                                 -- Received date in ISO 8601 format
@@ -54,7 +56,8 @@ INSERT OR REPLACE INTO Emails(
     composite_key,
     folder_name,
     subject,
-    sender,
+    address,
+    personal,
     recipients,
     sent_date,
     received_date,
@@ -66,7 +69,7 @@ INSERT OR REPLACE INTO Emails(
     attachments_count,
     has_attachments,
     account
-) VALUES(?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+) VALUES(?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 updateEmailReadStatus:
 UPDATE Emails SET is_read = ? WHERE composite_key = ?;
@@ -100,7 +103,8 @@ CREATE TRIGGER launch_on_emails_insert AFTER INSERT ON Emails
     composite_key,
     folder_name,
     subject,
-    sender,
+    address,
+    personal,
     recipients,
     sent_date,
     received_date,
@@ -118,7 +122,8 @@ CREATE TRIGGER launch_on_emails_insert AFTER INSERT ON Emails
                new.composite_key,
                new.folder_name,
                new.subject,
-               new.sender,
+               new.address,
+               new.personal,
                new.recipients,
                new.sent_date,
                new.received_date,
@@ -143,7 +148,8 @@ BEGIN
      composite_key,
      folder_name,
      subject,
-     sender,
+     address,
+     personal,
      recipients,
      sent_date,
      received_date,
@@ -162,7 +168,8 @@ BEGIN
       new.composite_key,
       new.folder_name,
       new.subject,
-      new.sender,
+      new.address,
+      new.personal,
       new.recipients,
       new.sent_date,
       new.received_date,
@@ -187,4 +194,4 @@ END;
 
 search:
 -- SELECT * FROM Emails WHERE size > 0;
-SELECT * FROM VirtualEmails WHERE sender MATCH :query OR subject MATCH :query OR body MATCH :query;
+SELECT * FROM VirtualEmails WHERE address MATCH :query OR personal MATCH :query OR subject MATCH :query OR body MATCH :query;

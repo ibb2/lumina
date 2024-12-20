@@ -2,6 +2,8 @@ package org.example.project
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -165,44 +167,44 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
         }
 
 
-//        Column {
-//            // Add account button
-//            Button(onClick = {
-//                scope.launch {
-//                    val re = authentication.authenticateUser(client, accountsDataSource)
-//                    r = re.first
-//                    e = re.second
-//
-//                    // Update accounts
-//                    accounts.value = authentication.getAccounts(accountsDataSource)
-//
-//                    // Sync will happen automatically due to LaunchedEffect
-//                }
-//            }) {
-//                Text("Add account (GMAIL)")
-//            }
-//
-//            LazyRow {
-//                items(accounts.value) { account ->
-//                    Text(account.email)
-//                    // Logout button (in your existing logout logic)
-//                    Button(onClick = {
-//                        scope.launch(Dispatchers.IO) {
-//                            authentication.logout(accountsDataSource, account.email)
-//
-//                            // Update accounts
-//                            withContext(Dispatchers.Main) {
-//                                accounts.value = authentication.getAccounts(accountsDataSource)
-//
-//                                // Sync will happen automatically due to LaunchedEffect
-//                            }
-//                        }
-//                    }) {
-//                        Text("Logout")
-//                    }
-//                }
-//            }
-//        }
+        Column {
+            // Add account button
+            Button(onClick = {
+                scope.launch {
+                    val re = authentication.authenticateUser(client, accountsDataSource)
+                    r = re.first
+                    e = re.second
+
+                    // Update accounts
+                    accounts.value = authentication.getAccounts(accountsDataSource)
+
+                    // Sync will happen automatically due to LaunchedEffect
+                }
+            }) {
+                Text("Add account (GMAIL)")
+            }
+
+            LazyRow {
+                items(accounts.value) { account ->
+                    Text(account.email)
+                    // Logout button (in your existing logout logic)
+                    Button(onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            authentication.logout(accountsDataSource, account.email)
+
+                            // Update accounts
+                            withContext(Dispatchers.Main) {
+                                accounts.value = authentication.getAccounts(accountsDataSource)
+
+                                // Sync will happen automatically due to LaunchedEffect
+                            }
+                        }
+                    }) {
+                        Text("Logout")
+                    }
+                }
+            }
+        }
 
 //            if (folders.size > 0) {
 //                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
@@ -845,7 +847,7 @@ fun read(
     emailAddress: String,
 ): Boolean? {
 
-    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
+    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.senderAddress)
 
     val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress)
 
@@ -867,7 +869,7 @@ fun deleteEmail(
     emailAddress: String,
 ) {
 
-    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.sender)
+    val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.senderAddress)
     val emailDeleted = emailService.deleteEmail(email, emailsDataSource, emailAddress)
 
 //    println("Deleting suc")
