@@ -141,7 +141,7 @@ fun displayEmails(
         ScrollArea(state = scrollState) {
             Column(modifier = Modifier.fillMaxWidth()) {
 
-                LazyColumn(state = lazyListState) {
+                LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     itemsIndexed(allEmails) { index, email ->
 
                         val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
@@ -162,35 +162,41 @@ fun displayEmails(
                                     Text(text = "${email.senderAddress} -> $emailAddress")
                                 }
                                 Text(
-                                    text = email.subject
-                                )
-                                Text(
-                                    text = if (email.body.length > 100) {
-                                        // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
-                                        email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) + "..."
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    text = if (email.subject.length > 60) {
+                                        email.subject.substring(0, 50) + "..."
                                     } else {
-                                        email.body
+                                        email.subject
                                     }
                                 )
+//                                Text(
+//                                    modifier = Modifier.padding(vertical = 8.dp),
+//                                    text = if (email.body.length > 100) {
+//                                        // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
+//                                        email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) + "..."
+//                                    } else {
+//                                        email.body
+//                                    }
+//                                )
                             }
-//                            Text(text = email.senderAddress)
-//                            Text(text = email.subject)
-                            PlatformSpecificMarkAsRead(Modifier, isRead, {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    isRead =
-                                        read(email, emailDataSource, emailService, emailAddress)
-                                            ?: false
-                                }
-                            })
-                            PlatformSpecificDelete(Modifier, onClick = {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    deleteEmail(email, emailDataSource, emailService, emailAddress)
-                                    // Remove email on the main thread
-                                    withContext(Dispatchers.Main) {
-                                        emails.remove(email)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                PlatformSpecificMarkAsRead(Modifier, isRead, {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        isRead =
+                                            read(email, emailDataSource, emailService, emailAddress)
+                                                ?: false
                                     }
-                                }
-                            })
+                                })
+                                PlatformSpecificDelete(Modifier, onClick = {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
+                                        // Remove email on the main thread
+                                        withContext(Dispatchers.Main) {
+                                            emails.remove(email)
+                                        }
+                                    }
+                                })
+                            }
                             if (attachments.any { it.emailId === email.id }) {
                                 Row {
                                     attachments.filter { it.emailId === email.id }.forEach { attachment ->
