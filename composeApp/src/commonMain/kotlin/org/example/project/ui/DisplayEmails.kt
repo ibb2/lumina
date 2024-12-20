@@ -1,13 +1,14 @@
 package org.example.project.ui
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -16,15 +17,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.composables.core.ScrollArea
-import com.composables.core.Thumb
-import com.composables.core.VerticalScrollbar
-import com.composables.core.rememberScrollAreaState
+import com.composables.core.*
 import com.multiplatform.webview.util.KLogSeverity
 import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebView
@@ -42,6 +41,7 @@ import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.PlatformSpecificCard
 import org.example.project.ui.platformSpecific.PlatformSpecificDelete
 import org.example.project.ui.platformSpecific.PlatformSpecificMarkAsRead
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun displayEmails(
@@ -223,10 +223,15 @@ fun displayEmails(
                     }
                 }
             }
-            VerticalScrollbar(
-                modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(12.dp)
-            ) {
-                Thumb(Modifier.background(Color.Black))
+            VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
+                Thumb(
+                    modifier = Modifier.background(Color.Black.copy(0.3f), RoundedCornerShape(100)),
+                    thumbVisibility = ThumbVisibility.HideWhileIdle(
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        hideDelay = 1.seconds
+                    )
+                )
             }
         }
     }
