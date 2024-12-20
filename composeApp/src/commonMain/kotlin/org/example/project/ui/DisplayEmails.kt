@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import com.composables.core.*
 import com.multiplatform.webview.util.KLogSeverity
 import com.multiplatform.webview.web.LoadingState
@@ -128,7 +129,7 @@ fun displayEmails(
 
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
-        Row(modifier = Modifier.padding(end = 16.dp), horizontalArrangement = Arrangement.End) {
+        Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
             Button(
                 onClick = {
                     sendEmail = true
@@ -156,18 +157,17 @@ fun displayEmails(
                         }
                         PlatformSpecificCard(Modifier, displayEmail) {
                             Column {
-                                Column {
-                                    Row {
-                                        Text(text = "${email.senderAddress} -> $emailAddress")
+                                Row {
+                                    Text(text = "${email.senderAddress} -> $emailAddress")
+                                }
+                                Text(
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    text = if (email.subject.length > 60) {
+                                        email.subject.substring(0, 50) + "..."
+                                    } else {
+                                        email.subject
                                     }
-                                    Text(
-                                        modifier = Modifier.padding(vertical = 4.dp),
-                                        text = if (email.subject.length > 60) {
-                                            email.subject.substring(0, 50) + "..."
-                                        } else {
-                                            email.subject
-                                        }
-                                    )
+                                )
 //                                Text(
 //                                    modifier = Modifier.padding(vertical = 8.dp),
 //                                    text = if (email.body.length > 100) {
@@ -177,44 +177,43 @@ fun displayEmails(
 //                                        email.body
 //                                    }
 //                                )
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    PlatformSpecificMarkAsRead(Modifier, isRead, {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            isRead =
-                                                read(email, emailDataSource, emailService, emailAddress)
-                                                    ?: false
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                PlatformSpecificMarkAsRead(Modifier, isRead, {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        isRead =
+                                            read(email, emailDataSource, emailService, emailAddress)
+                                                ?: false
+                                    }
+                                })
+                                PlatformSpecificDelete(Modifier, onClick = {
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
+                                        // Remove email on the main thread
+                                        withContext(Dispatchers.Main) {
+                                            emails.remove(email)
                                         }
-                                    })
-                                    PlatformSpecificDelete(Modifier, onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            deleteEmail(email, emailDataSource, emailService, emailAddress)
-                                            // Remove email on the main thread
-                                            withContext(Dispatchers.Main) {
-                                                emails.remove(email)
-                                            }
-                                        }
-                                    })
-                                }
-                                if (attachments.any { it.emailId === email.id }) {
-                                    Row {
-                                        attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                            Row {
-                                                Text(
-                                                    text = attachment.fileName,
-                                                    modifier = Modifier
-                                                        .padding(8.dp)
-                                                )
-                                                Text(
-                                                    text = attachment.size.toString(), modifier = Modifier
-                                                        .padding(8.dp)
+                                    }
+                                })
+                            }
+                            if (attachments.any { it.emailId === email.id }) {
+                                Row {
+                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                        Row {
+                                            Text(
+                                                text = attachment.fileName,
+                                                modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
+                                            Text(
+                                                text = attachment.size.toString(), modifier = Modifier
+                                                    .padding(8.dp)
 
-                                                )
-                                                Text(
-                                                    text = attachment.mimeType, modifier = Modifier
-                                                        .padding(8.dp)
-                                                )
-                                            }
+                                            )
+                                            Text(
+                                                text = attachment.mimeType, modifier = Modifier
+                                                    .padding(8.dp)
+                                            )
                                         }
                                     }
                                 }
