@@ -84,6 +84,8 @@ kotlin {
             // UI
             implementation("com.konyaco:fluent:0.0.1-dev.8")
             implementation("com.konyaco:fluent-icons-extended:0.0.1-dev.8") // If you want to use full fluent icons.
+            implementation("com.mayakapps.compose:window-styler:0.3.2")
+
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

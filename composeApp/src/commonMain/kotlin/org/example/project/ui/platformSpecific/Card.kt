@@ -1,8 +1,6 @@
 package org.example.project.ui.platformSpecific
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import org.example.project.shared.data.EmailsDAO
 
 @Composable
-expect fun PlatformSpecificCard(modifier: Modifier, displayEmail: () -> Unit, content: @Composable () -> Unit): Unit
+expect fun PlatformSpecificCard(content: @Composable () -> Unit): Unit

@@ -3,12 +3,10 @@ package org.example.project.ui
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -17,7 +15,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
@@ -39,10 +36,7 @@ import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
-import org.example.project.ui.platformSpecific.PlatformSpecificCard
-import org.example.project.ui.platformSpecific.PlatformSpecificDelete
-import org.example.project.ui.platformSpecific.PlatformSpecificMarkAsRead
-import org.example.project.ui.platformSpecific.PlatformSpecificText
+import org.example.project.ui.platformSpecific.*
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -128,48 +122,48 @@ fun displayEmails(
         }
     }
 
-
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
-        Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
-            Button(
-                onClick = {
-                    sendEmail = true
-                }) {
-                Text(text = "New Email")
+    PlatformSpecificCard {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+            Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
+                Button(
+                    onClick = {
+                        sendEmail = true
+                    }) {
+                    Text(text = "New Email")
+                }
             }
-        }
-        ScrollArea(state = scrollState) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            ScrollArea(state = scrollState) {
+                Column(modifier = Modifier.fillMaxWidth()) {
 
-                LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    itemsIndexed(allEmails) { index, email ->
+                    LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        itemsIndexed(allEmails) { index, email ->
 
-                        val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
-                        var isRead by remember { mutableStateOf(email.isRead) }
-                        println("Emails ${email.subject}")
+                            val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
+                            var isRead by remember { mutableStateOf(email.isRead) }
+                            println("Emails ${email.subject}")
 
-                        val displayEmail = { displayEmailBody(!display, email) }
-                        val markAsRead = {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                isRead =
-                                    read(email, emailDataSource, emailService, emailAddress)
-                                        ?: false
-                            }
-                        }
-                        PlatformSpecificCard(Modifier, displayEmail) {
-                            Column {
-                                Row {
-                                    PlatformSpecificText("${email.senderAddress} -> $emailAddress")
+                            val displayEmail = { displayEmailBody(!display, email) }
+                            val markAsRead = {
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    isRead =
+                                        read(email, emailDataSource, emailService, emailAddress)
+                                            ?: false
                                 }
-                                PlatformSpecificText(
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                    text = if (email.subject.length > 60) {
-                                        email.subject.substring(0, 50) + "..."
-                                    } else {
-                                        email.subject
+                            }
+                            PlatformSpecificEmailCard(Modifier, displayEmail) {
+                                Column() {
+                                    Row(modifier = Modifier.padding(vertical = 8.dp)) {
+                                        PlatformSpecificText("${email.senderAddress} -> $emailAddress")
                                     }
-                                )
-//                                Text(
+                                    PlatformSpecificText(
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                        text = if (email.subject.length > 60) {
+                                            email.subject.substring(0, 50) + "..."
+                                        } else {
+                                            email.subject
+                                        }
+                                    )
+//                                PlatformSpecificText(
 //                                    modifier = Modifier.padding(vertical = 8.dp),
 //                                    text = if (email.body.length > 100) {
 //                                        // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
@@ -178,43 +172,44 @@ fun displayEmails(
 //                                        email.body
 //                                    }
 //                                )
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                PlatformSpecificMarkAsRead(Modifier, isRead, {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        isRead =
-                                            read(email, emailDataSource, emailService, emailAddress)
-                                                ?: false
-                                    }
-                                })
-                                PlatformSpecificDelete(Modifier, onClick = {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
-                                        // Remove email on the main thread
-                                        withContext(Dispatchers.Main) {
-                                            emails.remove(email)
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    PlatformSpecificMarkAsRead(Modifier, isRead, {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            isRead =
+                                                read(email, emailDataSource, emailService, emailAddress)
+                                                    ?: false
                                         }
-                                    }
-                                })
-                            }
-                            if (attachments.any { it.emailId === email.id }) {
-                                Row {
-                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                        Row {
-                                            Text(
-                                                text = attachment.fileName,
-                                                modifier = Modifier
-                                                    .padding(8.dp)
-                                            )
-                                            Text(
-                                                text = attachment.size.toString(), modifier = Modifier
-                                                    .padding(8.dp)
+                                    })
+                                    PlatformSpecificDelete(Modifier, onClick = {
+                                        CoroutineScope(Dispatchers.IO).launch {
+                                            deleteEmail(email, emailDataSource, emailService, emailAddress)
+                                            // Remove email on the main thread
+                                            withContext(Dispatchers.Main) {
+                                                emails.remove(email)
+                                            }
+                                        }
+                                    })
+                                }
+                                if (attachments.any { it.emailId === email.id }) {
+                                    Row {
+                                        attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                            Row {
+                                                Text(
+                                                    text = attachment.fileName,
+                                                    modifier = Modifier
+                                                        .padding(8.dp)
+                                                )
+                                                Text(
+                                                    text = attachment.size.toString(), modifier = Modifier
+                                                        .padding(8.dp)
 
-                                            )
-                                            Text(
-                                                text = attachment.mimeType, modifier = Modifier
-                                                    .padding(8.dp)
-                                            )
+                                                )
+                                                Text(
+                                                    text = attachment.mimeType, modifier = Modifier
+                                                        .padding(8.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -222,16 +217,16 @@ fun displayEmails(
                         }
                     }
                 }
-            }
-            VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
-                Thumb(
-                    modifier = Modifier.background(Color.Black.copy(0.3f), RoundedCornerShape(100)),
-                    thumbVisibility = ThumbVisibility.HideWhileIdle(
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        hideDelay = 1.seconds
+                VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
+                    Thumb(
+                        modifier = Modifier.background(Color.Black.copy(0.3f), RoundedCornerShape(100)),
+                        thumbVisibility = ThumbVisibility.HideWhileIdle(
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            hideDelay = 1.seconds
+                        )
                     )
-                )
+                }
             }
         }
     }

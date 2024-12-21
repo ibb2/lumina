@@ -1,10 +1,18 @@
 package org.example.project
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.example.project.database.LuminaDatabase
+import com.konyaco.fluent.Background
+import com.konyaco.fluent.background.Mica
+import com.mayakapps.compose.windowstyler.WindowBackdrop
+import com.mayakapps.compose.windowstyler.WindowCornerPreference
+import com.mayakapps.compose.windowstyler.WindowFrameStyle
+import com.mayakapps.compose.windowstyler.WindowStyle
 import dev.datlag.kcef.KCEF
 import io.ktor.client.engine.okhttp.*
 import kotlinx.coroutines.Dispatchers
@@ -55,8 +63,21 @@ fun main() = application {
             Text(text = "Restart required.")
         } else {
             if (initialized) {
-                App(client = FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create())), emailService = EmailService(FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create()))), authentication = Authentication(), driver = DatabaseDriverFactory().create())
-            } else {
+                Mica(modifier = Modifier) {
+                    WindowStyle(
+                        isDarkTheme = isSystemInDarkTheme(),
+                        backdropType = WindowBackdrop.Mica,
+                        frameStyle = WindowFrameStyle(cornerPreference = WindowCornerPreference.NOT_ROUNDED),
+                    )
+
+                    App(
+                        client = FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create())),
+                        emailService = EmailService(FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create()))),
+                        authentication = Authentication(),
+                        driver = DatabaseDriverFactory().create()
+                    )
+                }
+            }else {
                 Text(text = "Downloading $downloading%")
             }
         }
