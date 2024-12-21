@@ -42,6 +42,7 @@ import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.PlatformSpecificCard
 import org.example.project.ui.platformSpecific.PlatformSpecificDelete
 import org.example.project.ui.platformSpecific.PlatformSpecificMarkAsRead
+import org.example.project.ui.platformSpecific.PlatformSpecificText
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -158,9 +159,9 @@ fun displayEmails(
                         PlatformSpecificCard(Modifier, displayEmail) {
                             Column {
                                 Row {
-                                    Text(text = "${email.senderAddress} -> $emailAddress")
+                                    PlatformSpecificText("${email.senderAddress} -> $emailAddress")
                                 }
-                                Text(
+                                PlatformSpecificText(
                                     modifier = Modifier.padding(vertical = 4.dp),
                                     text = if (email.subject.length > 60) {
                                         email.subject.substring(0, 50) + "..."

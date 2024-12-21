@@ -1,16 +1,21 @@
 package org.example.project
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Button
+import androidx.compose.material.Card
+import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import com.example.Accounts
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
-import com.konyaco.fluent.FluentTheme
+import com.konyaco.fluent.*
 import com.konyaco.fluent.background.Mica
-import com.konyaco.fluent.darkColors
-import com.konyaco.fluent.lightColors
 import jakarta.mail.*
 import jakarta.mail.event.MessageCountAdapter
 import jakarta.mail.event.MessageCountEvent
@@ -702,6 +707,7 @@ actual class Authentication {
 
 }
 
+@OptIn(ExperimentalFluentApi::class)
 @Composable
 actual fun PlatformSpecificUI(
     modifier: Modifier,
@@ -709,9 +715,16 @@ actual fun PlatformSpecificUI(
     content: @Composable () -> Unit,
 ) {
 
-    FluentTheme( colors = if (currentSystemTheme) darkColors() else lightColors()) {
-        Mica(modifier.fillMaxSize()) {
-            content()
+    FluentTheme(colors = if (currentSystemTheme) darkColors() else lightColors()) {
+        if (true) {
+            Mica(modifier = Modifier.fillMaxSize()) {
+                content()
+            }
+        } else {
+            CompositionLocalProvider(
+                LocalContentColor provides FluentTheme.colors.text.text.primary,
+                content = content
+            )
         }
     }
 

@@ -40,6 +40,7 @@ import org.example.project.utils.NetworkError
 @Preview
 fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
 
+
     val currentSystemTheme = isSystemInDarkTheme()
 
     PlatformSpecificUI(
