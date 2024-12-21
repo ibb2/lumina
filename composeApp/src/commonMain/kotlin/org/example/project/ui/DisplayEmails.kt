@@ -27,6 +27,7 @@ import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebView
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
+import io.ktor.util.*
 import kotlinx.coroutines.*
 import org.example.project.EmailService
 import org.example.project.data.NewEmail
@@ -125,11 +126,10 @@ fun displayEmails(
     PlatformSpecificCard {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
             Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
-                Button(
-                    onClick = {
-                        sendEmail = true
-                    }) {
-                    Text(text = "New Email")
+                PlatformSpecificButton(onClick = {
+                    sendEmail = true
+                }) {
+                    Text(text = "Send Email")
                 }
             }
             ScrollArea(state = scrollState) {
