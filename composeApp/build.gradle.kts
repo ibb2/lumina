@@ -62,6 +62,8 @@ kotlin {
             implementation(libs.runtime)
             implementation(libs.kotlinx.datetime)
             implementation(libs.koin.core)
+            implementation(libs.voyager.navigator)
+            implementation(libs.voyager.transition)
             api("io.github.kevinnzou:compose-webview-multiplatform:1.8.4")
             implementation("app.cash.sqldelight:primitive-adapters:2.0.2")
             implementation("com.composables:core:1.19.1")
