@@ -22,11 +22,14 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.material.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.TextFieldValue
+import cafe.adriel.voyager.navigator.Navigator
+import cafe.adriel.voyager.transitions.SlideTransition
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
+import org.example.project.screen.HomeScreen
 import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.FoldersDAO
 import org.example.project.shared.utils.createCompositeKey
@@ -43,13 +46,20 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 
     val currentSystemTheme = isSystemInDarkTheme()
 
-    PlatformSpecificUI(
-        modifier = Modifier,
-        currentSystemTheme = currentSystemTheme
-    )
-    {
-        Main(client, emailService, authentication, driver)
+    Navigator(
+        HomeScreen(
+            PlatformSpecificUI(
+                modifier = Modifier,
+                currentSystemTheme = currentSystemTheme
+            )
+            {
+                Main(client, emailService, authentication, driver)
+            })
+    ) {
+        SlideTransition(it)
     }
+
+
 }
 
 @Composable
@@ -58,6 +68,7 @@ expect fun PlatformSpecificUI(modifier: Modifier, currentSystemTheme: Boolean, c
 
 @Composable
 fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
+
 
     // db related stuff
     val database = LuminaDatabase(

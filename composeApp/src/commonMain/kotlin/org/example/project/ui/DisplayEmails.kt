@@ -37,6 +37,7 @@ import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.*
+import org.example.project.ui.settings.ProjectSettingsDialog
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -122,6 +123,7 @@ fun displayEmails(
         }
     }
 
+
     Box(contentAlignment = Alignment.BottomEnd) {
         Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
             PlatformSpecificButton(onClick = {
@@ -131,7 +133,8 @@ fun displayEmails(
             }
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            PlatformSpecificSettingsButton(fun() {})
+            PlatformSpecificSettingsButton(fun() {
+            })
             ScrollArea(state = scrollState) {
                 LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     itemsIndexed(allEmails) { index, email ->
@@ -228,200 +231,198 @@ fun displayEmails(
         }
     }
 
+//    if (display) {
+//        Dialog(
+//            onDismissRequest = { display = false },
+//            properties = DialogProperties(
+//                dismissOnBackPress = true,
+//                dismissOnClickOutside = true,
+//                usePlatformDefaultWidth = false
+//            ),
+//        ) {
+//            // Draw a rectangle shape with rounded corners inside the dialog
+//            Surface(modifier = Modifier.fillMaxSize(0.6f)) {
+//                Card(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(525.dp)
+//                        .padding(16.dp),
+//                    shape = RoundedCornerShape(16.dp),
+//                ) {
+//                    Column {
+//                        TopAppBar(
+//                            title = { Text(text = "WebView Sample") },
+//                            navigationIcon = {
+//                                if (navigator.canGoBack) {
+//                                    IconButton(onClick = { navigator.navigateBack() }) {
+//                                        Icon(
+//                                            imageVector = Icons.Default.ArrowBack,
+//                                            contentDescription = "Back",
+//                                        )
+//                                    }
+//                                }
+//                            },
+//                        )
 //
+//                        Row {
+//                            Box(modifier = Modifier.weight(1f)) {
+//                                if (state.errorsForCurrentRequest.isNotEmpty()) {
+//                                    Image(
+//                                        imageVector = Icons.Default.Close,
+//                                        contentDescription = "Error",
+//                                        colorFilter = ColorFilter.tint(Color.Red),
+//                                        modifier =
+//                                            Modifier
+//                                                .align(Alignment.CenterEnd)
+//                                                .padding(8.dp),
+//                                    )
+//                                }
+//
+//                                OutlinedTextField(
+//                                    value = textFieldValue ?: "",
+//                                    onValueChange = { textFieldValue = it },
+//                                    modifier = Modifier.fillMaxWidth(),
+//                                )
+//                            }
+//
+//                            Button(
+//                                onClick = {
+//                                    textFieldValue?.let {
+//                                        navigator.loadUrl(it)
+//                                    }
+//                                },
+//                                modifier = Modifier.align(Alignment.CenterVertically),
+//                            ) {
+//                                Text("Go")
+//                            }
+//                        }
+//                    }
+//
+//                    WebView(
+//                        state = state,
+//                        modifier =
+//                            Modifier
+//                                .fillMaxSize(),
+//                        navigator = navigator,
+//                    )
+//
+//                    Column(
+//                        modifier = Modifier
+//                            .fillMaxSize(),
+//                        verticalArrangement = Arrangement.Center,
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                    ) {
+//
+//                        Text(
+//                            text = "This is a dialog with buttons and an image.",
+//                            modifier = Modifier.padding(16.dp),
+//                        )
+//                        Row(
+//                            modifier = Modifier
+//                                .fillMaxWidth(),
+//                            horizontalArrangement = Arrangement.Center,
+//                        ) {
+//                            TextButton(
+//                                onClick = { /* TODO */ },
+//                                modifier = Modifier.padding(8.dp),
+//                            ) {
+//                                Text("Dismiss")
+//                            }
+//                            TextButton(
+//                                onClick = { /* TODO*/ },
+//                                modifier = Modifier.padding(8.dp),
+//                            ) {
+//                                Text("Confirm")
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 
-    if (display) {
-        Dialog(
-            onDismissRequest = { display = false },
-            properties = DialogProperties(
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true,
-                usePlatformDefaultWidth = false
-            ),
-        ) {
-            // Draw a rectangle shape with rounded corners inside the dialog
-            Surface(modifier = Modifier.fillMaxSize(0.6f)) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(525.dp)
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Column {
-                        TopAppBar(
-                            title = { Text(text = "WebView Sample") },
-                            navigationIcon = {
-                                if (navigator.canGoBack) {
-                                    IconButton(onClick = { navigator.navigateBack() }) {
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowBack,
-                                            contentDescription = "Back",
-                                        )
-                                    }
-                                }
-                            },
-                        )
-
-                        Row {
-                            Box(modifier = Modifier.weight(1f)) {
-                                if (state.errorsForCurrentRequest.isNotEmpty()) {
-                                    Image(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Error",
-                                        colorFilter = ColorFilter.tint(Color.Red),
-                                        modifier =
-                                            Modifier
-                                                .align(Alignment.CenterEnd)
-                                                .padding(8.dp),
-                                    )
-                                }
-
-                                OutlinedTextField(
-                                    value = textFieldValue ?: "",
-                                    onValueChange = { textFieldValue = it },
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    textFieldValue?.let {
-                                        navigator.loadUrl(it)
-                                    }
-                                },
-                                modifier = Modifier.align(Alignment.CenterVertically),
-                            ) {
-                                Text("Go")
-                            }
-                        }
-                    }
-
-                    WebView(
-                        state = state,
-                        modifier =
-                            Modifier
-                                .fillMaxSize(),
-                        navigator = navigator,
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-
-                        Text(
-                            text = "This is a dialog with buttons and an image.",
-                            modifier = Modifier.padding(16.dp),
-                        )
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            TextButton(
-                                onClick = { /* TODO */ },
-                                modifier = Modifier.padding(8.dp),
-                            ) {
-                                Text("Dismiss")
-                            }
-                            TextButton(
-                                onClick = { /* TODO*/ },
-                                modifier = Modifier.padding(8.dp),
-                            ) {
-                                Text("Confirm")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (sendEmail) {
-        var sendEmailFrom by remember { mutableStateOf("") }
-        var sendEmailTo by remember { mutableStateOf("") }
-        var sendEmailSubject by remember { mutableStateOf("") }
-        var sendEmailBody by remember { mutableStateOf("") }
-
-        fun sendEmail() {
-            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
-            var sentEmailSuccess = false
-            CoroutineScope(Dispatchers.IO).launch {
-                sentEmailSuccess = emailService.sendNewEmail(
-                    emailDataSource,
-                    NewEmail(
-                        from = sendEmailFrom,
-                        to = sendEmailTo,
-                        subject = sendEmailSubject,
-                        body = sendEmailBody
-                    ),
-                    sendEmailFrom
-                )
-            }
-
-            println("Email sent successfully? $sentEmailSuccess")
-
-            sendEmail = false
-        }
-
-        Dialog(
-            onDismissRequest = { sendEmail = false },
-            properties = DialogProperties(
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true,
-                usePlatformDefaultWidth = false
-            ),
-        ) {
-            // Draw a rectangle shape with rounded corners inside the dialog
-            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(525.dp)
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        TextField(
-                            label = { Text("From") },
-                            value = sendEmailFrom,
-                            onValueChange = { sendEmailFrom = it },
-                            modifier = Modifier.padding(16.dp),
-                        )
-                        TextField(
-                            label = { Text("To") },
-                            value = sendEmailTo,
-                            onValueChange = { sendEmailTo = it },
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        TextField(
-                            label = { Text("Subject") },
-                            value = sendEmailSubject,
-                            onValueChange = { sendEmailSubject = it },
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        TextField(
-                            label = { Text("Body") },
-                            value = sendEmailBody,
-                            onValueChange = { sendEmailBody = it },
-                            modifier = Modifier.padding(16.dp),
-                        )
-                        Button(onClick = {
-                            sendEmail()
-                        }) {
-                            Text(text = "Send")
-                        }
-                    }
-                }
-            }
-        }
-    }
+//    if (sendEmail) {
+//        var sendEmailFrom by remember { mutableStateOf("") }
+//        var sendEmailTo by remember { mutableStateOf("") }
+//        var sendEmailSubject by remember { mutableStateOf("") }
+//        var sendEmailBody by remember { mutableStateOf("") }
+//
+//        fun sendEmail() {
+//            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
+//            var sentEmailSuccess = false
+//            CoroutineScope(Dispatchers.IO).launch {
+//                sentEmailSuccess = emailService.sendNewEmail(
+//                    emailDataSource,
+//                    NewEmail(
+//                        from = sendEmailFrom,
+//                        to = sendEmailTo,
+//                        subject = sendEmailSubject,
+//                        body = sendEmailBody
+//                    ),
+//                    sendEmailFrom
+//                )
+//            }
+//
+//            println("Email sent successfully? $sentEmailSuccess")
+//
+//            sendEmail = false
+//        }
+//
+//        Dialog(
+//            onDismissRequest = { sendEmail = false },
+//            properties = DialogProperties(
+//                dismissOnBackPress = true,
+//                dismissOnClickOutside = true,
+//                usePlatformDefaultWidth = false
+//            ),
+//        ) {
+//            // Draw a rectangle shape with rounded corners inside the dialog
+//            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
+//                Card(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(525.dp)
+//                        .padding(16.dp),
+//                    shape = RoundedCornerShape(16.dp),
+//                ) {
+//                    Column(
+//                        modifier = Modifier
+//                            .fillMaxSize(),
+//                        verticalArrangement = Arrangement.Center,
+//                        horizontalAlignment = Alignment.CenterHorizontally,
+//                    ) {
+//                        TextField(
+//                            label = { Text("From") },
+//                            value = sendEmailFrom,
+//                            onValueChange = { sendEmailFrom = it },
+//                            modifier = Modifier.padding(16.dp),
+//                        )
+//                        TextField(
+//                            label = { Text("To") },
+//                            value = sendEmailTo,
+//                            onValueChange = { sendEmailTo = it },
+//                            modifier = Modifier.padding(16.dp)
+//                        )
+//                        TextField(
+//                            label = { Text("Subject") },
+//                            value = sendEmailSubject,
+//                            onValueChange = { sendEmailSubject = it },
+//                            modifier = Modifier.padding(16.dp)
+//                        )
+//                        TextField(
+//                            label = { Text("Body") },
+//                            value = sendEmailBody,
+//                            onValueChange = { sendEmailBody = it },
+//                            modifier = Modifier.padding(16.dp),
+//                        )
+//                        Button(onClick = {
+//                            sendEmail()
+//                        }) {
+//                            Text(text = "Send")
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
 }
