@@ -150,7 +150,6 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
 //                    onValueChange = {
 //                        isDeleting = searchQuery.length > it.length
 //                        searchQuery = it
-//
 //                    },
 //                    label = { Text("Search") },
 ////                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)

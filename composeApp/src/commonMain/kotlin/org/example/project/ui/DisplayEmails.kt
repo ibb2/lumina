@@ -27,7 +27,6 @@ import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebView
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
-import io.ktor.util.*
 import kotlinx.coroutines.*
 import org.example.project.EmailService
 import org.example.project.data.NewEmail
@@ -131,8 +130,9 @@ fun displayEmails(
                 Text(text = "Send Email")
             }
         }
-        ScrollArea(state = scrollState) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            PlatformSpecificSettingsButton(fun() {})
+            ScrollArea(state = scrollState) {
                 LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     itemsIndexed(allEmails) { index, email ->
 
@@ -161,15 +161,15 @@ fun displayEmails(
                                         email.subject
                                     }
                                 )
-//                                PlatformSpecificText(
-//                                    modifier = Modifier.padding(vertical = 8.dp),
-//                                    text = if (email.body.length > 100) {
-//                                        // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
-//                                        email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) + "..."
-//                                    } else {
-//                                        email.body
-//                                    }
-//                                )
+                                //                                PlatformSpecificText(
+                                //                                    modifier = Modifier.padding(vertical = 8.dp),
+                                //                                    text = if (email.body.length > 100) {
+                                //                                        // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
+                                //                                        email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) + "..."
+                                //                                    } else {
+                                //                                        email.body
+                                //                                    }
+                                //                                )
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 PlatformSpecificMarkAsRead(Modifier, isRead, {
@@ -214,16 +214,16 @@ fun displayEmails(
                         }
                     }
                 }
-            }
-            VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
-                Thumb(
-                    modifier = Modifier.background(Color.Black.copy(0.3f), RoundedCornerShape(100)),
-                    thumbVisibility = ThumbVisibility.HideWhileIdle(
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        hideDelay = 1.seconds
+                VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
+                    Thumb(
+                        modifier = Modifier.background(Color.Black.copy(0.3f), RoundedCornerShape(100)),
+                        thumbVisibility = ThumbVisibility.HideWhileIdle(
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            hideDelay = 1.seconds
+                        )
                     )
-                )
+                }
             }
         }
     }
