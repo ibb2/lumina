@@ -737,13 +737,13 @@ actual fun PlatformSpecificUI(
             }
 
             Mica(
-                background = {
-                    Image(
-                        painter = BrushPainter(Brush.linearGradient(gradient)),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillBounds
-                    )
-                },
+//                background = {
+//                    Image(
+//                        painter = BrushPainter(Brush.linearGradient(gradient)),
+//                        contentDescription = null,
+//                        contentScale = ContentScale.FillBounds
+//                    )
+//                },
                 modifier = Modifier.fillMaxSize()
             ) {
                 content()
