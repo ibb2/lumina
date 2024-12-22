@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import com.composables.core.*
 import com.multiplatform.webview.util.KLogSeverity
 import com.multiplatform.webview.web.LoadingState
@@ -32,12 +35,12 @@ import org.example.project.EmailService
 import org.example.project.data.NewEmail
 import org.example.project.deleteEmail
 import org.example.project.read
+import org.example.project.screen.SettingsScreen
 import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.*
-import org.example.project.ui.settings.ProjectSettingsDialog
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -47,8 +50,12 @@ fun displayEmails(
     emails: MutableList<EmailsDAO>,
     attachments: MutableList<AttachmentsDAO>,
     emailDataSource: EmailsDataSource,
-    emailService: EmailService
+    emailService: EmailService,
+    localNavigator: Navigator
 ) {
+
+//    val localNavigator = LocalNavigator.currentOrThrow
+
     var display: Boolean by remember { mutableStateOf(false) }
     var emailFromUser: String by remember { mutableStateOf("") }
     var emailSubject: String by remember { mutableStateOf("") }
@@ -84,7 +91,6 @@ fun displayEmails(
     var textFieldValue by remember(state.lastLoadedUrl) {
         mutableStateOf(state.lastLoadedUrl)
     }
-
 
     val loadingState = state.loadingState
     if (loadingState is LoadingState.Loading) {
@@ -123,7 +129,6 @@ fun displayEmails(
         }
     }
 
-
     Box(contentAlignment = Alignment.BottomEnd) {
         Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
             PlatformSpecificButton(onClick = {
@@ -133,8 +138,7 @@ fun displayEmails(
             }
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            PlatformSpecificSettingsButton(fun() {
-            })
+            PlatformSpecificSettingsButton( { localNavigator.push(SettingsScreen()) } )
             ScrollArea(state = scrollState) {
                 LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     itemsIndexed(allEmails) { index, email ->

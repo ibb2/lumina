@@ -48,14 +48,13 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
 
     Navigator(
         HomeScreen(
+            homepageContent = {
             PlatformSpecificUI(
                 modifier = Modifier,
-                currentSystemTheme = currentSystemTheme
-            )
-            {
-                Main(client, emailService, authentication, driver)
-            })
-    ) {
+                currentSystemTheme = currentSystemTheme,
+            ) { Main(client, emailService, authentication, driver, it) }
+        }
+    )) {
         SlideTransition(it)
     }
 
@@ -67,7 +66,7 @@ expect fun PlatformSpecificUI(modifier: Modifier, currentSystemTheme: Boolean, c
 
 
 @Composable
-fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
+fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver, localNavigator: Navigator) {
 
 
     // db related stuff
@@ -260,7 +259,8 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
             emails = allEmails.value.toMutableList(),
             attachments = attachments,
             emailDataSource = emailDataSource,
-            emailService = emailService
+            emailService = emailService,
+            localNavigator = localNavigator
         )
     }
 }

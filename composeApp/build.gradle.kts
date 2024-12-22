@@ -74,6 +74,8 @@ kotlin {
             implementation("io.ktor:ktor-server-core:3.0.1")
             implementation("io.ktor:ktor-server-netty:3.0.1")
             implementation("io.ktor:ktor-client-content-negotiation:3.0.1")
+            implementation("com.konyaco:fluent:0.1.0-SNAPSHOT")
+            implementation("com.konyaco:fluent-icons-extended:0.1.0-SNAPSHOT") // If you want to use full fluent icons.
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
