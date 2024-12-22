@@ -7,10 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.window.*
 import com.example.project.database.LuminaDatabase
 import com.konyaco.fluent.Background
 import com.konyaco.fluent.background.Mica
@@ -86,7 +83,7 @@ fun main() = application {
 //                    title = title,
 //                    state = state,
 //                    backButtonEnabled = false,
-//                    backButtonClick = { fun foo() {}  },
+//                    backButtonClick = { fun foo() {} },
 //                    backButtonVisible = hostOs.isWindows
 //                ) { _, _ ->
                     WindowStyle(

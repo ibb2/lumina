@@ -1,10 +1,12 @@
 package org.example.project.ui.platformSpecific
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.konyaco.fluent.FluentTheme
 import com.konyaco.fluent.LocalContentColor
@@ -19,7 +21,7 @@ actual fun PlatformSpecificEmailCard(
 ) {
     Mica(modifier) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Row(modifier.widthIn(max = 1000.dp)) {
+            Row(modifier.widthIn(max = 800.dp)) {
                 LocalContentColor provides FluentTheme.colors.text.text.primary
                 Card(modifier.clickable {
                     displayEmail()
@@ -27,7 +29,7 @@ actual fun PlatformSpecificEmailCard(
                     Column {
                         Mica(modifier) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.fillMaxWidth().background(Color.hsl(0f ,0f, .15f)).padding(horizontal = 8.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {

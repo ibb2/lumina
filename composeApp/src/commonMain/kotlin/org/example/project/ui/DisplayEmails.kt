@@ -123,7 +123,7 @@ fun displayEmails(
         }
     }
 
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+    Box(contentAlignment = Alignment.BottomEnd) {
         Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
             PlatformSpecificButton(onClick = {
                 sendEmail = true
