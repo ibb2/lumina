@@ -63,13 +63,14 @@ fun main() = application {
             Text(text = "Restart required.")
         } else {
             if (initialized) {
-                Mica(modifier = Modifier) {
+                Window(
+                    onCloseRequest = ::exitApplication,
+                ) {
                     WindowStyle(
                         isDarkTheme = isSystemInDarkTheme(),
                         backdropType = WindowBackdrop.Mica,
-                        frameStyle = WindowFrameStyle(cornerPreference = WindowCornerPreference.NOT_ROUNDED),
+                        frameStyle = WindowFrameStyle(cornerPreference = WindowCornerPreference.ROUNDED),
                     )
-
                     App(
                         client = FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create())),
                         emailService = EmailService(FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create()))),
@@ -77,7 +78,7 @@ fun main() = application {
                         driver = DatabaseDriverFactory().create()
                     )
                 }
-            }else {
+            } else {
                 Text(text = "Downloading $downloading%")
             }
         }

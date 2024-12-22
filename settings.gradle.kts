@@ -26,6 +26,13 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        // Add the snapshot repository
+        maven("https://s01.oss.sonatype.org/content/repositories/snapshots/") {
+            content {
+                // Optionally restrict this repository to specific groups if needed
+                includeGroupByRegex(".*")
+            }
+        }
     }
 }
 

@@ -82,9 +82,9 @@ kotlin {
             implementation("net.java.dev.jna:jna-platform:5.15.0")
             implementation("com.microsoft:credential-secure-storage:1.0.3")
             // UI
-            implementation("com.konyaco:fluent:0.0.1-dev.8")
-            implementation("com.konyaco:fluent-icons-extended:0.0.1-dev.8") // If you want to use full fluent icons.
-            implementation("com.mayakapps.compose:window-styler:0.3.2")
+            implementation("com.konyaco:fluent:0.1.0-SNAPSHOT")
+            implementation("com.konyaco:fluent-icons-extended:0.1.0-SNAPSHOT") // If you want to use full fluent icons.
+            implementation("com.mayakapps.compose:window-styler:0.3.3-SNAPSHOT")
 
         }
         iosMain.dependencies {
