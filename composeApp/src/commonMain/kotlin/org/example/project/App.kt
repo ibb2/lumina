@@ -75,145 +75,145 @@ fun App(
     collapseWindowInset: WindowInsets = WindowInsets(0)
 ) {
 
-//        val navigator = LocalNavigator.currentOrThrow
+    // db related stuff
+    val database = LuminaDatabase(
+        driver,
+        EmailsAdapter = Emails.Adapter(
+            attachments_countAdapter = IntColumnAdapter
+        )
+    )
 
-    Navigator(HomeScreen(client, emailService, authentication, driver)) {
-           val isCollapsed by remember { mutableStateOf(false) }
+    // Theme
+    val isSystemInDarkMode = isSystemInDarkTheme()
 
-    NavigationView(
-        modifier = Modifier.windowInsetsPadding(
-            insets = if (isCollapsed) collapseWindowInset else windowInset
-        ),
-        state = rememberNavigationState(),
-        displayMode = NavigationDisplayMode.Left,
-        contentPadding = if (!isCollapsed) {
-            PaddingValues()
-        } else {
-            PaddingValues(top = 48.dp)
-        },
-        menuItems = {
-            //            repeat(6) { index ->
-            //                item {
-            //                    MenuItem(
-            //                        selected = true,
-            //                        onClick = { SettingsScreen(
-            //                            client,
-            //                            driver,
-            //                            emailService,
-            //                            authentication,
-            //                            accountsDataSource,
-            //                            emailDataSource,
-            //                            attachmentsDataSource
-            //                        ) },
-            //                        navItem = "Settings",
-            //                        icon = Icons.Default.Settings,
-            //                    )
-            //                }
-            //            }
-        },
-        footerItems = {
-            item {
-                MenuItem(
-                    selected = false,
-                    onClick = {
-                        navigator.push(
-                            SettingsScreen(
-                                client,
-                                driver,
-                                emailService,
-                                authentication,
-                                accountsDataSource,
-                                emailDataSource,
-                                attachmentsDataSource
-                            )
-                        )
-                    },
-                    navItem = "Settings",
-                    icon = Icons.Default.Settings,
-                )
-            }
-        },
-        title = {
-            if (isCollapsed) {
-                //                if (icon != null) {
-                //                    Image(
-                //                        painter = icon,
-                //                        contentDescription = null,
-                //                        modifier = Modifier.padding(start = 12.dp).size(16.dp)
+    // Data Sources
+    val emailDataSource: EmailsDataSource = EmailsDataSource(database)
+    val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
+    val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
+
+
+    Navigator(HomeScreen(client, emailService, authentication, driver)) { navigator ->
+        //        val navigator = LocalNavigator.currentOrThrow
+        val selectedItemWithContent by remember {
+            mutableStateOf(navigator.lastItemOrNull)
+        }
+
+        val isCollapsed by remember { mutableStateOf(false) }
+
+        NavigationView(
+            modifier = Modifier.windowInsetsPadding(
+                insets = if (isCollapsed) collapseWindowInset else windowInset
+            ),
+            state = rememberNavigationState(),
+            displayMode = NavigationDisplayMode.Left,
+            contentPadding = if (!isCollapsed) {
+                PaddingValues()
+            } else {
+                PaddingValues(top = 48.dp)
+            },
+            menuItems = {
+                //            repeat(6) { index ->
+                //                item {
+                //                    MenuItem(
+                //                        selected = true,
+                //                        onClick = { SettingsScreen(
+                //                            client,
+                //                            driver,
+                //                            emailService,
+                //                            authentication,
+                //                            accountsDataSource,
+                //                            emailDataSource,
+                //                            attachmentsDataSource
+                //                        ) },
+                //                        navItem = "Settings",
+                //                        icon = Icons.Default.Settings,
                 //                    )
                 //                }
-                //                if (title.isNotEmpty()) {
-                PlatformSpecificText(
-                    text = "Lumina Mail",
-                    style = FluentTheme.typography.caption,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
-                //                }
-            } else {
-                PlatformSpecificText("Controls")
-            }
-        },
-        backButton = {
-            if (isCollapsed) {
-                NavigationDefaults.BackButton(
-                    onClick = { navigator.pop() },
-                    disabled = false,
-                    icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
-                    modifier = Modifier.windowInsetsPadding(contentInset.only(WindowInsetsSides.Start))
-                )
-            }
-        },
-        pane = {
-            Navigator(
-                HomeScreen(
-                    client, emailService, authentication, driver
-                )
-            ) { n ->
-                when (n.lastItemOrNull) {
-                    is HomeScreen -> {
-                        HomeScreen(
-                            client, emailService, authentication, driver
-                        )
-                    }
-
-                    is SettingsScreen -> {
-                        SettingsScreen(
-                            client = client,
-                            driver = driver,
-                            emailService = emailService,
-                            authentication = authentication,
-                            accountsDataSource = accountsDataSource,
-                            emailDataSource = emailDataSource,
-                            attachmentsDataSource = attachmentsDataSource
-                        )
-                    }
-
-                    null -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            PlatformSpecificText(
-                                text = "No content selected",
-                                style = FluentTheme.typography.bodyStrong
+                //            }
+            },
+            footerItems = {
+                item {
+                    MenuItem(
+                        selected = false,
+                        onClick = {
+                            navigator.push(
+                                SettingsScreen(
+                                    client,
+                                    driver,
+                                    emailService,
+                                    authentication,
+                                    accountsDataSource,
+                                    emailDataSource,
+                                    attachmentsDataSource
+                                )
                             )
-                        }
-                    }
-
-                    else -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            PlatformSpecificText(
-                                text = "No content selected",
-                                style = FluentTheme.typography.bodyStrong
-                            )
+                        },
+                        navItem = "Settings",
+                        icon = Icons.Default.Settings,
+                    )
+                }
+            },
+            title = {
+                if (isCollapsed) {
+                    //                if (icon != null) {
+                    //                    Image(
+                    //                        painter = icon,
+                    //                        contentDescription = null,
+                    //                        modifier = Modifier.padding(start = 12.dp).size(16.dp)
+                    //                    )
+                    //                }
+                    //                if (title.isNotEmpty()) {
+                    PlatformSpecificText(
+                        text = "Lumina Mail",
+                        style = FluentTheme.typography.caption,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                    //                }
+                } else {
+                    PlatformSpecificText("Controls")
+                }
+            },
+            backButton = {
+                if (isCollapsed) {
+                    NavigationDefaults.BackButton(
+                        onClick = { navigator.pop() },
+                        disabled = false,
+                        icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
+                        modifier = Modifier.windowInsetsPadding(contentInset.only(WindowInsetsSides.Start))
+                    )
+                }
+            },
+            pane = {
+                AnimatedContent(selectedItemWithContent, Modifier.fillMaxSize(), transitionSpec = {
+                    (fadeIn(
+                        tween(
+                            FluentDuration.ShortDuration,
+                            easing = FluentEasing.FadeInFadeOutEasing,
+                            delayMillis = FluentDuration.QuickDuration
+                        )
+                    ) + slideInVertically(
+                        tween(
+                            FluentDuration.MediumDuration,
+                            easing = FluentEasing.FastInvokeEasing,
+                            delayMillis = FluentDuration.QuickDuration
+                        )
+                    ) { it / 5 }) togetherWith fadeOut(
+                        tween(
+                            FluentDuration.QuickDuration,
+                            easing = FluentEasing.FadeInFadeOutEasing,
+                            delayMillis = FluentDuration.QuickDuration
+                        )
+                    )
+                }) {
+                    if (it != null) {
+                        navigator.lastItem.Content()
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            PlatformSpecificText("No content selected", style = FluentTheme.typography.bodyStrong)
                         }
                     }
                 }
-            }
-        })
+            })
     }
 }
 
