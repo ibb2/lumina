@@ -2,9 +2,6 @@ package org.example.project
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,22 +17,30 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.material.*
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.TextFieldValue
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.transitions.SlideTransition
+import com.konyaco.fluent.component.SideNav
+import com.konyaco.fluent.component.SideNavHeader
+import com.konyaco.fluent.component.SideNavItem
+import com.konyaco.fluent.icons.Icons
+import com.konyaco.fluent.icons.regular.Circle
+import com.konyaco.fluent.icons.regular.Settings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
 import org.example.project.screen.HomeScreen
+import org.example.project.screen.SettingsScreen
 import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.FoldersDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.ui.displayEmails
+import org.example.project.ui.platformSpecific.PlatformSpecificText
 import org.example.project.ui.platformSpecific.PlatformSpecificTextField
+import org.example.project.ui.platformSpecific.buttons.PlatformSpecificIconButton
 import org.example.project.utils.NetworkError
 
 @OptIn(ExperimentalSettingsApi::class)
@@ -49,12 +54,12 @@ fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: 
     Navigator(
         HomeScreen(
             homepageContent = {
-            PlatformSpecificUI(
-                modifier = Modifier,
-                currentSystemTheme = currentSystemTheme,
-            ) { Main(client, emailService, authentication, driver, it) }
-        }
-    )) {
+                PlatformSpecificUI(
+                    modifier = Modifier,
+                    currentSystemTheme = currentSystemTheme,
+                ) { Main(client, emailService, authentication, driver, it) }
+            }
+        )) {
         SlideTransition(it)
     }
 
@@ -66,8 +71,13 @@ expect fun PlatformSpecificUI(modifier: Modifier, currentSystemTheme: Boolean, c
 
 
 @Composable
-fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver, localNavigator: Navigator) {
-
+fun Main(
+    client: FirebaseAuthClient,
+    emailService: EmailService,
+    authentication: Authentication,
+    driver: SqlDriver,
+    localNavigator: Navigator
+) {
 
     // db related stuff
     val database = LuminaDatabase(
@@ -146,123 +156,139 @@ fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication:
     }
 
     // UI with sync indicator
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier.padding(16.dp).fillMaxSize()
-    ) {
 
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedIndex by remember { mutableStateOf(0) }
 
-//                TextField(
-//                    modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
-//                    value = searchQuery,
-//                    onValueChange = {
-//                        isDeleting = searchQuery.length > it.length
-//                        searchQuery = it
-//                    },
-//                    label = { Text("Search") },
-////                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-//                )
+    SideNav(
+        modifier = Modifier.fillMaxHeight(),
+        expanded = expanded,
+        onExpandStateChange = { expanded = it },
+        title = { PlatformSpecificText("Sidebar") }) {
 
-                var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-
-                fun updateTextFieldValue(newValue: TextFieldValue) {
-                    textFieldValue = newValue
-                }
-
-                PlatformSpecificTextField(Modifier, textFieldValue) {
-                    updateTextFieldValue(it)
-                }
-        }
-
-
-        Column {
-            // Add account button
-            Button(onClick = {
-                scope.launch {
-                    val re = authentication.authenticateUser(client, accountsDataSource)
-                    r = re.first
-                    e = re.second
-
-                    // Update accounts
-                    accounts.value = authentication.getAccounts(accountsDataSource)
-
-                    // Sync will happen automatically due to LaunchedEffect
-                }
-            }) {
-                Text("Add account (GMAIL)")
-            }
-
-            LazyRow {
-                items(accounts.value) { account ->
-                    Text(account.email)
-                    // Logout button (in your existing logout logic)
-                    Button(onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            authentication.logout(accountsDataSource, account.email)
-
-                            // Update accounts
-                            withContext(Dispatchers.Main) {
-                                accounts.value = authentication.getAccounts(accountsDataSource)
-
-                                // Sync will happen automatically due to LaunchedEffect
-                            }
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+            Column(modifier = Modifier.fillMaxHeight()) {
+                repeat(6) { index ->
+                    SideNavItem(
+                        selected = selectedIndex == index,
+                        onClick = { selectedIndex = index },
+                        content = { com.konyaco.fluent.component.Text("Menu Item $index") },
+                        icon = {
+                            com.konyaco.fluent.component.Icon(
+                                imageVector = Icons.Default.Circle,
+                                contentDescription = null
+                            )
                         }
-                    }) {
-                        Text("Logout")
-                    }
+                    )
                 }
             }
+            SideNavItem(
+                selected = selectedIndex == 7,
+                onClick = {
+                    localNavigator.push(
+                        SettingsScreen(
+                            client,
+                            driver,
+                            emailService,
+                            authentication,
+                            accountsDataSource,
+                            emailDataSource,
+                            attachmentsDataSource
+                        )
+                    )
+                },
+                content = { PlatformSpecificText("Settings", fontSize = 16) },
+                icon = {
+                    com.konyaco.fluent.component.Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings"
+                    )
+                }
+            )
         }
-
-//            if (folders.size > 0) {
-//                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
-//                    itemsIndexed(folders) { _, it ->
-//                        Row {
-//                            val isSelected = selectedFolders.value.contains(it.name)
-//                            val color = if (isSelected) Color.Green else Color.White
-//                            Button(
-//                                onClick = {
-//                                    println("Folder selected ${it.name}")
-//                                    val currentFolders = selectedFolders.value.toMutableList()
-//                                    if (currentFolders.contains(it.name)) {
-//                                        currentFolders.remove(it.name)
-//                                    } else {
-//                                        currentFolders.add(it.name)
-//                                    }
-//                                    // Update the entire list
-//                                    selectedFolders.value = currentFolders
-//                                },
-//                                colors = ButtonDefaults.buttonColors(color)
-//                            ) {
-//                                Text(it.name)
-//                            }
-//                        }
-//                        Divider(modifier = Modifier.width(4.dp))
-//                    }
-//                }
-//            }
-
-        if (isSyncing) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-
-        // Use emails and attachments in your display logic
-        if (isSearching && emails.isEmpty()) {
-            Text("No emails found :)")
-        }
-
-        displayEmails(
-            accounts = accounts.value,
-            selectedFolders = selectedFolders,
-            emails = allEmails.value.toMutableList(),
-            attachments = attachments,
-            emailDataSource = emailDataSource,
-            emailService = emailService,
-            localNavigator = localNavigator
-        )
     }
+//    Column(
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.SpaceBetween,
+//        modifier = Modifier.padding(16.dp).fillMaxSize()
+//    ) {
+//
+//        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+//
+////                TextField(
+////                    modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
+////                    value = searchQuery,
+////                    onValueChange = {
+////                        isDeleting = searchQuery.length > it.length
+////                        searchQuery = it
+////                    },
+////                    label = { Text("Search") },
+//////                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+////                )
+//
+//                var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+//
+//                fun updateTextFieldValue(newValue: TextFieldValue) {
+//                    textFieldValue = newValue
+//                }
+//
+//                PlatformSpecificTextField(Modifier, textFieldValue) {
+//                    updateTextFieldValue(it)
+//                }
+//        }
+//
+////            if (folders.size > 0) {
+////                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
+////                    itemsIndexed(folders) { _, it ->
+////                        Row {
+////                            val isSelected = selectedFolders.value.contains(it.name)
+////                            val color = if (isSelected) Color.Green else Color.White
+////                            Button(
+////                                onClick = {
+////                                    println("Folder selected ${it.name}")
+////                                    val currentFolders = selectedFolders.value.toMutableList()
+////                                    if (currentFolders.contains(it.name)) {
+////                                        currentFolders.remove(it.name)
+////                                    } else {
+////                                        currentFolders.add(it.name)
+////                                    }
+////                                    // Update the entire list
+////                                    selectedFolders.value = currentFolders
+////                                },
+////                                colors = ButtonDefaults.buttonColors(color)
+////                            ) {
+////                                Text(it.name)
+////                            }
+////                        }
+////                        Divider(modifier = Modifier.width(4.dp))
+////                    }
+////                }
+////            }
+//
+//        if (isSyncing) {
+//            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+//        }
+//
+//        // Use emails and attachments in your display logic
+//        if (isSearching && emails.isEmpty()) {
+//            Text("No emails found :)")
+//        }
+//
+//        displayEmails(
+//            accounts = accounts.value,
+//            selectedFolders = selectedFolders,
+//            emails = allEmails.value.toMutableList(),
+//            attachments = attachments,
+//            emailDataSource = emailDataSource,
+//            client = client,
+//            emailService = emailService,
+//            authentication = authentication,
+//            driver = driver,
+//            localNavigator = localNavigator,
+//            accountsDataSource = accountsDataSource,
+//            attachmentsDataSource = attachmentsDataSource,
+//        )
+//    }
 }
 
 class EmailServiceManager(

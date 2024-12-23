@@ -78,14 +78,14 @@ fun main() = application {
             Text(text = "Restart required.")
         } else {
             if (initialized) {
-//                WindowFrame(
-//                    onCloseRequest = ::exitApplication,
-//                    title = title,
-//                    state = state,
-//                    backButtonEnabled = false,
-//                    backButtonClick = { fun foo() {} },
-//                    backButtonVisible = hostOs.isWindows
-//                ) { _, _ ->
+                WindowFrame(
+                    onCloseRequest = ::exitApplication,
+                    title = title,
+                    state = state,
+                    backButtonEnabled = false,
+                    backButtonClick = { fun foo() {} },
+                    backButtonVisible = hostOs.isWindows
+                ) { _, _ ->
                     WindowStyle(
                         isDarkTheme = isSystemInDarkTheme(),
                         backdropType = WindowBackdrop.Mica,
@@ -97,7 +97,7 @@ fun main() = application {
                         authentication = Authentication(),
                         driver = DatabaseDriverFactory().create()
                     )
-//                }
+                }
             } else {
                 Text(text = "Downloading $downloading%")
             }

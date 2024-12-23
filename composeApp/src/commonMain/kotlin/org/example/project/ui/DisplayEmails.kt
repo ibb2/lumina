@@ -9,36 +9,31 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
-import cafe.adriel.voyager.navigator.LocalNavigator
+import app.cash.sqldelight.db.SqlDriver
 import cafe.adriel.voyager.navigator.Navigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import com.composables.core.*
 import com.multiplatform.webview.util.KLogSeverity
 import com.multiplatform.webview.web.LoadingState
-import com.multiplatform.webview.web.WebView
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
 import kotlinx.coroutines.*
+import org.example.project.Authentication
 import org.example.project.EmailService
-import org.example.project.data.NewEmail
 import org.example.project.deleteEmail
+import org.example.project.networking.FirebaseAuthClient
 import org.example.project.read
 import org.example.project.screen.SettingsScreen
 import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
+import org.example.project.sqldelight.AccountsDataSource
+import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.*
 import kotlin.time.Duration.Companion.seconds
@@ -51,7 +46,12 @@ fun displayEmails(
     attachments: MutableList<AttachmentsDAO>,
     emailDataSource: EmailsDataSource,
     emailService: EmailService,
-    localNavigator: Navigator
+    localNavigator: Navigator,
+    authentication: Authentication,
+    client: FirebaseAuthClient,
+    driver: SqlDriver,
+    accountsDataSource: AccountsDataSource,
+    attachmentsDataSource: AttachmentsDataSource,
 ) {
 
 //    val localNavigator = LocalNavigator.currentOrThrow
@@ -63,7 +63,6 @@ fun displayEmails(
 
     // Send email
     var sendEmail by remember { mutableStateOf(false) }
-
 
     fun displayEmailBody(show: Boolean, email: EmailsDAO) {
 
@@ -138,7 +137,19 @@ fun displayEmails(
             }
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            PlatformSpecificSettingsButton( { localNavigator.push(SettingsScreen()) } )
+            PlatformSpecificSettingsButton({
+                localNavigator.push(
+                    SettingsScreen(
+                        client,
+                        driver,
+                        emailService,
+                        authentication,
+                        accountsDataSource,
+                        emailDataSource,
+                        attachmentsDataSource
+                    )
+                )
+            })
             ScrollArea(state = scrollState) {
                 LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     itemsIndexed(allEmails) { index, email ->
