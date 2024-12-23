@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import com.example.project.database.LuminaDatabase
 import com.konyaco.fluent.Background
 import com.konyaco.fluent.background.Mica
@@ -19,6 +21,7 @@ import com.mayakapps.compose.windowstyler.WindowStyle
 import dev.datlag.kcef.KCEF
 import io.ktor.client.engine.okhttp.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.withContext
 import lumina.composeapp.generated.resources.Res
 import org.example.project.networking.FirebaseAuthClient
@@ -48,6 +51,9 @@ fun main() = application {
         var restartRequired by remember { mutableStateOf(false) }
         var downloading by remember { mutableStateOf(0F) }
         var initialized by remember { mutableStateOf(false) }
+
+//        val navigationCommands = MutableSharedFlow<() -> Unit>()
+//        val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) {
             withContext(Dispatchers.IO) {
@@ -82,20 +88,22 @@ fun main() = application {
                     onCloseRequest = ::exitApplication,
                     title = title,
                     state = state,
-                    backButtonEnabled = false,
-                    backButtonClick = { fun foo() {} },
+                    backButtonEnabled = true,
+                    backButtonClick = { },
                     backButtonVisible = hostOs.isWindows
-                ) { _, _ ->
-                    WindowStyle(
-                        isDarkTheme = isSystemInDarkTheme(),
-                        backdropType = WindowBackdrop.Mica,
-                        frameStyle = WindowFrameStyle(cornerPreference = WindowCornerPreference.ROUNDED),
-                    )
+                ) { windowInset, contentInset ->
+//                    WindowStyle(
+//                        isDarkTheme = isSystemInDarkTheme(),
+//                        backdropType = WindowBackdrop.Mica,
+//                        frameStyle = WindowFrameStyle(cornerPreference = WindowCornerPreference.ROUNDED),
+//                    )
                     App(
                         client = FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create())),
                         emailService = EmailService(FirebaseAuthClient(httpClient = createHttpClient(OkHttp.create()))),
                         authentication = Authentication(),
-                        driver = DatabaseDriverFactory().create()
+                        driver = DatabaseDriverFactory().create(),
+                        windowInset = windowInset,
+                        contentInset = contentInset
                     )
                 }
             } else {

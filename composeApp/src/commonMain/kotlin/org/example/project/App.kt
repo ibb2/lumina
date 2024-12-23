@@ -1,5 +1,7 @@
 package org.example.project
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
@@ -17,17 +19,33 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.material.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.TextFieldValue
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.CurrentScreen
+import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.transitions.SlideTransition
-import com.konyaco.fluent.component.SideNav
-import com.konyaco.fluent.component.SideNavHeader
-import com.konyaco.fluent.component.SideNavItem
+import com.konyaco.fluent.FluentTheme
+import com.konyaco.fluent.component.Icon as FluentIcon
+import com.konyaco.fluent.animation.FluentDuration
+import com.konyaco.fluent.animation.FluentDuration.MediumDuration
+import com.konyaco.fluent.animation.FluentDuration.QuickDuration
+import com.konyaco.fluent.animation.FluentDuration.ShortDuration
+import com.konyaco.fluent.animation.FluentEasing
+import com.konyaco.fluent.animation.FluentEasing.FadeInFadeOutEasing
+import com.konyaco.fluent.animation.FluentEasing.FastInvokeEasing
+import com.konyaco.fluent.background.Mica
+import com.konyaco.fluent.component.*
 import com.konyaco.fluent.icons.Icons
+import com.konyaco.fluent.icons.regular.ArrowLeft
 import com.konyaco.fluent.icons.regular.Circle
 import com.konyaco.fluent.icons.regular.Settings
+import com.russhwolf.settings.Settings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import lumina.composeapp.generated.resources.Res
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
@@ -42,28 +60,161 @@ import org.example.project.ui.platformSpecific.PlatformSpecificText
 import org.example.project.ui.platformSpecific.PlatformSpecificTextField
 import org.example.project.ui.platformSpecific.buttons.PlatformSpecificIconButton
 import org.example.project.utils.NetworkError
+import androidx.compose.foundation.layout.Box
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
-fun App(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver) {
+fun App(
+    client: FirebaseAuthClient,
+    emailService: EmailService,
+    authentication: Authentication,
+    driver: SqlDriver,
+    windowInset: WindowInsets = WindowInsets(0),
+    contentInset: WindowInsets = WindowInsets(0),
+    collapseWindowInset: WindowInsets = WindowInsets(0)
+) {
 
+//        val navigator = LocalNavigator.currentOrThrow
 
-    val currentSystemTheme = isSystemInDarkTheme()
+    Navigator(HomeScreen(client, emailService, authentication, driver)) {
+           val isCollapsed by remember { mutableStateOf(false) }
 
-    Navigator(
-        HomeScreen(
-            homepageContent = {
-                PlatformSpecificUI(
-                    modifier = Modifier,
-                    currentSystemTheme = currentSystemTheme,
-                ) { Main(client, emailService, authentication, driver, it) }
+    NavigationView(
+        modifier = Modifier.windowInsetsPadding(
+            insets = if (isCollapsed) collapseWindowInset else windowInset
+        ),
+        state = rememberNavigationState(),
+        displayMode = NavigationDisplayMode.Left,
+        contentPadding = if (!isCollapsed) {
+            PaddingValues()
+        } else {
+            PaddingValues(top = 48.dp)
+        },
+        menuItems = {
+            //            repeat(6) { index ->
+            //                item {
+            //                    MenuItem(
+            //                        selected = true,
+            //                        onClick = { SettingsScreen(
+            //                            client,
+            //                            driver,
+            //                            emailService,
+            //                            authentication,
+            //                            accountsDataSource,
+            //                            emailDataSource,
+            //                            attachmentsDataSource
+            //                        ) },
+            //                        navItem = "Settings",
+            //                        icon = Icons.Default.Settings,
+            //                    )
+            //                }
+            //            }
+        },
+        footerItems = {
+            item {
+                MenuItem(
+                    selected = false,
+                    onClick = {
+                        navigator.push(
+                            SettingsScreen(
+                                client,
+                                driver,
+                                emailService,
+                                authentication,
+                                accountsDataSource,
+                                emailDataSource,
+                                attachmentsDataSource
+                            )
+                        )
+                    },
+                    navItem = "Settings",
+                    icon = Icons.Default.Settings,
+                )
             }
-        )) {
-        SlideTransition(it)
+        },
+        title = {
+            if (isCollapsed) {
+                //                if (icon != null) {
+                //                    Image(
+                //                        painter = icon,
+                //                        contentDescription = null,
+                //                        modifier = Modifier.padding(start = 12.dp).size(16.dp)
+                //                    )
+                //                }
+                //                if (title.isNotEmpty()) {
+                PlatformSpecificText(
+                    text = "Lumina Mail",
+                    style = FluentTheme.typography.caption,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+                //                }
+            } else {
+                PlatformSpecificText("Controls")
+            }
+        },
+        backButton = {
+            if (isCollapsed) {
+                NavigationDefaults.BackButton(
+                    onClick = { navigator.pop() },
+                    disabled = false,
+                    icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
+                    modifier = Modifier.windowInsetsPadding(contentInset.only(WindowInsetsSides.Start))
+                )
+            }
+        },
+        pane = {
+            Navigator(
+                HomeScreen(
+                    client, emailService, authentication, driver
+                )
+            ) { n ->
+                when (n.lastItemOrNull) {
+                    is HomeScreen -> {
+                        HomeScreen(
+                            client, emailService, authentication, driver
+                        )
+                    }
+
+                    is SettingsScreen -> {
+                        SettingsScreen(
+                            client = client,
+                            driver = driver,
+                            emailService = emailService,
+                            authentication = authentication,
+                            accountsDataSource = accountsDataSource,
+                            emailDataSource = emailDataSource,
+                            attachmentsDataSource = attachmentsDataSource
+                        )
+                    }
+
+                    null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PlatformSpecificText(
+                                text = "No content selected",
+                                style = FluentTheme.typography.bodyStrong
+                            )
+                        }
+                    }
+
+                    else -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PlatformSpecificText(
+                                text = "No content selected",
+                                style = FluentTheme.typography.bodyStrong
+                            )
+                        }
+                    }
+                }
+            }
+        })
     }
-
-
 }
 
 @Composable
@@ -76,8 +227,12 @@ fun Main(
     emailService: EmailService,
     authentication: Authentication,
     driver: SqlDriver,
-    localNavigator: Navigator
+    windowInset: WindowInsets,
+    contentInset: WindowInsets,
+    collapseWindowInset: WindowInsets
 ) {
+
+    val navigator = LocalNavigator.currentOrThrow
 
     // db related stuff
     val database = LuminaDatabase(
@@ -155,58 +310,142 @@ fun Main(
         emailServiceManager.search(searchQuery, isDeleting)
     }
 
-    // UI with sync indicator
+    val isCollapsed by remember { mutableStateOf(false) }
 
-    var expanded by remember { mutableStateOf(false) }
-    var selectedIndex by remember { mutableStateOf(0) }
+    NavigationView(
+        modifier = Modifier.windowInsetsPadding(
+            insets = if (isCollapsed) collapseWindowInset else windowInset
+        ),
+        state = rememberNavigationState(),
+        displayMode = NavigationDisplayMode.Left,
+        contentPadding = if (!isCollapsed) {
+            PaddingValues()
+        } else {
+            PaddingValues(top = 48.dp)
+        },
+        menuItems = {
+            //            repeat(6) { index ->
+            //                item {
+            //                    MenuItem(
+            //                        selected = true,
+            //                        onClick = { SettingsScreen(
+            //                            client,
+            //                            driver,
+            //                            emailService,
+            //                            authentication,
+            //                            accountsDataSource,
+            //                            emailDataSource,
+            //                            attachmentsDataSource
+            //                        ) },
+            //                        navItem = "Settings",
+            //                        icon = Icons.Default.Settings,
+            //                    )
+            //                }
+            //            }
+        },
+        footerItems = {
+            item {
+                MenuItem(
+                    selected = false,
+                    onClick = {
+                        navigator.push(
+                            SettingsScreen(
+                                client,
+                                driver,
+                                emailService,
+                                authentication,
+                                accountsDataSource,
+                                emailDataSource,
+                                attachmentsDataSource
+                            )
+                        )
+                    },
+                    navItem = "Settings",
+                    icon = Icons.Default.Settings,
+                )
+            }
+        },
+        title = {
+            if (isCollapsed) {
+                //                if (icon != null) {
+                //                    Image(
+                //                        painter = icon,
+                //                        contentDescription = null,
+                //                        modifier = Modifier.padding(start = 12.dp).size(16.dp)
+                //                    )
+                //                }
+                //                if (title.isNotEmpty()) {
+                PlatformSpecificText(
+                    text = "Lumina Mail",
+                    style = FluentTheme.typography.caption,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+                //                }
+            } else {
+                PlatformSpecificText("Controls")
+            }
+        },
+        backButton = {
+            if (isCollapsed) {
+                NavigationDefaults.BackButton(
+                    onClick = { navigator.pop() },
+                    disabled = false,
+                    icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
+                    modifier = Modifier.windowInsetsPadding(contentInset.only(WindowInsetsSides.Start))
+                )
+            }
+        },
+        pane = {
+            Navigator(
+                HomeScreen(
+                    client, emailService, authentication, driver
+                )
+            ) { n ->
+                when (n.lastItemOrNull) {
+                    is HomeScreen -> {
+                        HomeScreen(
+                            client, emailService, authentication, driver
+                        )
+                    }
 
-    SideNav(
-        modifier = Modifier.fillMaxHeight(),
-        expanded = expanded,
-        onExpandStateChange = { expanded = it },
-        title = { PlatformSpecificText("Sidebar") }) {
+                    is SettingsScreen -> {
+                        SettingsScreen(
+                            client = client,
+                            driver = driver,
+                            emailService = emailService,
+                            authentication = authentication,
+                            accountsDataSource = accountsDataSource,
+                            emailDataSource = emailDataSource,
+                            attachmentsDataSource = attachmentsDataSource
+                        )
+                    }
 
-        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-            Column(modifier = Modifier.fillMaxHeight()) {
-                repeat(6) { index ->
-                    SideNavItem(
-                        selected = selectedIndex == index,
-                        onClick = { selectedIndex = index },
-                        content = { com.konyaco.fluent.component.Text("Menu Item $index") },
-                        icon = {
-                            com.konyaco.fluent.component.Icon(
-                                imageVector = Icons.Default.Circle,
-                                contentDescription = null
+                    null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PlatformSpecificText(
+                                text = "No content selected",
+                                style = FluentTheme.typography.bodyStrong
                             )
                         }
-                    )
+                    }
+
+                    else -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PlatformSpecificText(
+                                text = "No content selected",
+                                style = FluentTheme.typography.bodyStrong
+                            )
+                        }
+                    }
                 }
             }
-            SideNavItem(
-                selected = selectedIndex == 7,
-                onClick = {
-                    localNavigator.push(
-                        SettingsScreen(
-                            client,
-                            driver,
-                            emailService,
-                            authentication,
-                            accountsDataSource,
-                            emailDataSource,
-                            attachmentsDataSource
-                        )
-                    )
-                },
-                content = { PlatformSpecificText("Settings", fontSize = 16) },
-                icon = {
-                    com.konyaco.fluent.component.Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings"
-                    )
-                }
-            )
-        }
-    }
+        })
 //    Column(
 //        horizontalAlignment = Alignment.CenterHorizontally,
 //        verticalArrangement = Arrangement.SpaceBetween,
@@ -226,15 +465,15 @@ fun Main(
 //////                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
 ////                )
 //
-//                var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+//            var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
 //
-//                fun updateTextFieldValue(newValue: TextFieldValue) {
-//                    textFieldValue = newValue
-//                }
+//            fun updateTextFieldValue(newValue: TextFieldValue) {
+//                textFieldValue = newValue
+//            }
 //
-//                PlatformSpecificTextField(Modifier, textFieldValue) {
-//                    updateTextFieldValue(it)
-//                }
+//            PlatformSpecificTextField(Modifier, textFieldValue) {
+//                updateTextFieldValue(it)
+//            }
 //        }
 //
 ////            if (folders.size > 0) {
@@ -430,6 +669,66 @@ class EmailServiceManager(
             emailService.watchEmails(it.email, emailsDataSource)
         }
     }
+}
+
+@Composable
+private fun NavigationMenuItemScope.MenuItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    navItem: String,
+    icon: ImageVector?,
+    hasSeparator: Boolean = false,
+) {
+    if (!hasSeparator) {
+        MenuItem(
+            selected,
+            onClick = { onClick() },
+            icon = icon?.let { { FluentIcon(it, navItem) } },
+            text = { PlatformSpecificText(navItem) },
+            expandItems = false,
+            items = {
+                NavigationItem(
+                    selected,
+                    onClick,
+                    navItem,
+                    icon
+                )
+            },
+        )
+    } else {
+        MenuItem(
+            selected,
+            onClick = { onClick() },
+            icon = icon?.let { { FluentIcon(it, navItem) } },
+            text = { PlatformSpecificText(navItem) },
+            items = {
+                NavigationItem(
+                    selected,
+                    onClick,
+                    navItem,
+                    icon
+                )
+            },
+            expandItems = false,
+            header = null,
+            separatorVisible = true
+        )
+    }
+}
+
+@Composable
+private fun NavigationItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    navItem: String,
+    icon: ImageVector?
+) {
+    SideNavItem(
+        selected,
+        onClick = { onClick() },
+        icon = icon?.let { { Icon(it, navItem) } },
+        content = { PlatformSpecificText(navItem) },
+    )
 }
 
 

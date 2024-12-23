@@ -13,9 +13,10 @@ import com.konyaco.fluent.LocalContentColor
 import com.konyaco.fluent.background.Layer
 import com.konyaco.fluent.background.Mica
 import com.konyaco.fluent.component.Text
+import java.time.format.TextStyle
 
 
 @Composable
-actual fun PlatformSpecificText(text: String, modifier: Modifier?, fontSize: Int) {
-    if (modifier != null) Text(modifier = Modifier, text = text, fontSize = fontSize.sp) else Text(text = text, fontSize = fontSize.sp)
+actual fun PlatformSpecificText(text: String, modifier: Modifier?, style: androidx.compose.ui.text.TextStyle ,fontSize: Int) {
+    if (modifier != null) Text(modifier = Modifier, text = text, fontSize = fontSize.sp, style = style) else Text(text = text, fontSize = fontSize.sp)
 }

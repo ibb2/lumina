@@ -33,16 +33,33 @@ import org.example.project.ui.displayEmails
 import org.example.project.ui.platformSpecific.PlatformSpecificTextField
 import org.example.project.utils.NetworkError
 
-data class HomeScreen(val homepageContent: @Composable (localNavigator: Navigator) -> Unit): Screen {
+data class HomeScreen(
+    val client: FirebaseAuthClient,
+    val emailService: EmailService,
+    val authentication: Authentication,
+    val driver: SqlDriver,
+    ): Screen {
 
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        homepageContent(navigator)
+        Main(
+            client = client,
+            emailService = emailService,
+            authentication = authentication,
+            driver = driver,
+            localNavigator = navigator
+        )
     }
 
     @Composable
-    fun Main(client: FirebaseAuthClient, emailService: EmailService, authentication: Authentication, driver: SqlDriver, localNavigator: Navigator) {
+    fun Main(
+        client: FirebaseAuthClient,
+        emailService: EmailService,
+        authentication: Authentication,
+        driver: SqlDriver,
+        localNavigator: Navigator
+    ) {
 
         // db related stuff
         val database = LuminaDatabase(
