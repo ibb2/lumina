@@ -138,7 +138,7 @@ fun displayEmails(
         }
         Row(verticalAlignment = Alignment.Bottom) {
             ScrollArea(state = scrollState) {
-                LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     itemsIndexed(allEmails) { index, email ->
 
                         val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
@@ -155,9 +155,7 @@ fun displayEmails(
                         }
                         PlatformSpecificEmailCard(Modifier, displayEmail) {
                             Column() {
-                                Row(modifier = Modifier.padding(vertical = 8.dp)) {
-                                    PlatformSpecificText("${email.senderAddress} -> $emailAddress")
-                                }
+                                PlatformSpecificText("${email.senderAddress} -> $emailAddress")
                                 PlatformSpecificText(
                                     modifier = Modifier.padding(vertical = 4.dp),
                                     text = if (email.subject.length > 60) {

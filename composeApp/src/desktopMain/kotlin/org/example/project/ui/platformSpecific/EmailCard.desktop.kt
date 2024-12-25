@@ -3,9 +3,11 @@ package org.example.project.ui.platformSpecific
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.konyaco.fluent.FluentTheme
@@ -19,26 +21,20 @@ actual fun PlatformSpecificEmailCard(
     displayEmail: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    Mica(modifier) {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Column(modifier = Modifier.padding(end = 16.dp)) {
             Row(modifier.widthIn(max = 800.dp)) {
                 LocalContentColor provides FluentTheme.colors.text.text.primary
                 Card(modifier.clickable {
                     displayEmail()
                 }) {
-                    Column {
-                        Mica(modifier) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().background(Color.hsl(0f ,0f, .15f)).padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 content()
                             }
-                        }
-                    }
                 }
             }
         }
-    }
 }

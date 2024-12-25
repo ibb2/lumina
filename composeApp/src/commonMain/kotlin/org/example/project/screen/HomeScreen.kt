@@ -141,10 +141,10 @@ data class HomeScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
+            modifier = Modifier.padding(16.dp).fillMaxHeight()
         ) {
 
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box( contentAlignment = Alignment.Center) {
 
 //                TextField(
 //                    modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
