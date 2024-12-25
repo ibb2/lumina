@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
+import cafe.adriel.voyager.navigator.Navigator
 import com.konyaco.fluent.gallery.window.WindowFrame
 import dev.datlag.kcef.KCEF
 import io.ktor.client.engine.okhttp.*
@@ -23,11 +24,20 @@ import org.jetbrains.skiko.hostOs
 
 fun main() = application {
     val state =
-        rememberWindowState(
-            position = WindowPosition(Alignment.Center),
-            size = DpSize(1280.dp, 720.dp)
-        )
+            rememberWindowState(
+                    position = WindowPosition(Alignment.Center),
+                    size = DpSize(1280.dp, 720.dp)
+            )
     val title = "Lumina"
+
+    // Create a state to track navigation
+    var navigator by remember { mutableStateOf<Navigator?>(null) }
+    var canGoBack by remember { mutableStateOf(false) }
+
+    // Update canGoBack whenever navigation stack changes
+    LaunchedEffect(navigator) {
+        snapshotFlow { navigator?.canPop ?: false }.collect { canPop -> canGoBack = canPop }
+    }
 
     Window(onCloseRequest = ::exitApplication, state = state, title = title) {
         var restartRequired by remember { mutableStateOf(false) }
@@ -39,15 +49,15 @@ fun main() = application {
             try {
                 withContext(Dispatchers.IO) {
                     KCEF.init(
-                        builder = {
-                            release("jbr-release-17.0.10b1087.23")
-                            installDir(File("kcef-bundle"))
-                            progress {
-                                onDownloading { downloading = max(it, 0F) }
-                                onInitialized { initialized = true }
+                            builder = {
+                                release("jbr-release-17.0.10b1087.23")
+                                installDir(File("kcef-bundle"))
+                                progress {
+                                    onDownloading { downloading = max(it, 0F) }
+                                    onInitialized { initialized = true }
+                                }
+                                settings { cachePath = File("cache").absolutePath }
                             }
-                            settings { cachePath = File("cache").absolutePath }
-                        }
                     )
                 }
             } catch (e: Exception) {
@@ -57,43 +67,42 @@ fun main() = application {
         }
 
         WindowFrame(
-            onCloseRequest = ::exitApplication,
-            title = title,
-            state = state,
-            backButtonEnabled = true,
-            backButtonClick = {},
-            backButtonVisible = hostOs.isWindows
+                onCloseRequest = ::exitApplication,
+                title = title,
+                state = state,
+                backButtonEnabled = canGoBack,
+                backButtonClick = { navigator?.pop() },
+                backButtonVisible = hostOs.isWindows
         ) { windowInset, contentInset ->
             when {
                 restartRequired -> {
                     Text("Restart required.")
                 }
-
                 !initialized -> {
                     Box(Modifier.fillMaxSize()) {
                         Text(
-                            "Downloading $downloading%",
-                            modifier = Modifier.align(Alignment.Center)
+                                "Downloading $downloading%",
+                                modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
-
                 else -> {
                     App(
-                        client =
-                            FirebaseAuthClient(
-                                httpClient = createHttpClient(OkHttp.create())
-                            ),
-                        emailService =
-                            EmailService(
-                                FirebaseAuthClient(
-                                    httpClient = createHttpClient(OkHttp.create())
-                                )
-                            ),
-                        authentication = Authentication(),
-                        driver = DatabaseDriverFactory().create(),
-                        windowInset = windowInset,
-                        contentInset = contentInset
+                            client =
+                                    FirebaseAuthClient(
+                                            httpClient = createHttpClient(OkHttp.create())
+                                    ),
+                            emailService =
+                                    EmailService(
+                                            FirebaseAuthClient(
+                                                    httpClient = createHttpClient(OkHttp.create())
+                                            )
+                                    ),
+                            authentication = Authentication(),
+                            driver = DatabaseDriverFactory().create(),
+                            windowInset = windowInset,
+                            contentInset = contentInset,
+                            onNavigatorReady = { nav -> navigator = nav }
                     )
                 }
             }

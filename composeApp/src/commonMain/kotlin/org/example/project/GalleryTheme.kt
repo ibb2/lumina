@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.painter.BrushPainter
 import androidx.compose.ui.layout.ContentScale
 import com.konyaco.fluent.*
 import com.konyaco.fluent.background.Mica
+import com.konyaco.fluent.component.NavigationDisplayMode
 
 val LocalStore = compositionLocalOf<Stored> { error("Not provided") }
 
@@ -32,7 +33,8 @@ class Stored(
 
     var compactMode by mutableStateOf(compactMode)
 
-//    var navigationDisplayMode by mutableStateOf(NavigationDisplayMode.Left)
+    var navigationDisplayMode by mutableStateOf(NavigationDisplayMode.Left)
+    
 }
 
 @OptIn(ExperimentalFluentApi::class)
@@ -77,13 +79,13 @@ fun GalleryTheme(
                 }
 
                 Mica(
-//                    background = {
-//                        Image(
-//                            painter = BrushPainter(Brush.linearGradient(gradient)),
-//                            contentDescription = null,
-//                            contentScale = ContentScale.FillBounds
-//                        )
-//                    },
+                    background = {
+                        Image(
+                            painter = BrushPainter(Brush.linearGradient(gradient)),
+                            contentDescription = null,
+                            contentScale = ContentScale.FillBounds
+                        )
+                    },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     content()

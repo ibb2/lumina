@@ -4,31 +4,21 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
-import com.example.Emails
-import com.example.project.database.LuminaDatabase
-import com.russhwolf.settings.ExperimentalSettingsApi
-import org.example.project.shared.data.AttachmentsDAO
-import org.example.project.shared.data.EmailsDAO
-import org.example.project.sqldelight.AttachmentsDataSource
-import org.example.project.sqldelight.EmailsDataSource
-import org.jetbrains.compose.ui.tooling.preview.Preview
-import androidx.compose.material.*
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.input.TextFieldValue
-import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import cafe.adriel.voyager.transitions.SlideTransition
+import com.example.Emails
+import com.example.project.database.LuminaDatabase
 import com.konyaco.fluent.FluentTheme
-import com.konyaco.fluent.component.Icon as FluentIcon
 import com.konyaco.fluent.animation.FluentDuration
 import com.konyaco.fluent.animation.FluentDuration.MediumDuration
 import com.konyaco.fluent.animation.FluentDuration.QuickDuration
@@ -36,52 +26,52 @@ import com.konyaco.fluent.animation.FluentDuration.ShortDuration
 import com.konyaco.fluent.animation.FluentEasing
 import com.konyaco.fluent.animation.FluentEasing.FadeInFadeOutEasing
 import com.konyaco.fluent.animation.FluentEasing.FastInvokeEasing
-import com.konyaco.fluent.background.Mica
 import com.konyaco.fluent.component.*
+import com.konyaco.fluent.component.Icon as FluentIcon
 import com.konyaco.fluent.icons.Icons
 import com.konyaco.fluent.icons.regular.ArrowLeft
-import com.konyaco.fluent.icons.regular.Circle
 import com.konyaco.fluent.icons.regular.Settings
+import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import lumina.composeapp.generated.resources.Res
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
 import org.example.project.screen.HomeScreen
 import org.example.project.screen.SettingsScreen
 import org.example.project.shared.data.AccountsDAO
+import org.example.project.shared.data.AttachmentsDAO
+import org.example.project.shared.data.EmailsDAO
 import org.example.project.shared.data.FoldersDAO
 import org.example.project.shared.utils.createCompositeKey
 import org.example.project.sqldelight.AccountsDataSource
-import org.example.project.ui.displayEmails
+import org.example.project.sqldelight.AttachmentsDataSource
+import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.PlatformSpecificText
-import org.example.project.ui.platformSpecific.PlatformSpecificTextField
-import org.example.project.ui.platformSpecific.buttons.PlatformSpecificIconButton
 import org.example.project.utils.NetworkError
-import androidx.compose.foundation.layout.Box
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalSettingsApi::class)
 @Composable
 @Preview
 fun App(
-    client: FirebaseAuthClient,
-    emailService: EmailService,
-    authentication: Authentication,
-    driver: SqlDriver,
-    windowInset: WindowInsets = WindowInsets(0),
-    contentInset: WindowInsets = WindowInsets(0),
-    collapseWindowInset: WindowInsets = WindowInsets(0)
+        client: FirebaseAuthClient,
+        emailService: EmailService,
+        authentication: Authentication,
+        driver: SqlDriver,
+        windowInset: WindowInsets = WindowInsets(0),
+        contentInset: WindowInsets = WindowInsets(0),
+        collapseWindowInset: WindowInsets = WindowInsets(0),
+        onNavigatorReady: (Navigator) -> Unit = {} // Add this parameter
 ) {
 
     // db related stuff
-    val database = LuminaDatabase(
-        driver,
-        EmailsAdapter = Emails.Adapter(
-            attachments_countAdapter = IntColumnAdapter
-        )
-    )
+    val database =
+            LuminaDatabase(
+                    driver,
+                    EmailsAdapter = Emails.Adapter(attachments_countAdapter = IntColumnAdapter)
+            )
 
     // Theme
     val isSystemInDarkMode = isSystemInDarkTheme()
@@ -91,26 +81,234 @@ fun App(
     val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
     val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
 
-
     Navigator(HomeScreen(client, emailService, authentication, driver)) { navigator ->
         //        val navigator = LocalNavigator.currentOrThrow
-        val selectedItemWithContent by remember {
-            mutableStateOf(navigator.lastItemOrNull)
-        }
+        LaunchedEffect(navigator) { onNavigatorReady(navigator) }
+
+        val selectedItemWithContent by remember { mutableStateOf(navigator.lastItemOrNull) }
 
         val isCollapsed by remember { mutableStateOf(false) }
 
         NavigationView(
-            modifier = Modifier.windowInsetsPadding(
-                insets = if (isCollapsed) collapseWindowInset else windowInset
-            ),
+                modifier =
+                        Modifier.windowInsetsPadding(
+                                insets = if (isCollapsed) collapseWindowInset else windowInset
+                        ),
+                state = rememberNavigationState(),
+                displayMode = NavigationDisplayMode.Left,
+                contentPadding =
+                        if (!isCollapsed) {
+                            PaddingValues()
+                        } else {
+                            PaddingValues(top = 48.dp)
+                        },
+                menuItems = {
+                    //            repeat(6) { index ->
+                    //                item {
+                    //                    MenuItem(
+                    //                        selected = true,
+                    //                        onClick = { SettingsScreen(
+                    //                            client,
+                    //                            driver,
+                    //                            emailService,
+                    //                            authentication,
+                    //                            accountsDataSource,
+                    //                            emailDataSource,
+                    //                            attachmentsDataSource
+                    //                        ) },
+                    //                        navItem = "Settings",
+                    //                        icon = Icons.Default.Settings,
+                    //                    )
+                    //                }
+                    //            }
+                },
+                footerItems = {
+                    item {
+                        MenuItem(
+                                selected = false,
+                                onClick = {
+                                    navigator.push(
+                                            SettingsScreen(
+                                                    client,
+                                                    driver,
+                                                    emailService,
+                                                    authentication,
+                                                    accountsDataSource,
+                                                    emailDataSource,
+                                                    attachmentsDataSource
+                                            )
+                                    )
+                                },
+                                navItem = "Settings",
+                                icon = Icons.Default.Settings,
+                        )
+                    }
+                },
+                title = {
+                    if (isCollapsed) {
+                        //                if (icon != null) {
+                        //                    Image(
+                        //                        painter = icon,
+                        //                        contentDescription = null,
+                        //                        modifier = Modifier.padding(start =
+                        // 12.dp).size(16.dp)
+                        //                    )
+                        //                }
+                        //                if (title.isNotEmpty()) {
+                        PlatformSpecificText(
+                                text = "Lumina Mail",
+                                style = FluentTheme.typography.caption,
+                                modifier = Modifier.padding(start = 16.dp)
+                        )
+                        //                }
+                    } else {
+                        PlatformSpecificText("Controls")
+                    }
+                },
+                backButton = {
+                    if (isCollapsed) {
+                        NavigationDefaults.BackButton(
+                                onClick = { navigator.pop() },
+                                disabled = false,
+                                icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
+                                modifier =
+                                        Modifier.windowInsetsPadding(
+                                                contentInset.only(WindowInsetsSides.Start)
+                                        )
+                        )
+                    }
+                },
+                pane = {
+                    AnimatedContent(
+                            selectedItemWithContent,
+                            Modifier.fillMaxSize(),
+                            transitionSpec = {
+                                (fadeIn(
+                                        tween(
+                                                FluentDuration.ShortDuration,
+                                                easing = FluentEasing.FadeInFadeOutEasing,
+                                                delayMillis = FluentDuration.QuickDuration
+                                        )
+                                ) +
+                                        slideInVertically(
+                                                tween(
+                                                        FluentDuration.MediumDuration,
+                                                        easing = FluentEasing.FastInvokeEasing,
+                                                        delayMillis = FluentDuration.QuickDuration
+                                                )
+                                        ) { it / 5 }) togetherWith
+                                        fadeOut(
+                                                tween(
+                                                        FluentDuration.QuickDuration,
+                                                        easing = FluentEasing.FadeInFadeOutEasing,
+                                                        delayMillis = FluentDuration.QuickDuration
+                                                )
+                                        )
+                            }
+                    ) {
+                        if (it != null) {
+                            navigator.lastItem.Content()
+                        } else {
+                            Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                            ) {
+                                PlatformSpecificText(
+                                        "No content selected",
+                                        style = FluentTheme.typography.bodyStrong
+                                )
+                            }
+                        }
+                    }
+                }
+        )
+    }
+}
+
+@Composable
+fun Main(
+        client: FirebaseAuthClient,
+        emailService: EmailService,
+        authentication: Authentication,
+        driver: SqlDriver,
+        windowInset: WindowInsets,
+        contentInset: WindowInsets,
+        collapseWindowInset: WindowInsets
+) {
+
+    val navigator = LocalNavigator.currentOrThrow
+
+    // db related stuff
+    val database =
+            LuminaDatabase(
+                    driver,
+                    EmailsAdapter = Emails.Adapter(attachments_countAdapter = IntColumnAdapter)
+            )
+
+    // Theme
+    val isSystemInDarkMode = isSystemInDarkTheme()
+
+    // Data Sources
+    val emailDataSource: EmailsDataSource = EmailsDataSource(database)
+    val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
+    val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
+
+    val scope = rememberCoroutineScope()
+
+    var r by remember { mutableStateOf<OAuthResponse?>(null) }
+    var e by remember { mutableStateOf<NetworkError?>(null) }
+
+    authentication.amILoggedIn(accountsDataSource)
+
+    val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
+    val emailServiceManager = remember { EmailServiceManager(emailService, emailDataSource) }
+
+    LaunchedEffect(accounts.value) {
+        withContext(Dispatchers.Default) {
+            emailServiceManager.syncEmails(accounts.value)
+            emailServiceManager.getFolders(accounts.value)
+            emailServiceManager.watchEmails(accounts.value, emailDataSource)
+        }
+    }
+
+    val folders by emailServiceManager.folders.collectAsState()
+    val emails by emailServiceManager.emails.collectAsState()
+    val attachments by emailServiceManager.attachments.collectAsState()
+    val isSyncing by emailServiceManager.isSyncing.collectAsState()
+    val isSearching by emailServiceManager.isSearching.collectAsState()
+    val allEmails = remember { mutableStateOf<List<EmailsDAO>>(emptyList()) }
+
+    // Change how you handle emailsFlow
+    LaunchedEffect(Unit) {
+        println("Setting up email flow collection")
+        emailDataSource.emailsFlow.collect { emails ->
+            println("CRITICAL DEBUG: Collected ${emails.size} emails")
+            // Use withContext to ensure UI update happens on Main dispatcher
+            withContext(Dispatchers.Main) { allEmails.value = emails }
+        }
+    }
+
+    val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
+    var searchQuery by remember { mutableStateOf("") }
+    var isDeleting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(searchQuery) { emailServiceManager.search(searchQuery, isDeleting) }
+
+    val isCollapsed by remember { mutableStateOf(false) }
+
+    NavigationView(
+            modifier =
+                    Modifier.windowInsetsPadding(
+                            insets = if (isCollapsed) collapseWindowInset else windowInset
+                    ),
             state = rememberNavigationState(),
             displayMode = NavigationDisplayMode.Left,
-            contentPadding = if (!isCollapsed) {
-                PaddingValues()
-            } else {
-                PaddingValues(top = 48.dp)
-            },
+            contentPadding =
+                    if (!isCollapsed) {
+                        PaddingValues()
+                    } else {
+                        PaddingValues(top = 48.dp)
+                    },
             menuItems = {
                 //            repeat(6) { index ->
                 //                item {
@@ -134,22 +332,22 @@ fun App(
             footerItems = {
                 item {
                     MenuItem(
-                        selected = false,
-                        onClick = {
-                            navigator.push(
-                                SettingsScreen(
-                                    client,
-                                    driver,
-                                    emailService,
-                                    authentication,
-                                    accountsDataSource,
-                                    emailDataSource,
-                                    attachmentsDataSource
+                            selected = false,
+                            onClick = {
+                                navigator.push(
+                                        SettingsScreen(
+                                                client,
+                                                driver,
+                                                emailService,
+                                                authentication,
+                                                accountsDataSource,
+                                                emailDataSource,
+                                                attachmentsDataSource
+                                        )
                                 )
-                            )
-                        },
-                        navItem = "Settings",
-                        icon = Icons.Default.Settings,
+                            },
+                            navItem = "Settings",
+                            icon = Icons.Default.Settings,
                     )
                 }
             },
@@ -164,9 +362,9 @@ fun App(
                     //                }
                     //                if (title.isNotEmpty()) {
                     PlatformSpecificText(
-                        text = "Lumina Mail",
-                        style = FluentTheme.typography.caption,
-                        modifier = Modifier.padding(start = 16.dp)
+                            text = "Lumina Mail",
+                            style = FluentTheme.typography.caption,
+                            modifier = Modifier.padding(start = 16.dp)
                     )
                     //                }
                 } else {
@@ -176,359 +374,149 @@ fun App(
             backButton = {
                 if (isCollapsed) {
                     NavigationDefaults.BackButton(
-                        onClick = { navigator.pop() },
-                        disabled = false,
-                        icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
-                        modifier = Modifier.windowInsetsPadding(contentInset.only(WindowInsetsSides.Start))
+                            onClick = { navigator.pop() },
+                            disabled = false,
+                            icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
+                            modifier =
+                                    Modifier.windowInsetsPadding(
+                                            contentInset.only(WindowInsetsSides.Start)
+                                    )
                     )
                 }
             },
             pane = {
-                AnimatedContent(selectedItemWithContent, Modifier.fillMaxSize(), transitionSpec = {
-                    (fadeIn(
-                        tween(
-                            FluentDuration.ShortDuration,
-                            easing = FluentEasing.FadeInFadeOutEasing,
-                            delayMillis = FluentDuration.QuickDuration
-                        )
-                    ) + slideInVertically(
-                        tween(
-                            FluentDuration.MediumDuration,
-                            easing = FluentEasing.FastInvokeEasing,
-                            delayMillis = FluentDuration.QuickDuration
-                        )
-                    ) { it / 5 }) togetherWith fadeOut(
-                        tween(
-                            FluentDuration.QuickDuration,
-                            easing = FluentEasing.FadeInFadeOutEasing,
-                            delayMillis = FluentDuration.QuickDuration
-                        )
-                    )
-                }) {
-                    if (it != null) {
-                        navigator.lastItem.Content()
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            PlatformSpecificText("No content selected", style = FluentTheme.typography.bodyStrong)
+                Navigator(HomeScreen(client, emailService, authentication, driver)) { n ->
+                    when (n.lastItemOrNull) {
+                        is HomeScreen -> {
+                            HomeScreen(client, emailService, authentication, driver)
                         }
-                    }
-                }
-            })
-    }
-}
-
-@Composable
-fun Main(
-    client: FirebaseAuthClient,
-    emailService: EmailService,
-    authentication: Authentication,
-    driver: SqlDriver,
-    windowInset: WindowInsets,
-    contentInset: WindowInsets,
-    collapseWindowInset: WindowInsets
-) {
-
-    val navigator = LocalNavigator.currentOrThrow
-
-    // db related stuff
-    val database = LuminaDatabase(
-        driver,
-        EmailsAdapter = Emails.Adapter(
-            attachments_countAdapter = IntColumnAdapter
-        )
-    )
-
-    // Theme
-    val isSystemInDarkMode = isSystemInDarkTheme()
-
-    // Data Sources
-    val emailDataSource: EmailsDataSource = EmailsDataSource(database)
-    val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
-    val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
-
-    val scope = rememberCoroutineScope()
-
-    var r by remember { mutableStateOf<OAuthResponse?>(null) }
-    var e by remember {
-        mutableStateOf<NetworkError?>(null)
-    }
-
-    authentication.amILoggedIn(accountsDataSource)
-
-    val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
-    val emailServiceManager = remember {
-        EmailServiceManager(
-            emailService,
-            emailDataSource
-        )
-    }
-
-    LaunchedEffect(accounts.value) {
-        withContext(Dispatchers.Default) {
-            emailServiceManager.syncEmails(
-                accounts.value
-            )
-            emailServiceManager.getFolders(
-                accounts.value
-            )
-            emailServiceManager.watchEmails(
-                accounts.value,
-                emailDataSource
-            )
-        }
-    }
-
-    val folders by emailServiceManager.folders.collectAsState()
-    val emails by emailServiceManager.emails.collectAsState()
-    val attachments by emailServiceManager.attachments.collectAsState()
-    val isSyncing by emailServiceManager.isSyncing.collectAsState()
-    val isSearching by emailServiceManager.isSearching.collectAsState()
-    val allEmails = remember { mutableStateOf<List<EmailsDAO>>(emptyList()) }
-
-    // Change how you handle emailsFlow
-    LaunchedEffect(Unit) {
-        println("Setting up email flow collection")
-        emailDataSource.emailsFlow
-            .collect { emails ->
-                println("CRITICAL DEBUG: Collected ${emails.size} emails")
-                // Use withContext to ensure UI update happens on Main dispatcher
-                withContext(Dispatchers.Main) {
-                    allEmails.value = emails
-                }
-            }
-    }
-
-    val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
-    var searchQuery by remember { mutableStateOf("") }
-    var isDeleting by remember { mutableStateOf(false) }
-
-    LaunchedEffect(searchQuery) {
-        emailServiceManager.search(searchQuery, isDeleting)
-    }
-
-    val isCollapsed by remember { mutableStateOf(false) }
-
-    NavigationView(
-        modifier = Modifier.windowInsetsPadding(
-            insets = if (isCollapsed) collapseWindowInset else windowInset
-        ),
-        state = rememberNavigationState(),
-        displayMode = NavigationDisplayMode.Left,
-        contentPadding = if (!isCollapsed) {
-            PaddingValues()
-        } else {
-            PaddingValues(top = 48.dp)
-        },
-        menuItems = {
-            //            repeat(6) { index ->
-            //                item {
-            //                    MenuItem(
-            //                        selected = true,
-            //                        onClick = { SettingsScreen(
-            //                            client,
-            //                            driver,
-            //                            emailService,
-            //                            authentication,
-            //                            accountsDataSource,
-            //                            emailDataSource,
-            //                            attachmentsDataSource
-            //                        ) },
-            //                        navItem = "Settings",
-            //                        icon = Icons.Default.Settings,
-            //                    )
-            //                }
-            //            }
-        },
-        footerItems = {
-            item {
-                MenuItem(
-                    selected = false,
-                    onClick = {
-                        navigator.push(
+                        is SettingsScreen -> {
                             SettingsScreen(
-                                client,
-                                driver,
-                                emailService,
-                                authentication,
-                                accountsDataSource,
-                                emailDataSource,
-                                attachmentsDataSource
-                            )
-                        )
-                    },
-                    navItem = "Settings",
-                    icon = Icons.Default.Settings,
-                )
-            }
-        },
-        title = {
-            if (isCollapsed) {
-                //                if (icon != null) {
-                //                    Image(
-                //                        painter = icon,
-                //                        contentDescription = null,
-                //                        modifier = Modifier.padding(start = 12.dp).size(16.dp)
-                //                    )
-                //                }
-                //                if (title.isNotEmpty()) {
-                PlatformSpecificText(
-                    text = "Lumina Mail",
-                    style = FluentTheme.typography.caption,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
-                //                }
-            } else {
-                PlatformSpecificText("Controls")
-            }
-        },
-        backButton = {
-            if (isCollapsed) {
-                NavigationDefaults.BackButton(
-                    onClick = { navigator.pop() },
-                    disabled = false,
-                    icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
-                    modifier = Modifier.windowInsetsPadding(contentInset.only(WindowInsetsSides.Start))
-                )
-            }
-        },
-        pane = {
-            Navigator(
-                HomeScreen(
-                    client, emailService, authentication, driver
-                )
-            ) { n ->
-                when (n.lastItemOrNull) {
-                    is HomeScreen -> {
-                        HomeScreen(
-                            client, emailService, authentication, driver
-                        )
-                    }
-
-                    is SettingsScreen -> {
-                        SettingsScreen(
-                            client = client,
-                            driver = driver,
-                            emailService = emailService,
-                            authentication = authentication,
-                            accountsDataSource = accountsDataSource,
-                            emailDataSource = emailDataSource,
-                            attachmentsDataSource = attachmentsDataSource
-                        )
-                    }
-
-                    null -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            PlatformSpecificText(
-                                text = "No content selected",
-                                style = FluentTheme.typography.bodyStrong
+                                    client = client,
+                                    driver = driver,
+                                    emailService = emailService,
+                                    authentication = authentication,
+                                    accountsDataSource = accountsDataSource,
+                                    emailDataSource = emailDataSource,
+                                    attachmentsDataSource = attachmentsDataSource
                             )
                         }
-                    }
-
-                    else -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            PlatformSpecificText(
-                                text = "No content selected",
-                                style = FluentTheme.typography.bodyStrong
-                            )
+                        null -> {
+                            Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                            ) {
+                                PlatformSpecificText(
+                                        text = "No content selected",
+                                        style = FluentTheme.typography.bodyStrong
+                                )
+                            }
+                        }
+                        else -> {
+                            Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                            ) {
+                                PlatformSpecificText(
+                                        text = "No content selected",
+                                        style = FluentTheme.typography.bodyStrong
+                                )
+                            }
                         }
                     }
                 }
             }
-        })
-//    Column(
-//        horizontalAlignment = Alignment.CenterHorizontally,
-//        verticalArrangement = Arrangement.SpaceBetween,
-//        modifier = Modifier.padding(16.dp).fillMaxSize()
-//    ) {
-//
-//        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-//
-////                TextField(
-////                    modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
-////                    value = searchQuery,
-////                    onValueChange = {
-////                        isDeleting = searchQuery.length > it.length
-////                        searchQuery = it
-////                    },
-////                    label = { Text("Search") },
-//////                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-////                )
-//
-//            var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-//
-//            fun updateTextFieldValue(newValue: TextFieldValue) {
-//                textFieldValue = newValue
-//            }
-//
-//            PlatformSpecificTextField(Modifier, textFieldValue) {
-//                updateTextFieldValue(it)
-//            }
-//        }
-//
-////            if (folders.size > 0) {
-////                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
-////                    itemsIndexed(folders) { _, it ->
-////                        Row {
-////                            val isSelected = selectedFolders.value.contains(it.name)
-////                            val color = if (isSelected) Color.Green else Color.White
-////                            Button(
-////                                onClick = {
-////                                    println("Folder selected ${it.name}")
-////                                    val currentFolders = selectedFolders.value.toMutableList()
-////                                    if (currentFolders.contains(it.name)) {
-////                                        currentFolders.remove(it.name)
-////                                    } else {
-////                                        currentFolders.add(it.name)
-////                                    }
-////                                    // Update the entire list
-////                                    selectedFolders.value = currentFolders
-////                                },
-////                                colors = ButtonDefaults.buttonColors(color)
-////                            ) {
-////                                Text(it.name)
-////                            }
-////                        }
-////                        Divider(modifier = Modifier.width(4.dp))
-////                    }
-////                }
-////            }
-//
-//        if (isSyncing) {
-//            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-//        }
-//
-//        // Use emails and attachments in your display logic
-//        if (isSearching && emails.isEmpty()) {
-//            Text("No emails found :)")
-//        }
-//
-//        displayEmails(
-//            accounts = accounts.value,
-//            selectedFolders = selectedFolders,
-//            emails = allEmails.value.toMutableList(),
-//            attachments = attachments,
-//            emailDataSource = emailDataSource,
-//            client = client,
-//            emailService = emailService,
-//            authentication = authentication,
-//            driver = driver,
-//            localNavigator = localNavigator,
-//            accountsDataSource = accountsDataSource,
-//            attachmentsDataSource = attachmentsDataSource,
-//        )
-//    }
+    )
+    //    Column(
+    //        horizontalAlignment = Alignment.CenterHorizontally,
+    //        verticalArrangement = Arrangement.SpaceBetween,
+    //        modifier = Modifier.padding(16.dp).fillMaxSize()
+    //    ) {
+    //
+    //        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    //
+    ////                TextField(
+    ////                    modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent),
+    // CircleShape),
+    ////                    value = searchQuery,
+    ////                    onValueChange = {
+    ////                        isDeleting = searchQuery.length > it.length
+    ////                        searchQuery = it
+    ////                    },
+    ////                    label = { Text("Search") },
+    //////                        keyboardOptions = KeyboardOptions(keyboardType =
+    // KeyboardType.Text)
+    ////                )
+    //
+    //            var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+    //
+    //            fun updateTextFieldValue(newValue: TextFieldValue) {
+    //                textFieldValue = newValue
+    //            }
+    //
+    //            PlatformSpecificTextField(Modifier, textFieldValue) {
+    //                updateTextFieldValue(it)
+    //            }
+    //        }
+    //
+    ////            if (folders.size > 0) {
+    ////                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
+    ////                    itemsIndexed(folders) { _, it ->
+    ////                        Row {
+    ////                            val isSelected = selectedFolders.value.contains(it.name)
+    ////                            val color = if (isSelected) Color.Green else Color.White
+    ////                            Button(
+    ////                                onClick = {
+    ////                                    println("Folder selected ${it.name}")
+    ////                                    val currentFolders =
+    // selectedFolders.value.toMutableList()
+    ////                                    if (currentFolders.contains(it.name)) {
+    ////                                        currentFolders.remove(it.name)
+    ////                                    } else {
+    ////                                        currentFolders.add(it.name)
+    ////                                    }
+    ////                                    // Update the entire list
+    ////                                    selectedFolders.value = currentFolders
+    ////                                },
+    ////                                colors = ButtonDefaults.buttonColors(color)
+    ////                            ) {
+    ////                                Text(it.name)
+    ////                            }
+    ////                        }
+    ////                        Divider(modifier = Modifier.width(4.dp))
+    ////                    }
+    ////                }
+    ////            }
+    //
+    //        if (isSyncing) {
+    //            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    //        }
+    //
+    //        // Use emails and attachments in your display logic
+    //        if (isSearching && emails.isEmpty()) {
+    //            Text("No emails found :)")
+    //        }
+    //
+    //        displayEmails(
+    //            accounts = accounts.value,
+    //            selectedFolders = selectedFolders,
+    //            emails = allEmails.value.toMutableList(),
+    //            attachments = attachments,
+    //            emailDataSource = emailDataSource,
+    //            client = client,
+    //            emailService = emailService,
+    //            authentication = authentication,
+    //            driver = driver,
+    //            localNavigator = localNavigator,
+    //            accountsDataSource = accountsDataSource,
+    //            attachmentsDataSource = attachmentsDataSource,
+    //        )
+    //    }
 }
 
 class EmailServiceManager(
-    private val emailService: EmailService,
-    private val emailsDataSource: EmailsDataSource
+        private val emailService: EmailService,
+        private val emailsDataSource: EmailsDataSource
 ) {
     private val _folders = MutableStateFlow<MutableList<FoldersDAO>>(mutableListOf())
     val folders: StateFlow<MutableList<FoldersDAO>> = _folders.asStateFlow()
@@ -545,7 +533,6 @@ class EmailServiceManager(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
-
     private val _search = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
     val search: StateFlow<MutableList<EmailsDAO>> = _search.asStateFlow()
 
@@ -560,18 +547,20 @@ class EmailServiceManager(
         try {
             // Perform email sync in parallel
             val emailResults = coroutineScope {
-                accounts.map {
-                    async {
-                        emailService.getEmails(
-                            it.email,
-                        )
-                    }
-                }.awaitAll()
+                accounts
+                        .map {
+                            async {
+                                emailService.getEmails(
+                                        it.email,
+                                )
+                            }
+                        }
+                        .awaitAll()
             }
 
             emailResults
-//            _emails.value = mutableListOf()
-//            _attachments.value = mutableListOf()
+            //            _emails.value = mutableListOf()
+            //            _attachments.value = mutableListOf()
 
             // Combine results from all accounts
             val combinedEmails = emailResults.flatMap { it.first.value }
@@ -598,13 +587,15 @@ class EmailServiceManager(
         try {
             // Perform email sync in parallel
             val foldersResults = coroutineScope {
-                accounts.map {
-                    async {
-                        emailService.getFolders(
-                            it.email,
-                        )
-                    }
-                }.awaitAll()
+                accounts
+                        .map {
+                            async {
+                                emailService.getFolders(
+                                        it.email,
+                                )
+                            }
+                        }
+                        .awaitAll()
             }
 
             // Combine results from all accounts
@@ -641,10 +632,11 @@ class EmailServiceManager(
             // Perform email sync in parallel
             val searchResults = coroutineScope {
                 async {
-                    emailService.searchEmails(
-                        query = search,
-                    )
-                }.await()
+                            emailService.searchEmails(
+                                    query = search,
+                            )
+                        }
+                        .await()
             }
 
             println("Results ${searchResults}")
@@ -657,79 +649,64 @@ class EmailServiceManager(
         } finally {
             _isSyncing.value = false
         }
-
     }
 
-    suspend fun watchEmails(accounts: MutableList<AccountsDAO>, emailsDataSource: EmailsDataSource) {
-        accounts.map {
-            emailService.watchEmails(it.email, emailsDataSource)
-        }
+    suspend fun watchEmails(
+            accounts: MutableList<AccountsDAO>,
+            emailsDataSource: EmailsDataSource
+    ) {
+        accounts.map { emailService.watchEmails(it.email, emailsDataSource) }
     }
 }
 
 @Composable
 private fun NavigationMenuItemScope.MenuItem(
-    selected: Boolean,
-    onClick: () -> Unit,
-    navItem: String,
-    icon: ImageVector?,
-    hasSeparator: Boolean = false,
+        selected: Boolean,
+        onClick: () -> Unit,
+        navItem: String,
+        icon: ImageVector?,
+        hasSeparator: Boolean = false,
 ) {
     if (!hasSeparator) {
         MenuItem(
-            selected,
-            onClick = { onClick() },
-            icon = icon?.let { { FluentIcon(it, navItem) } },
-            text = { PlatformSpecificText(navItem) },
-            expandItems = false,
-            items = {
-                NavigationItem(
-                    selected,
-                    onClick,
-                    navItem,
-                    icon
-                )
-            },
+                selected,
+                onClick = { onClick() },
+                icon = icon?.let { { FluentIcon(it, navItem) } },
+                text = { PlatformSpecificText(navItem) },
+                expandItems = false,
+                items = { NavigationItem(selected, onClick, navItem, icon) },
         )
     } else {
         MenuItem(
-            selected,
-            onClick = { onClick() },
-            icon = icon?.let { { FluentIcon(it, navItem) } },
-            text = { PlatformSpecificText(navItem) },
-            items = {
-                NavigationItem(
-                    selected,
-                    onClick,
-                    navItem,
-                    icon
-                )
-            },
-            expandItems = false,
-            header = null,
-            separatorVisible = true
+                selected,
+                onClick = { onClick() },
+                icon = icon?.let { { FluentIcon(it, navItem) } },
+                text = { PlatformSpecificText(navItem) },
+                items = { NavigationItem(selected, onClick, navItem, icon) },
+                expandItems = false,
+                header = null,
+                separatorVisible = true
         )
     }
 }
 
 @Composable
 private fun NavigationItem(
-    selected: Boolean,
-    onClick: () -> Unit,
-    navItem: String,
-    icon: ImageVector?
+        selected: Boolean,
+        onClick: () -> Unit,
+        navItem: String,
+        icon: ImageVector?
 ) {
     SideNavItem(
-        selected,
-        onClick = { onClick() },
-        icon = icon?.let { { Icon(it, navItem) } },
-        content = { PlatformSpecificText(navItem) },
+            selected,
+            onClick = { onClick() },
+            icon = icon?.let { { Icon(it, navItem) } },
+            content = { PlatformSpecificText(navItem) },
     )
 }
 
-
-//@Composable
-//fun displayEmails(
+// @Composable
+// fun displayEmails(
 //    emailDataSource: EmailsDataSource,
 //    emailTableQueries: EmailsTableQueries,
 //    accountQueries: AccountsTableQueries,
@@ -737,7 +714,7 @@ private fun NavigationItem(
 //    loggedIn: Boolean,
 //    emailAddress: String,
 //    client: FirebaseAuthClient
-//) {
+// ) {
 //    var display: Boolean by remember { mutableStateOf(false) }
 //    var emailFromUser: String by remember { mutableStateOf("") }
 //    var emailSubject: String by remember { mutableStateOf("") }
@@ -771,7 +748,8 @@ private fun NavigationItem(
 //        state.webSettings.apply {
 //            logSeverity = KLogSeverity.Debug
 //            customUserAgentString =
-//                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like Gecko) Version/14.3.43 Safari/625.20"
+//                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like
+// Gecko) Version/14.3.43 Safari/625.20"
 //        }
 //    }
 //    val navigator = rememberWebViewNavigator()
@@ -797,7 +775,8 @@ private fun NavigationItem(
 //
 //        var isLoading by remember { mutableStateOf(false) }
 //        var emails by remember { mutableStateOf<List<EmailsDAO>?>(null) } // Store emails
-//        var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store attachments
+//        var attachments by remember { mutableStateOf<List<AttachmentsDAO>>(emptyList()) } // Store
+// attachments
 //
 //        val totalEmails by emailService.totalEmails.collectAsState()
 //        val emailsReadCount by emailService.emailsRead.collectAsState()
@@ -830,7 +809,8 @@ private fun NavigationItem(
 //                }
 //                val endTime = Clock.System.now()
 //                val duration = endTime - startTime
-//                println("Emails loaded in ${duration.inWholeSeconds} seconds or ${duration.inWholeMilliseconds} ms")
+//                println("Emails loaded in ${duration.inWholeSeconds} seconds or
+// ${duration.inWholeMilliseconds} ms")
 //
 //
 //                withContext(Dispatchers.Main) {
@@ -865,14 +845,17 @@ private fun NavigationItem(
 //        } else {
 //            // Display email content
 //
-//            emails = emailDataSource.selectAllEmailsFlow().collectAsState(initial = emptyList()).value
+//            emails = emailDataSource.selectAllEmailsFlow().collectAsState(initial =
+// emptyList()).value
 //
 //            println("Emails: ${emails!!.size}")
 //
 //            if (emails != null) {
-//                Column(modifier = Modifier.fillMaxHeight(0.7f), verticalArrangement = Arrangement.SpaceBetween) {
+//                Column(modifier = Modifier.fillMaxHeight(0.7f), verticalArrangement =
+// Arrangement.SpaceBetween) {
 //                    // Email
-//                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+//                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement =
+// Arrangement.End) {
 //                        Button(
 //                            onClick = {
 //                                sendEmail = true
@@ -916,12 +899,14 @@ private fun NavigationItem(
 //                                        onClick = {
 //                                            CoroutineScope(Dispatchers.IO).launch {
 //                                                isRead =
-//                                                    read(email, emailDataSource, emailService, emailAddress)
+//                                                    read(email, emailDataSource, emailService,
+// emailAddress)
 //                                                        ?: false
 //                                            }
 //                                        }
 //                                    ) {
-//                                        Text(text = if (isRead) "Mark as unread" else "Mark as read")
+//                                        Text(text = if (isRead) "Mark as unread" else "Mark as
+// read")
 //                                    }
 //                                    Button(
 //                                        onClick = {
@@ -934,13 +919,15 @@ private fun NavigationItem(
 //                                                )
 //                                            }
 //                                        },
-//                                        colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
+//                                        colors = ButtonDefaults.buttonColors(backgroundColor =
+// Color.Red),
 //                                    ) {
 //                                        Text(text = "Delete")
 //                                    }
 //                                    if (attachments.any { it.emailId === email.id }) {
 //                                        Row {
-//                                            attachments.filter { it.emailId === email.id }.forEach { attachment ->
+//                                            attachments.filter { it.emailId === email.id }.forEach
+// { attachment ->
 //                                                Row {
 //                                                    Text(
 //                                                        text = attachment.fileName,
@@ -948,12 +935,14 @@ private fun NavigationItem(
 //                                                            .padding(8.dp)
 //                                                    )
 //                                                    Text(
-//                                                        text = attachment.size.toString(), modifier = Modifier
+//                                                        text = attachment.size.toString(),
+// modifier = Modifier
 //                                                            .padding(8.dp)
 //
 //                                                    )
 //                                                    Text(
-//                                                        text = attachment.mimeType, modifier = Modifier
+//                                                        text = attachment.mimeType, modifier =
+// Modifier
 //                                                            .padding(8.dp)
 //                                                    )
 //                                                }
@@ -971,7 +960,8 @@ private fun NavigationItem(
 //
 //                        }
 //                        VerticalScrollbar(
-//                            modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
+//                            modifier =
+// Modifier.align(Alignment.TopEnd).fillMaxHeight().width(4.dp)
 //                        ) {
 //                            Thumb(Modifier.background(Color.Black))
 //                        }
@@ -1098,12 +1088,14 @@ private fun NavigationItem(
 //        var sendEmailBody by remember { mutableStateOf("") }
 //
 //        fun sendEmail() {
-//            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
+//            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject,
+// $sendEmailBody")
 //            var sentEmailSuccess = false
 //            CoroutineScope(Dispatchers.IO).launch {
 //                sentEmailSuccess = emailService.sendNewEmail(
 //                    emailDataSource,
-//                    NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject, body = sendEmailBody),
+//                    NewEmail(from = sendEmailFrom, to = sendEmailTo, subject = sendEmailSubject,
+// body = sendEmailBody),
 //                    emailAddress
 //                )
 //            }
@@ -1170,13 +1162,13 @@ private fun NavigationItem(
 //            }
 //        }
 //    }
-//}
+// }
 
 fun read(
-    email: EmailsDAO,
-    emailsDataSource: EmailsDataSource,
-    emailService: EmailService,
-    emailAddress: String,
+        email: EmailsDAO,
+        emailsDataSource: EmailsDataSource,
+        emailService: EmailService,
+        emailAddress: String,
 ): Boolean? {
 
     val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.senderAddress)
@@ -1184,34 +1176,28 @@ fun read(
     val emailRead = emailService.readEmail(email, emailsDataSource, emailAddress)
 
     if (emailRead.first) {
-        emailsDataSource.updateEmailReadStatus(
-            emailCompKey,
-            !email.isRead
-        )
+        emailsDataSource.updateEmailReadStatus(emailCompKey, !email.isRead)
     }
 
     return emailRead.second
-
 }
 
 fun deleteEmail(
-    email: EmailsDAO,
-    emailsDataSource: EmailsDataSource,
-    emailService: EmailService,
-    emailAddress: String,
+        email: EmailsDAO,
+        emailsDataSource: EmailsDataSource,
+        emailService: EmailService,
+        emailAddress: String,
 ) {
 
     val emailCompKey = createCompositeKey(email.subject, email.receivedDate, email.senderAddress)
     val emailDeleted = emailService.deleteEmail(email, emailsDataSource, emailAddress)
 
-//    println("Deleting suc")
+    //    println("Deleting suc")
     if (emailDeleted) {
 
         println("Delete successful $emailDeleted")
 
-        emailsDataSource.deleteEmail(
-            email.id!!
-        )
+        emailsDataSource.deleteEmail(email.id!!)
     }
 }
 
@@ -1219,9 +1205,8 @@ suspend fun loadProgress(emailsRead: Int, totalEmails: Int, updateProgress: (Flo
     updateProgress(emailsRead.toFloat() / totalEmails)
 }
 
-
 expect class EmailService(
-    client: FirebaseAuthClient,
+        client: FirebaseAuthClient,
 ) {
 
     val folders: StateFlow<MutableList<FoldersDAO>>
@@ -1229,7 +1214,9 @@ expect class EmailService(
     val attachments: StateFlow<MutableList<AttachmentsDAO>>
     val isSyncing: StateFlow<Boolean>
 
-    suspend fun getEmails(emailAddress: String): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
+    suspend fun getEmails(
+            emailAddress: String
+    ): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
 
     suspend fun watchEmails(emailAddress: String, dataSource: EmailsDataSource)
 
@@ -1238,23 +1225,22 @@ expect class EmailService(
     suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO>
 
     fun readEmail(
-        email: EmailsDAO,
-        emailsDataSource: EmailsDataSource,
-        emailAddress: String
+            email: EmailsDAO,
+            emailsDataSource: EmailsDataSource,
+            emailAddress: String
     ): Pair<Boolean, Boolean?>
 
     fun deleteEmail(
-        email: EmailsDAO,
-        emailsDataSource: EmailsDataSource,
-        emailAddress: String
+            email: EmailsDAO,
+            emailsDataSource: EmailsDataSource,
+            emailAddress: String
     ): Boolean
 
     fun sendNewEmail(
-        emailsDataSource: EmailsDataSource,
-        newEmail: NewEmail,
-        emailAddress: String
+            emailsDataSource: EmailsDataSource,
+            newEmail: NewEmail,
+            emailAddress: String
     ): Boolean
-
 }
 
 expect class Authentication {
@@ -1263,8 +1249,8 @@ expect class Authentication {
     val email: StateFlow<String>
 
     suspend fun authenticateUser(
-        fAuthClient: FirebaseAuthClient,
-        accountsDataSource: AccountsDataSource
+            fAuthClient: FirebaseAuthClient,
+            accountsDataSource: AccountsDataSource
     ): Pair<OAuthResponse?, NetworkError?>
 
     fun amILoggedIn(accountsDataSource: AccountsDataSource): Boolean

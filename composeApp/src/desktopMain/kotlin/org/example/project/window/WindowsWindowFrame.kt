@@ -48,6 +48,8 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.zIndex
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import com.konyaco.fluent.FluentTheme
 import com.konyaco.fluent.animation.FluentDuration
 import com.konyaco.fluent.animation.FluentEasing
@@ -92,6 +94,9 @@ fun FrameWindowScope.WindowsWindowFrame(
     captionBarHeight: Dp = 48.dp,
     content: @Composable (windowInset: WindowInsets, captionBarInset: WindowInsets) -> Unit
 ) {
+
+//    val navigator = LocalNavigator.currentOrThrow
+
     LaunchedEffect(window) {
         window.findSkiaLayer()?.transparency = true
     }
