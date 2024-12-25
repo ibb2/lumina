@@ -137,19 +137,6 @@ fun displayEmails(
             }
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            PlatformSpecificSettingsButton({
-                localNavigator.push(
-                    SettingsScreen(
-                        client,
-                        driver,
-                        emailService,
-                        authentication,
-                        accountsDataSource,
-                        emailDataSource,
-                        attachmentsDataSource
-                    )
-                )
-            })
             ScrollArea(state = scrollState) {
                 LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     itemsIndexed(allEmails) { index, email ->

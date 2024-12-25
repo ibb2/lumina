@@ -38,7 +38,7 @@ data class HomeScreen(
     val emailService: EmailService,
     val authentication: Authentication,
     val driver: SqlDriver,
-    ): Screen {
+) : Screen {
 
     @Composable
     override fun Content() {

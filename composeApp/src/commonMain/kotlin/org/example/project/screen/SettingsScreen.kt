@@ -135,9 +135,6 @@ data class SettingsScreen(
         }
 
         FluentThemeEntry {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                PlatformSpecificIconButton("Arrow back", "Arrow back") { navigator.pop() }
-            }
             Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
 
                 PlatformSpecificText(text = "Settings page", modifier = Modifier.padding(bottom = 24.dp), fontSize = 32)
