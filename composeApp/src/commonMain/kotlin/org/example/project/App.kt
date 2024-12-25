@@ -218,10 +218,6 @@ fun App(
 }
 
 @Composable
-expect fun PlatformSpecificUI(modifier: Modifier, currentSystemTheme: Boolean, content: @Composable () -> Unit): Unit
-
-
-@Composable
 fun Main(
     client: FirebaseAuthClient,
     emailService: EmailService,

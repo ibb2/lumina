@@ -23,6 +23,7 @@ import com.sun.jna.platform.win32.WinDef.LPARAM
 import com.sun.jna.platform.win32.WinDef.WPARAM
 import com.sun.jna.platform.win32.WinDef.LRESULT
 import com.sun.jna.platform.win32.BaseTSD.LONG_PTR
+import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.platform.win32.WinUser
 import com.sun.jna.platform.win32.WinUser.WM_DESTROY
 import com.sun.jna.platform.win32.WinUser.WM_SIZE
@@ -52,7 +53,8 @@ internal class ComposeWindowProcedure(
     )
 
     //     The default window procedure to call its methods when the default method behaviour is desired/sufficient
-    private var defaultWindowProcedure = User32Extend.instance?.setWindowLong(windowHandle, WinUser.GWL_WNDPROC, this) ?: LONG_PTR(-1)
+    private var defaultWindowProcedure =
+        User32Extend.instance?.setWindowLong(windowHandle, WinUser.GWL_WNDPROC, this) ?: LONG_PTR(-1)
 
     private var dpi = UINT(0)
     private var width = 0
@@ -97,15 +99,51 @@ internal class ComposeWindowProcedure(
     init {
         enableResizability()
         enableBorderAndShadow()
+//        initializeWindowMetrics()
     }
+
+    private fun initializeWindowMetrics() {
+        User32Extend.instance?.let { user32 ->
+            dpi = user32.GetDpiForWindow(windowHandle)
+            frameX = user32.GetSystemMetricsForDpi(WinUser.SM_CXFRAME, dpi)
+            frameY = user32.GetSystemMetricsForDpi(WinUser.SM_CYFRAME, dpi)
+            edgeX = user32.GetSystemMetricsForDpi(WinUser.SM_CXEDGE, dpi)
+            edgeY = user32.GetSystemMetricsForDpi(WinUser.SM_CYEDGE, dpi)
+            padding = user32.GetSystemMetricsForDpi(WinUser.SM_CXPADDEDBORDER, dpi)
+            isMaximized = user32.isWindowInMaximized(windowHandle)
+
+            // Get initial window size
+            val rect = WinDef.RECT()
+            user32.GetClientRect(windowHandle, rect)
+            width = rect.right - rect.left
+            height = rect.bottom - rect.top
+
+            // Update initial window insets
+            updateWindowInsets()
+        }
+    }
+
+    private fun updateWindowInsets() {
+        onWindowInsetUpdate(
+            WindowInsets(
+                left = if (isMaximized) frameX + padding else edgeX,
+                right = if (isMaximized) frameX + padding else edgeX,
+                top = if (isMaximized) frameY + padding else edgeY,
+                bottom = if (isMaximized) frameY + padding else edgeY
+            )
+        )
+    }
+
 
     override fun callback(hWnd: HWND, uMsg: Int, wParam: WPARAM, lParam: LPARAM): LRESULT {
         return when (uMsg) {
             // Returns 0 to make the window not draw the non-client area (title bar and border)
             // thus effectively making all the window our client area
+
             WM_NCCALCSIZE -> {
                 if (wParam.toInt() == 0) {
-                    User32Extend.instance?.CallWindowProc(defaultWindowProcedure, hWnd, uMsg, wParam, lParam) ?: LRESULT(0)
+                    User32Extend.instance?.CallWindowProc(defaultWindowProcedure, hWnd, uMsg, wParam, lParam)
+                        ?: LRESULT(0)
                 } else {
                     val user32 = User32Extend.instance ?: return LRESULT(0)
                     dpi = user32.GetDpiForWindow(hWnd)
@@ -144,7 +182,7 @@ internal class ComposeWindowProcedure(
                 }
 
             }
-
+            
             WM_NCHITTEST -> {
                 // Hit test result return
                 return LRESULT(hitResult.toLong())
@@ -191,7 +229,6 @@ internal class ComposeWindowProcedure(
             ?.getOrNull()
             ?.invoke(arrayOf(windowHandle, margins))
     }
-
 
 
 }

@@ -69,12 +69,12 @@ import com.konyaco.fluent.icons.regular.Subtract
 import com.konyaco.fluent.scheme.PentaVisualScheme
 import com.konyaco.fluent.scheme.VisualStateScheme
 import com.konyaco.fluent.scheme.collectVisualState
-import com.mayakapps.compose.windowstyler.WindowBackdrop
-import com.mayakapps.compose.windowstyler.WindowStyle
-import com.mayakapps.compose.windowstyler.findSkiaLayer
+import com.mayakapps.compose.windowstyler.*
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef.HWND
 import com.sun.jna.platform.win32.WinUser
+import kotlinx.coroutines.delay
+import java.awt.Dimension
 import java.awt.Window
 import java.awt.event.WindowEvent
 import java.awt.event.WindowFocusListener
@@ -95,15 +95,17 @@ fun FrameWindowScope.WindowsWindowFrame(
     LaunchedEffect(window) {
         window.findSkiaLayer()?.transparency = true
     }
+
     WindowStyle(
         isDarkTheme = FluentTheme.colors.darkMode,
-        backdropType = when {
+        when {
             isWindows11OrLater() -> WindowBackdrop.Mica
             else -> WindowBackdrop.Solid(FluentTheme.colors.background.mica.baseAlt)
-        }
+        },
+        frameStyle = WindowFrameStyle(cornerPreference = WindowCornerPreference.SMALL_ROUNDED)
     )
 
-    val paddingInset = remember { MutableWindowInsets() }
+    val paddingInset = remember { MutableWindowInsets(WindowInsets(0)) }
     val maxButtonRect = remember { mutableStateOf(Rect.Zero) }
     val captionBarRect = remember { mutableStateOf(Rect.Zero) }
     val layoutHitTestOwner = rememberLayoutHitTestOwner()
@@ -115,13 +117,13 @@ fun FrameWindowScope.WindowsWindowFrame(
                 when {
                     maxButtonRect.value.contains(x, y) -> HTMAXBUTTON
                     captionBarRect.value.contains(x, y) && !layoutHitTestOwner.hitTest(x, y) -> HTCAPTION
-
                     else -> HTCLIENT
                 }
             },
             onWindowInsetUpdate = { paddingInset.insets = it }
         )
     }
+
     Box(
         modifier = Modifier.windowInsetsPadding(paddingInset)
     ) {

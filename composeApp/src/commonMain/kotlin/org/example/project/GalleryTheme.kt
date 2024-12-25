@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.BrushPainter
 import androidx.compose.ui.layout.ContentScale
+import com.konyaco.fluent.*
+import com.konyaco.fluent.background.Mica
 
 val LocalStore = compositionLocalOf<Stored> { error("Not provided") }
 
@@ -33,11 +35,13 @@ class Stored(
 //    var navigationDisplayMode by mutableStateOf(NavigationDisplayMode.Left)
 }
 
+@OptIn(ExperimentalFluentApi::class)
 @Composable
 fun GalleryTheme(
     displayMicaLayer: Boolean = true,
     content: @Composable () -> Unit
 ) {
+
     val systemDarkMode = isSystemInDarkTheme()
 
     val store = remember {
@@ -54,8 +58,43 @@ fun GalleryTheme(
     CompositionLocalProvider(
         LocalStore provides store
     ) {
-        org.example.project.ui.GalleryTheme(displayMicaLayer,store.darkMode, store.enabledAcrylicPopup, store.compactMode) {
-            content()
+        FluentTheme(
+            colors = if (store.darkMode) darkColors() else lightColors(),
+            useAcrylicPopup = store.enabledAcrylicPopup,
+            compactMode = store.compactMode
+        ) {
+            if (displayMicaLayer) {
+                val gradient = if (store.darkMode) {
+                    listOf(
+                        Color(0xff282C51),
+                        Color(0xff2A344A),
+                    )
+                } else {
+                    listOf(
+                        Color(0xffB1D0ED),
+                        Color(0xffDAE3EC),
+                    )
+                }
+
+                Mica(
+//                    background = {
+//                        Image(
+//                            painter = BrushPainter(Brush.linearGradient(gradient)),
+//                            contentDescription = null,
+//                            contentScale = ContentScale.FillBounds
+//                        )
+//                    },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    content()
+                }
+            } else {
+                CompositionLocalProvider(
+                    LocalContentColor provides FluentTheme.colors.text.text.primary,
+                    content = content
+                )
+            }
         }
     }
+
 }
