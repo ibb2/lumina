@@ -175,7 +175,7 @@ class EmailsDataSource(db: LuminaDatabase) {
     fun deleteEmail(id: Long) = queries.deleteEmail(id)
 
     // Search
-    private val all: List<EmailsDAO>
+    private val all: Flow<List<EmailsDAO>>
         get() = queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
@@ -198,9 +198,9 @@ class EmailsDataSource(db: LuminaDatabase) {
                 hasAttachments = hasAttachments ?: false,
                 account = account
             )
-        }).executeAsList()
+        }).asFlow().mapToList(Dispatchers.IO)
 
-    fun search(query: String): List<EmailsDAO> {
+    fun search(query: String): Flow<List<EmailsDAO>> {
         return if (query.isEmpty()) {
             all
         } else {
@@ -229,7 +229,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                         account = account
                     )
                 }
-            ).executeAsList()
+            ).asFlow().mapToList(Dispatchers.IO)
         }
     }
 

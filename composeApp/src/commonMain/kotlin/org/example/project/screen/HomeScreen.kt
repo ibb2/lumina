@@ -9,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
 import cafe.adriel.voyager.core.screen.Screen
@@ -34,40 +33,39 @@ import org.example.project.ui.platformSpecific.PlatformSpecificTextField
 import org.example.project.utils.NetworkError
 
 data class HomeScreen(
-    val client: FirebaseAuthClient,
-    val emailService: EmailService,
-    val authentication: Authentication,
-    val driver: SqlDriver,
+        val client: FirebaseAuthClient,
+        val emailService: EmailService,
+        val authentication: Authentication,
+        val driver: SqlDriver,
 ) : Screen {
 
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         Main(
-            client = client,
-            emailService = emailService,
-            authentication = authentication,
-            driver = driver,
-            localNavigator = navigator
+                client = client,
+                emailService = emailService,
+                authentication = authentication,
+                driver = driver,
+                localNavigator = navigator
         )
     }
 
     @Composable
     fun Main(
-        client: FirebaseAuthClient,
-        emailService: EmailService,
-        authentication: Authentication,
-        driver: SqlDriver,
-        localNavigator: Navigator
+            client: FirebaseAuthClient,
+            emailService: EmailService,
+            authentication: Authentication,
+            driver: SqlDriver,
+            localNavigator: Navigator
     ) {
 
         // db related stuff
-        val database = LuminaDatabase(
-            driver,
-            EmailsAdapter = Emails.Adapter(
-                attachments_countAdapter = IntColumnAdapter
-            )
-        )
+        val database =
+                LuminaDatabase(
+                        driver,
+                        EmailsAdapter = Emails.Adapter(attachments_countAdapter = IntColumnAdapter)
+                )
 
         // Theme
         val isSystemInDarkMode = isSystemInDarkTheme()
@@ -80,32 +78,18 @@ data class HomeScreen(
         val scope = rememberCoroutineScope()
 
         var r by remember { mutableStateOf<OAuthResponse?>(null) }
-        var e by remember {
-            mutableStateOf<NetworkError?>(null)
-        }
+        var e by remember { mutableStateOf<NetworkError?>(null) }
 
         authentication.amILoggedIn(accountsDataSource)
 
         val accounts = remember { mutableStateOf(authentication.getAccounts(accountsDataSource)) }
-        val emailServiceManager = remember {
-            EmailServiceManager(
-                emailService,
-                emailDataSource
-            )
-        }
+        val emailServiceManager = remember { EmailServiceManager(emailService, emailDataSource) }
 
         LaunchedEffect(accounts.value) {
             withContext(Dispatchers.Default) {
-                emailServiceManager.syncEmails(
-                    accounts.value
-                )
-                emailServiceManager.getFolders(
-                    accounts.value
-                )
-                emailServiceManager.watchEmails(
-                    accounts.value,
-                    emailDataSource
-                )
+                emailServiceManager.syncEmails(accounts.value)
+                emailServiceManager.getFolders(accounts.value)
+                emailServiceManager.watchEmails(accounts.value, emailDataSource)
             }
         }
 
@@ -119,70 +103,86 @@ data class HomeScreen(
         // Change how you handle emailsFlow
         LaunchedEffect(Unit) {
             println("Setting up email flow collection")
-            emailDataSource.emailsFlow
-                .collect { emails ->
-                    println("CRITICAL DEBUG: Collected ${emails.size} emails")
-                    // Use withContext to ensure UI update happens on Main dispatcher
-                    withContext(Dispatchers.Main) {
-                        allEmails.value = emails
-                    }
-                }
+            emailDataSource.emailsFlow.collect { emails ->
+                println("CRITICAL DEBUG: Collected ${emails.size} emails")
+                // Use withContext to ensure UI update happens on Main dispatcher
+                withContext(Dispatchers.Main) { allEmails.value = emails }
+            }
         }
 
         val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
-        var searchQuery by remember { mutableStateOf("") }
+
+        // Search
+        var searchQuery by remember { mutableStateOf(TextFieldValue()) }
         var isDeleting by remember { mutableStateOf(false) }
 
         LaunchedEffect(searchQuery) {
-            emailServiceManager.search(searchQuery, isDeleting)
+            if (searchQuery.text.isEmpty()) {
+                // Reset to original emails when search is cleared
+                allEmails.value = emails
+                return@LaunchedEffect
+            }
+
+            // Track if backspace was pressed
+            val isDeleting = searchQuery.text.length < (searchQuery.text.length)
+
+            try {
+                // Store original emails before search if this is first character
+                if (searchQuery.text.length == 1 && !isDeleting) {
+                    allEmails.value = emails
+                }
+
+                // Perform search
+                emailDataSource.search(searchQuery.text).collect { results ->
+                    withContext(Dispatchers.Main) { allEmails.value = results }
+                }
+            } catch (e: Exception) {
+                println("Search failed: ${e.message}")
+            }
         }
 
         // UI with sync indicator
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(16.dp).fillMaxSize()
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(16.dp).fillMaxSize()
         ) {
-
-            var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-
             fun updateTextFieldValue(newValue: TextFieldValue) {
-                textFieldValue = newValue
+                searchQuery = newValue
             }
 
             Box(modifier = Modifier.fillMaxWidth(.7f), contentAlignment = Alignment.Center) {
-                PlatformSpecificTextField(Modifier, textFieldValue) {
-                    updateTextFieldValue(it)
-                }
+                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
             }
 
-//            if (folders.size > 0) {
-//                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
-//                    itemsIndexed(folders) { _, it ->
-//                        Row {
-//                            val isSelected = selectedFolders.value.contains(it.name)
-//                            val color = if (isSelected) Color.Green else Color.White
-//                            Button(
-//                                onClick = {
-//                                    println("Folder selected ${it.name}")
-//                                    val currentFolders = selectedFolders.value.toMutableList()
-//                                    if (currentFolders.contains(it.name)) {
-//                                        currentFolders.remove(it.name)
-//                                    } else {
-//                                        currentFolders.add(it.name)
-//                                    }
-//                                    // Update the entire list
-//                                    selectedFolders.value = currentFolders
-//                                },
-//                                colors = ButtonDefaults.buttonColors(color)
-//                            ) {
-//                                Text(it.name)
-//                            }
-//                        }
-//                        Divider(modifier = Modifier.width(4.dp))
-//                    }
-//                }
-//            }
+            //            if (folders.size > 0) {
+            //                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
+            //                    itemsIndexed(folders) { _, it ->
+            //                        Row {
+            //                            val isSelected = selectedFolders.value.contains(it.name)
+            //                            val color = if (isSelected) Color.Green else Color.White
+            //                            Button(
+            //                                onClick = {
+            //                                    println("Folder selected ${it.name}")
+            //                                    val currentFolders =
+            // selectedFolders.value.toMutableList()
+            //                                    if (currentFolders.contains(it.name)) {
+            //                                        currentFolders.remove(it.name)
+            //                                    } else {
+            //                                        currentFolders.add(it.name)
+            //                                    }
+            //                                    // Update the entire list
+            //                                    selectedFolders.value = currentFolders
+            //                                },
+            //                                colors = ButtonDefaults.buttonColors(color)
+            //                            ) {
+            //                                Text(it.name)
+            //                            }
+            //                        }
+            //                        Divider(modifier = Modifier.width(4.dp))
+            //                    }
+            //                }
+            //            }
 
             if (isSyncing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -194,21 +194,19 @@ data class HomeScreen(
             }
 
             displayEmails(
-                accounts = accounts.value,
-                selectedFolders = selectedFolders,
-                emails = allEmails.value.toMutableList(),
-                attachments = attachments,
-                emailDataSource = emailDataSource,
-                client = client,
-                emailService = emailService,
-                authentication = authentication,
-                driver = driver,
-                localNavigator = localNavigator,
-                accountsDataSource = accountsDataSource,
-                attachmentsDataSource = attachmentsDataSource,
+                    accounts = accounts.value,
+                    selectedFolders = selectedFolders,
+                    emails = allEmails.value.toMutableList(),
+                    attachments = attachments,
+                    emailDataSource = emailDataSource,
+                    client = client,
+                    emailService = emailService,
+                    authentication = authentication,
+                    driver = driver,
+                    localNavigator = localNavigator,
+                    accountsDataSource = accountsDataSource,
+                    attachmentsDataSource = attachmentsDataSource,
             )
         }
     }
-
 }
-

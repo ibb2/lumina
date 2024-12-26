@@ -130,9 +130,6 @@ data class SettingsScreen(
         var searchQuery by remember { mutableStateOf("") }
         var isDeleting by remember { mutableStateOf(false) }
 
-        LaunchedEffect(searchQuery) {
-            emailServiceManager.search(searchQuery, isDeleting)
-        }
 
         FluentThemeEntry {
             Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {

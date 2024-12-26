@@ -323,44 +323,44 @@ class EmailServiceManager(
         }
     }
 
-    suspend fun search(search: String, deleting: Boolean) {
-        println("Searching... $search $deleting")
-        if (search.isEmpty()) {
-            _emails.value = mutableListOf()
-            _emails.value.addAll(_search.value)
-            _isSearching.value = false
-            return
-        }
-
-        if (search.length == 1 && !deleting) {
-            _search.value.addAll(emails.value)
-        }
-
-        _isSearching.value = true
-
-        try {
-
-            // Perform email sync in parallel
-            val searchResults = coroutineScope {
-                async {
-                    emailService.searchEmails(
-                        query = search,
-                    )
-                }
-                    .await()
-            }
-
-            println("Results ${searchResults}")
-
-            _emails.value.clear()
-            _emails.value.addAll(searchResults)
-        } catch (e: Exception) {
-            // Log error or handle synchronization failure
-            println("Search failed: ${e.message}")
-        } finally {
-            _isSyncing.value = false
-        }
-    }
+//    suspend fun search(search: String, deleting: Boolean) {
+//        println("Searching... $search $deleting")
+//        if (search.isEmpty()) {
+//            _emails.value = mutableListOf()
+//            _emails.value.addAll(_search.value)
+//            _isSearching.value = false
+//            return
+//        }
+//
+//        if (search.length == 1 && !deleting) {
+//            _search.value.addAll(emails.value)
+//        }
+//
+//        _isSearching.value = true
+//
+//        try {
+//
+//            // Perform email sync in parallel
+//            val searchResults = coroutineScope {
+//                async {
+//                    emailService.searchEmails(
+//                        query = search,
+//                    )
+//                }
+//                    .await()
+//            }
+//
+//            println("Results ${searchResults}")
+//
+//            _emails.value.clear()
+//            _emails.value.addAll(searchResults)
+//        } catch (e: Exception) {
+//            // Log error or handle synchronization failure
+//            println("Search failed: ${e.message}")
+//        } finally {
+//            _isSyncing.value = false
+//        }
+//    }
 
     suspend fun watchEmails(
         accounts: MutableList<AccountsDAO>,
@@ -930,8 +930,6 @@ expect class EmailService(
     ): Pair<StateFlow<List<EmailsDAO>>, StateFlow<List<AttachmentsDAO>>>
 
     suspend fun watchEmails(emailAddress: String, dataSource: EmailsDataSource)
-
-    suspend fun searchEmails(query: String): List<EmailsDAO>
 
     suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO>
 

@@ -391,15 +391,6 @@ actual class EmailService actual constructor(
         return nbMessages
     }
 
-    actual suspend fun searchEmails(query: String): List<EmailsDAO> {
-
-        val matchingEmails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
-
-        val search = emailDataSource.search(query)
-        println("Function $search")
-        return search
-    }
-
     actual fun readEmail(
         email: EmailsDAO,
         emailsDataSource: EmailsDataSource,

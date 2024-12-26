@@ -1241,3 +1241,8 @@
 [1226/150844.502:WARNING:value_store_frontend.cc(47)] Reading mhjfbmdgcfjbbpaeojofohoefgiehjai.alarms from  failed: IO error: .../LOCK: File currently in use. (ChromeMethodBFE: 15::LockFile::2)
 [1226/150907.911:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
 [1226/150948.949:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1226/155725.708:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1226/155904.047:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1226/160156.084:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1226/160356.429:ERROR:gpu_init.cc(525)] Passthrough is not supported, GL is disabled, ANGLE is 
+[1226/162936.940:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
