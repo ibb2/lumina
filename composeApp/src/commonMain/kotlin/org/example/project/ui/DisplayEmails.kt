@@ -22,13 +22,13 @@ import com.multiplatform.webview.util.KLogSeverity
 import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.*
 import org.example.project.Authentication
 import org.example.project.EmailService
 import org.example.project.deleteEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.read
-import org.example.project.screen.SettingsScreen
 import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
@@ -37,25 +37,24 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.*
 import org.example.project.ui.platformSpecific.emails.emailsDialog
-import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun displayEmails(
-    accounts: List<AccountsDAO>,
-    selectedFolders: MutableState<List<String>>,
-    emails: MutableList<EmailsDAO>,
-    attachments: MutableList<AttachmentsDAO>,
-    emailDataSource: EmailsDataSource,
-    emailService: EmailService,
-    localNavigator: Navigator,
-    authentication: Authentication,
-    client: FirebaseAuthClient,
-    driver: SqlDriver,
-    accountsDataSource: AccountsDataSource,
-    attachmentsDataSource: AttachmentsDataSource,
+        accounts: List<AccountsDAO>,
+        selectedFolders: MutableState<List<String>>,
+        emails: MutableList<EmailsDAO>,
+        attachments: MutableList<AttachmentsDAO>,
+        emailDataSource: EmailsDataSource,
+        emailService: EmailService,
+        localNavigator: Navigator,
+        authentication: Authentication,
+        client: FirebaseAuthClient,
+        driver: SqlDriver,
+        accountsDataSource: AccountsDataSource,
+        attachmentsDataSource: AttachmentsDataSource,
 ) {
 
-//    val localNavigator = LocalNavigator.currentOrThrow
+    //    val localNavigator = LocalNavigator.currentOrThrow
 
     var display: Boolean by remember { mutableStateOf(false) }
     var emailFromUser: String by remember { mutableStateOf("") }
@@ -84,19 +83,17 @@ fun displayEmails(
         state.webSettings.apply {
             logSeverity = KLogSeverity.Debug
             customUserAgentString =
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like Gecko) Version/14.3.43 Safari/625.20"
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1) AppleWebKit/625.20 (KHTML, like Gecko) Version/14.3.43 Safari/625.20"
         }
     }
     val navigator = rememberWebViewNavigator()
-    var textFieldValue by remember(state.lastLoadedUrl) {
-        mutableStateOf(state.lastLoadedUrl)
-    }
+    var textFieldValue by remember(state.lastLoadedUrl) { mutableStateOf(state.lastLoadedUrl) }
 
     val loadingState = state.loadingState
     if (loadingState is LoadingState.Loading) {
         LinearProgressIndicator(
-            progress = loadingState.progress,
-            modifier = Modifier.fillMaxWidth(),
+                progress = loadingState.progress,
+                modifier = Modifier.fillMaxWidth(),
         )
     }
 
@@ -110,9 +107,7 @@ fun displayEmails(
         val validAccountEmails = accounts.map { it.email }.toSet()
 
         // Remove emails that don't belong to current accounts
-        emails.removeAll { email ->
-            email.account !in validAccountEmails
-        }
+        emails.removeAll { email -> email.account !in validAccountEmails }
 
         // Similarly, remove orphaned attachments
         attachments.removeAll { attachment ->
@@ -121,28 +116,30 @@ fun displayEmails(
         }
     }
 
-    val allEmails = remember(selectedFolders.value, emails) {
-        if (selectedFolders.value.isNotEmpty()) {
-            emails.filter { email -> email.folderName in selectedFolders.value }
-        } else {
-            emails
-        }
-    }
+    val allEmails =
+            remember(selectedFolders.value, emails) {
+                if (selectedFolders.value.isNotEmpty()) {
+                    emails.filter { email -> email.folderName in selectedFolders.value }
+                } else {
+                    emails
+                }
+            }
 
     Box(contentAlignment = Alignment.BottomEnd) {
-        Row(modifier = Modifier.padding(end = 16.dp).zIndex(10f), horizontalArrangement = Arrangement.End) {
-            PlatformSpecificButton(onClick = {
-                sendEmail = true
-            }) {
-                Text(text = "Send Email")
-            }
-        }
+        Row(
+                modifier = Modifier.padding(end = 16.dp).zIndex(10f),
+                horizontalArrangement = Arrangement.End
+        ) { PlatformSpecificButton(onClick = { sendEmail = true }) { Text(text = "Send Email") } }
         Row(verticalAlignment = Alignment.Bottom) {
             ScrollArea(state = scrollState) {
-                LazyColumn(state = lazyListState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                LazyColumn(
+                        state = lazyListState,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     itemsIndexed(allEmails) { index, email ->
-
-                        val emailAddress = accounts.find { it.email == email.account }?.email ?: "Unknown Account"
+                        val emailAddress =
+                                accounts.find { it.email == email.account }?.email
+                                        ?: "Unknown Account"
                         var isRead by remember { mutableStateOf(email.isRead) }
                         println("Emails ${email.subject}")
 
@@ -150,66 +147,88 @@ fun displayEmails(
                         val markAsRead = {
                             CoroutineScope(Dispatchers.IO).launch {
                                 isRead =
-                                    read(email, emailDataSource, emailService, emailAddress)
-                                        ?: false
+                                        read(email, emailDataSource, emailService, emailAddress)
+                                                ?: false
                             }
                         }
                         PlatformSpecificEmailCard(Modifier, displayEmail) {
                             Column() {
                                 PlatformSpecificText("${email.senderAddress} -> $emailAddress")
                                 PlatformSpecificText(
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                    text = if (email.subject.length > 60) {
-                                        email.subject.substring(0, 50) + "..."
-                                    } else {
-                                        email.subject
-                                    }
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                        text =
+                                                if (email.subject.length > 60) {
+                                                    email.subject.substring(0, 50) + "..."
+                                                } else {
+                                                    email.subject
+                                                }
                                 )
                                 //                                PlatformSpecificText(
-                                //                                    modifier = Modifier.padding(vertical = 8.dp),
-                                //                                    text = if (email.body.length > 100) {
-                                //                                        // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
-                                //                                        email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) + "..."
+                                //                                    modifier =
+                                // Modifier.padding(vertical = 8.dp),
+                                //                                    text = if (email.body.length >
+                                // 100) {
+                                //                                        //
+                                // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
+                                //
+                                // email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) +
+                                // "..."
                                 //                                    } else {
                                 //                                        email.body
                                 //                                    }
                                 //                                )
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                PlatformSpecificMarkAsRead(Modifier, isRead, {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        isRead =
-                                            read(email, emailDataSource, emailService, emailAddress)
-                                                ?: false
-                                    }
-                                })
-                                PlatformSpecificDelete(Modifier, onClick = {
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                        deleteEmail(email, emailDataSource, emailService, emailAddress)
-                                        // Remove email on the main thread
-                                        withContext(Dispatchers.Main) {
-                                            emails.remove(email)
+                                PlatformSpecificMarkAsRead(
+                                        Modifier,
+                                        isRead,
+                                        {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                isRead =
+                                                        read(
+                                                                email,
+                                                                emailDataSource,
+                                                                emailService,
+                                                                emailAddress
+                                                        )
+                                                                ?: false
+                                            }
                                         }
-                                    }
-                                })
+                                )
+                                PlatformSpecificDelete(
+                                        Modifier,
+                                        onClick = {
+                                            CoroutineScope(Dispatchers.IO).launch {
+                                                deleteEmail(
+                                                        email,
+                                                        emailDataSource,
+                                                        emailService,
+                                                        emailAddress
+                                                )
+                                                // Remove email on the main thread
+                                                withContext(Dispatchers.Main) {
+                                                    emails.remove(email)
+                                                }
+                                            }
+                                        }
+                                )
                             }
                             if (attachments.any { it.emailId === email.id }) {
                                 Row {
-                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+                                    attachments.filter { it.emailId === email.id }.forEach {
+                                            attachment ->
                                         Row {
                                             Text(
-                                                text = attachment.fileName,
-                                                modifier = Modifier
-                                                    .padding(8.dp)
+                                                    text = attachment.fileName,
+                                                    modifier = Modifier.padding(8.dp)
                                             )
                                             Text(
-                                                text = attachment.size.toString(), modifier = Modifier
-                                                    .padding(8.dp)
-
+                                                    text = attachment.size.toString(),
+                                                    modifier = Modifier.padding(8.dp)
                                             )
                                             Text(
-                                                text = attachment.mimeType, modifier = Modifier
-                                                    .padding(8.dp)
+                                                    text = attachment.mimeType,
+                                                    modifier = Modifier.padding(8.dp)
                                             )
                                         }
                                     }
@@ -220,102 +239,109 @@ fun displayEmails(
                 }
                 VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
                     Thumb(
-                        modifier = Modifier.background(Color.Black.copy(0.3f), RoundedCornerShape(100)),
-                        thumbVisibility = ThumbVisibility.HideWhileIdle(
-                            enter = fadeIn(),
-                            exit = fadeOut(),
-                            hideDelay = 1.seconds
-                        )
+                            modifier =
+                                    Modifier.background(
+                                            Color.Black.copy(0.3f),
+                                            RoundedCornerShape(100)
+                                    ),
+                            thumbVisibility =
+                                    ThumbVisibility.HideWhileIdle(
+                                            enter = fadeIn(),
+                                            exit = fadeOut(),
+                                            hideDelay = 1.seconds
+                                    )
                     )
                 }
             }
         }
     }
 
-    emailsDialog(display, emailFromUser, emailSubject, emailContent)
-
-//    if (sendEmail) {
-//        var sendEmailFrom by remember { mutableStateOf("") }
-//        var sendEmailTo by remember { mutableStateOf("") }
-//        var sendEmailSubject by remember { mutableStateOf("") }
-//        var sendEmailBody by remember { mutableStateOf("") }
-//
-//        fun sendEmail() {
-//            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject, $sendEmailBody")
-//            var sentEmailSuccess = false
-//            CoroutineScope(Dispatchers.IO).launch {
-//                sentEmailSuccess = emailService.sendNewEmail(
-//                    emailDataSource,
-//                    NewEmail(
-//                        from = sendEmailFrom,
-//                        to = sendEmailTo,
-//                        subject = sendEmailSubject,
-//                        body = sendEmailBody
-//                    ),
-//                    sendEmailFrom
-//                )
-//            }
-//
-//            println("Email sent successfully? $sentEmailSuccess")
-//
-//            sendEmail = false
-//        }
-//
-//        Dialog(
-//            onDismissRequest = { sendEmail = false },
-//            properties = DialogProperties(
-//                dismissOnBackPress = true,
-//                dismissOnClickOutside = true,
-//                usePlatformDefaultWidth = false
-//            ),
-//        ) {
-//            // Draw a rectangle shape with rounded corners inside the dialog
-//            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
-//                Card(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .height(525.dp)
-//                        .padding(16.dp),
-//                    shape = RoundedCornerShape(16.dp),
-//                ) {
-//                    Column(
-//                        modifier = Modifier
-//                            .fillMaxSize(),
-//                        verticalArrangement = Arrangement.Center,
-//                        horizontalAlignment = Alignment.CenterHorizontally,
-//                    ) {
-//                        TextField(
-//                            label = { Text("From") },
-//                            value = sendEmailFrom,
-//                            onValueChange = { sendEmailFrom = it },
-//                            modifier = Modifier.padding(16.dp),
-//                        )
-//                        TextField(
-//                            label = { Text("To") },
-//                            value = sendEmailTo,
-//                            onValueChange = { sendEmailTo = it },
-//                            modifier = Modifier.padding(16.dp)
-//                        )
-//                        TextField(
-//                            label = { Text("Subject") },
-//                            value = sendEmailSubject,
-//                            onValueChange = { sendEmailSubject = it },
-//                            modifier = Modifier.padding(16.dp)
-//                        )
-//                        TextField(
-//                            label = { Text("Body") },
-//                            value = sendEmailBody,
-//                            onValueChange = { sendEmailBody = it },
-//                            modifier = Modifier.padding(16.dp),
-//                        )
-//                        Button(onClick = {
-//                            sendEmail()
-//                        }) {
-//                            Text(text = "Send")
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
+    Box(modifier = Modifier.padding(vertical = 32.dp)) {
+        emailsDialog(display, emailFromUser, emailSubject, emailContent) { display = false }
+    }
+    //    if (sendEmail) {
+    //        var sendEmailFrom by remember { mutableStateOf("") }
+    //        var sendEmailTo by remember { mutableStateOf("") }
+    //        var sendEmailSubject by remember { mutableStateOf("") }
+    //        var sendEmailBody by remember { mutableStateOf("") }
+    //
+    //        fun sendEmail() {
+    //            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject,
+    // $sendEmailBody")
+    //            var sentEmailSuccess = false
+    //            CoroutineScope(Dispatchers.IO).launch {
+    //                sentEmailSuccess = emailService.sendNewEmail(
+    //                    emailDataSource,
+    //                    NewEmail(
+    //                        from = sendEmailFrom,
+    //                        to = sendEmailTo,
+    //                        subject = sendEmailSubject,
+    //                        body = sendEmailBody
+    //                    ),
+    //                    sendEmailFrom
+    //                )
+    //            }
+    //
+    //            println("Email sent successfully? $sentEmailSuccess")
+    //
+    //            sendEmail = false
+    //        }
+    //
+    //        Dialog(
+    //            onDismissRequest = { sendEmail = false },
+    //            properties = DialogProperties(
+    //                dismissOnBackPress = true,
+    //                dismissOnClickOutside = true,
+    //                usePlatformDefaultWidth = false
+    //            ),
+    //        ) {
+    //            // Draw a rectangle shape with rounded corners inside the dialog
+    //            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
+    //                Card(
+    //                    modifier = Modifier
+    //                        .fillMaxWidth()
+    //                        .height(525.dp)
+    //                        .padding(16.dp),
+    //                    shape = RoundedCornerShape(16.dp),
+    //                ) {
+    //                    Column(
+    //                        modifier = Modifier
+    //                            .fillMaxSize(),
+    //                        verticalArrangement = Arrangement.Center,
+    //                        horizontalAlignment = Alignment.CenterHorizontally,
+    //                    ) {
+    //                        TextField(
+    //                            label = { Text("From") },
+    //                            value = sendEmailFrom,
+    //                            onValueChange = { sendEmailFrom = it },
+    //                            modifier = Modifier.padding(16.dp),
+    //                        )
+    //                        TextField(
+    //                            label = { Text("To") },
+    //                            value = sendEmailTo,
+    //                            onValueChange = { sendEmailTo = it },
+    //                            modifier = Modifier.padding(16.dp)
+    //                        )
+    //                        TextField(
+    //                            label = { Text("Subject") },
+    //                            value = sendEmailSubject,
+    //                            onValueChange = { sendEmailSubject = it },
+    //                            modifier = Modifier.padding(16.dp)
+    //                        )
+    //                        TextField(
+    //                            label = { Text("Body") },
+    //                            value = sendEmailBody,
+    //                            onValueChange = { sendEmailBody = it },
+    //                            modifier = Modifier.padding(16.dp),
+    //                        )
+    //                        Button(onClick = {
+    //                            sendEmail()
+    //                        }) {
+    //                            Text(text = "Send")
+    //                        }
+    //                    }
+    //                }
+    //            }
+    //        }
+    //    }
 }
