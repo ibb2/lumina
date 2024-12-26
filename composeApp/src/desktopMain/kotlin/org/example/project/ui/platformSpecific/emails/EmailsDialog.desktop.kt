@@ -1,31 +1,20 @@
 package org.example.project.ui.platformSpecific.emails
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
-import com.composables.core.rememberScrollAreaState
-import com.konyaco.fluent.component.DialogSize
-import com.konyaco.fluent.component.FluentDialog
-import com.multiplatform.webview.util.KLogSeverity
 import com.multiplatform.webview.web.LoadingState
 import com.multiplatform.webview.web.WebView
-import com.multiplatform.webview.web.rememberWebViewNavigator
 import com.multiplatform.webview.web.rememberWebViewStateWithHTMLData
-import org.example.project.shared.data.EmailsDAO
-import org.example.project.ui.platformSpecific.PlatformSpecificCard
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 
 @Composable
 actual fun emailsDialog(
@@ -36,42 +25,95 @@ actual fun emailsDialog(
     onDismiss: () -> Unit
 ) {
     if (visible) {
-        DialogWindow(
-            onCloseRequest = onDismiss,
-            title = "Email Details",
-            state = rememberDialogState(width = 800.dp, height = 600.dp)
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties =
+                DialogProperties(
+                    dismissOnClickOutside = true,
+                    dismissOnBackPress = true,
+                    usePlatformDefaultWidth =
+                        false // This allows us to control the width
+                )
         ) {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                // Email header section
-                Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                    Text(
-                        text = "From: $emailFromUser",
-                        style = MaterialTheme.typography.subtitle1,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Text(
-                        text = "Subject: $emailSubject",
-                        style = MaterialTheme.typography.h6,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    Divider()
-                }
-
-                // Email content section
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    val state = rememberWebViewStateWithHTMLData(emailContent)
-
-                    // Loading indicator
-                    val loadingState = state.loadingState
-                    if (loadingState is LoadingState.Loading) {
-                        LinearProgressIndicator(
-                            progress = loadingState.progress,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+            Surface(
+                modifier =
+                    Modifier.fillMaxWidth(
+                        0.60f
+                    ) // Increased width to better fit email content
+                        .fillMaxHeight(0.80f),
+                shape = MaterialTheme.shapes.medium,
+                elevation = 24.dp
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    TopAppBar(backgroundColor = MaterialTheme.colors.surface, elevation = 0.dp) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Email Details", style = MaterialTheme.typography.h6)
+                            IconButton(
+                                onClick = {
+                                    onDismiss()
+                                    // Force recomposition to clear any lingering content
+//                                    rememberCoroutineScope1().launch { delay(100) }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBack,
+                                    contentDescription = "Close"
+                                )
+                            }
+                        }
                     }
 
-                    // WebView for email content
-                    WebView(state = state, modifier = Modifier.fillMaxSize())
+                    Column(modifier = Modifier.weight(1f).padding(16.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                            Text(
+                                text = "From: $emailFromUser",
+                                style = MaterialTheme.typography.subtitle1,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Text(
+                                text = "Subject: $emailSubject",
+                                style = MaterialTheme.typography.h6,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                            Divider()
+                        }
+
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            val state = rememberWebViewStateWithHTMLData(emailContent)
+
+                            val loadingState = state.loadingState
+                            if (loadingState is LoadingState.Loading) {
+                                LinearProgressIndicator(
+                                    progress = loadingState.progress,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            WebView(
+                                state = state,
+                                modifier = Modifier.fillMaxSize(),
+                                captureBackPresses =
+                                    false // Prevents WebView from capturing back presses
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Button(
+                            onClick = {
+                                onDismiss()
+                                // Force recomposition to clear any lingering content
+//                                rememberCoroutineScope().launch { delay(100) }
+                            }
+                        ) { Text("Close") }
+                    }
                 }
             }
         }

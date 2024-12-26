@@ -1261,3 +1261,24 @@
 [1227/030945.861:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
 [1227/041805.008:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
 [1227/041820.822:WARNING:net_errors_win.cc(119)] Unknown error 10055 mapped to net::ERR_FAILED
+[1227/042025.913:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/042122.457:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/042549.275:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/042714.135:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/042716.167:WARNING:value_store_frontend.cc(47)] Reading mhjfbmdgcfjbbpaeojofohoefgiehjai.alarms from  failed: IO error: .../LOCK: File currently in use. (ChromeMethodBFE: 15::LockFile::2)
+[1227/042739.239:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1227/042739.239:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1227/042739.241:ERROR:disk_cache.cc(205)] Unable to create cache
+[1227/042739.241:ERROR:gpu_disk_cache.cc(673)] Gpu Cache Creation failed: -2
+[1227/042739.241:ERROR:disk_cache.cc(205)] Unable to create cache
+[1227/042739.241:ERROR:gpu_disk_cache.cc(673)] Gpu Cache Creation failed: -2
+[1227/042739.286:ERROR:cache_util_win.cc(20)] Unable to move the cache: Access is denied. (0x5)
+[1227/042739.286:ERROR:disk_cache.cc(205)] Unable to create cache
+[1227/042749.730:ERROR:gpu_init.cc(525)] Passthrough is not supported, GL is disabled, ANGLE is 
+[1227/042817.404:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/042943.802:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/043144.152:ERROR:gpu_init.cc(525)] Passthrough is not supported, GL is disabled, ANGLE is 
+[1227/043154.217:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/043352.385:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/043429.832:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/044042.660:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
