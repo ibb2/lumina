@@ -21,20 +21,20 @@ actual fun PlatformSpecificEmailCard(
     displayEmail: () -> Unit,
     content: @Composable () -> Unit
 ) {
-        Column(modifier = Modifier.padding(end = 16.dp)) {
-            Row(modifier.widthIn(max = 800.dp)) {
-                LocalContentColor provides FluentTheme.colors.text.text.primary
-                Card(modifier.clickable {
-                    displayEmail()
-                }) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                content()
-                            }
+    Column(modifier = Modifier.padding(end = 16.dp)) {
+        Row(modifier.widthIn(max = 800.dp)) {
+            LocalContentColor provides FluentTheme.colors.text.text.primary
+            Card(modifier.clickable {
+                displayEmail()
+            }) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    content()
                 }
             }
         }
+    }
 }

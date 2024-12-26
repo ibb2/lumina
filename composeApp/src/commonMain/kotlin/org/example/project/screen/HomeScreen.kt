@@ -140,29 +140,17 @@ data class HomeScreen(
         // UI with sync indicator
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.padding(16.dp).fillMaxHeight()
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(16.dp).fillMaxSize()
         ) {
 
-            Box( contentAlignment = Alignment.Center) {
+            var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
 
-//                TextField(
-//                    modifier = Modifier.border(BorderStroke(0.dp, Color.Transparent), CircleShape),
-//                    value = searchQuery,
-//                    onValueChange = {
-//                        isDeleting = searchQuery.length > it.length
-//                        searchQuery = it
-//                    },
-//                    label = { Text("Search") },
-////                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
-//                )
+            fun updateTextFieldValue(newValue: TextFieldValue) {
+                textFieldValue = newValue
+            }
 
-                var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-
-                fun updateTextFieldValue(newValue: TextFieldValue) {
-                    textFieldValue = newValue
-                }
-
+            Box(modifier = Modifier.fillMaxWidth(.7f), contentAlignment = Alignment.Center) {
                 PlatformSpecificTextField(Modifier, textFieldValue) {
                     updateTextFieldValue(it)
                 }
