@@ -36,6 +36,7 @@ import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.*
+import org.example.project.ui.platformSpecific.emails.emailsDialog
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -231,115 +232,7 @@ fun displayEmails(
         }
     }
 
-//    if (display) {
-//        Dialog(
-//            onDismissRequest = { display = false },
-//            properties = DialogProperties(
-//                dismissOnBackPress = true,
-//                dismissOnClickOutside = true,
-//                usePlatformDefaultWidth = false
-//            ),
-//        ) {
-//            // Draw a rectangle shape with rounded corners inside the dialog
-//            Surface(modifier = Modifier.fillMaxSize(0.6f)) {
-//                Card(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .height(525.dp)
-//                        .padding(16.dp),
-//                    shape = RoundedCornerShape(16.dp),
-//                ) {
-//                    Column {
-//                        TopAppBar(
-//                            title = { Text(text = "WebView Sample") },
-//                            navigationIcon = {
-//                                if (navigator.canGoBack) {
-//                                    IconButton(onClick = { navigator.navigateBack() }) {
-//                                        Icon(
-//                                            imageVector = Icons.Default.ArrowBack,
-//                                            contentDescription = "Back",
-//                                        )
-//                                    }
-//                                }
-//                            },
-//                        )
-//
-//                        Row {
-//                            Box(modifier = Modifier.weight(1f)) {
-//                                if (state.errorsForCurrentRequest.isNotEmpty()) {
-//                                    Image(
-//                                        imageVector = Icons.Default.Close,
-//                                        contentDescription = "Error",
-//                                        colorFilter = ColorFilter.tint(Color.Red),
-//                                        modifier =
-//                                            Modifier
-//                                                .align(Alignment.CenterEnd)
-//                                                .padding(8.dp),
-//                                    )
-//                                }
-//
-//                                OutlinedTextField(
-//                                    value = textFieldValue ?: "",
-//                                    onValueChange = { textFieldValue = it },
-//                                    modifier = Modifier.fillMaxWidth(),
-//                                )
-//                            }
-//
-//                            Button(
-//                                onClick = {
-//                                    textFieldValue?.let {
-//                                        navigator.loadUrl(it)
-//                                    }
-//                                },
-//                                modifier = Modifier.align(Alignment.CenterVertically),
-//                            ) {
-//                                Text("Go")
-//                            }
-//                        }
-//                    }
-//
-//                    WebView(
-//                        state = state,
-//                        modifier =
-//                            Modifier
-//                                .fillMaxSize(),
-//                        navigator = navigator,
-//                    )
-//
-//                    Column(
-//                        modifier = Modifier
-//                            .fillMaxSize(),
-//                        verticalArrangement = Arrangement.Center,
-//                        horizontalAlignment = Alignment.CenterHorizontally,
-//                    ) {
-//
-//                        Text(
-//                            text = "This is a dialog with buttons and an image.",
-//                            modifier = Modifier.padding(16.dp),
-//                        )
-//                        Row(
-//                            modifier = Modifier
-//                                .fillMaxWidth(),
-//                            horizontalArrangement = Arrangement.Center,
-//                        ) {
-//                            TextButton(
-//                                onClick = { /* TODO */ },
-//                                modifier = Modifier.padding(8.dp),
-//                            ) {
-//                                Text("Dismiss")
-//                            }
-//                            TextButton(
-//                                onClick = { /* TODO*/ },
-//                                modifier = Modifier.padding(8.dp),
-//                            ) {
-//                                Text("Confirm")
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
+    emailsDialog(display, emailFromUser, emailSubject, emailContent)
 
 //    if (sendEmail) {
 //        var sendEmailFrom by remember { mutableStateOf("") }
