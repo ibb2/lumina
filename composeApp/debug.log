@@ -1282,3 +1282,12 @@
 [1227/043352.385:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
 [1227/043429.832:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
 [1227/044042.660:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/045449.174:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/145704.625:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/145803.815:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/151758.640:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/151953.176:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/152122.863:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/152323.222:ERROR:gpu_init.cc(525)] Passthrough is not supported, GL is disabled, ANGLE is 
+[1227/152756.611:ERROR:component_installer.cc(290)] Failed to read manifest for Widevine Content Decryption Module (C:\Users\ibyst\AppData\Local\CEF\User Data\WidevineCdm\4.10.2710.0).: Access is denied. (0x5)
+[1227/152956.939:ERROR:gpu_init.cc(525)] Passthrough is not supported, GL is disabled, ANGLE is 

@@ -37,6 +37,7 @@ import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.platformSpecific.*
 import org.example.project.ui.platformSpecific.emails.emailsDialog
+import org.example.project.ui.platformSpecific.emails.sendEmail
 
 @Composable
 fun displayEmails(
@@ -129,7 +130,7 @@ fun displayEmails(
         Row(
                 modifier = Modifier.padding(end = 16.dp).zIndex(10f),
                 horizontalArrangement = Arrangement.End
-        ) { PlatformSpecificButton(onClick = { sendEmail = true }) { Text(text = "Send Email") } }
+        ) { Button(onClick = { sendEmail = true }) { Text(text = "Send Email") } }
         Row(verticalAlignment = Alignment.Bottom) {
             ScrollArea(state = scrollState) {
                 LazyColumn(
@@ -259,89 +260,12 @@ fun displayEmails(
     Box(modifier = Modifier.padding(vertical = 32.dp)) {
         emailsDialog(display, emailFromUser, emailSubject, emailContent) { display = false }
     }
-    //    if (sendEmail) {
-    //        var sendEmailFrom by remember { mutableStateOf("") }
-    //        var sendEmailTo by remember { mutableStateOf("") }
-    //        var sendEmailSubject by remember { mutableStateOf("") }
-    //        var sendEmailBody by remember { mutableStateOf("") }
-    //
-    //        fun sendEmail() {
-    //            println("Sending email... $sendEmailFrom, $sendEmailTo, $sendEmailSubject,
-    // $sendEmailBody")
-    //            var sentEmailSuccess = false
-    //            CoroutineScope(Dispatchers.IO).launch {
-    //                sentEmailSuccess = emailService.sendNewEmail(
-    //                    emailDataSource,
-    //                    NewEmail(
-    //                        from = sendEmailFrom,
-    //                        to = sendEmailTo,
-    //                        subject = sendEmailSubject,
-    //                        body = sendEmailBody
-    //                    ),
-    //                    sendEmailFrom
-    //                )
-    //            }
-    //
-    //            println("Email sent successfully? $sentEmailSuccess")
-    //
-    //            sendEmail = false
-    //        }
-    //
-    //        Dialog(
-    //            onDismissRequest = { sendEmail = false },
-    //            properties = DialogProperties(
-    //                dismissOnBackPress = true,
-    //                dismissOnClickOutside = true,
-    //                usePlatformDefaultWidth = false
-    //            ),
-    //        ) {
-    //            // Draw a rectangle shape with rounded corners inside the dialog
-    //            Surface(modifier = Modifier.fillMaxSize(0.9f)) {
-    //                Card(
-    //                    modifier = Modifier
-    //                        .fillMaxWidth()
-    //                        .height(525.dp)
-    //                        .padding(16.dp),
-    //                    shape = RoundedCornerShape(16.dp),
-    //                ) {
-    //                    Column(
-    //                        modifier = Modifier
-    //                            .fillMaxSize(),
-    //                        verticalArrangement = Arrangement.Center,
-    //                        horizontalAlignment = Alignment.CenterHorizontally,
-    //                    ) {
-    //                        TextField(
-    //                            label = { Text("From") },
-    //                            value = sendEmailFrom,
-    //                            onValueChange = { sendEmailFrom = it },
-    //                            modifier = Modifier.padding(16.dp),
-    //                        )
-    //                        TextField(
-    //                            label = { Text("To") },
-    //                            value = sendEmailTo,
-    //                            onValueChange = { sendEmailTo = it },
-    //                            modifier = Modifier.padding(16.dp)
-    //                        )
-    //                        TextField(
-    //                            label = { Text("Subject") },
-    //                            value = sendEmailSubject,
-    //                            onValueChange = { sendEmailSubject = it },
-    //                            modifier = Modifier.padding(16.dp)
-    //                        )
-    //                        TextField(
-    //                            label = { Text("Body") },
-    //                            value = sendEmailBody,
-    //                            onValueChange = { sendEmailBody = it },
-    //                            modifier = Modifier.padding(16.dp),
-    //                        )
-    //                        Button(onClick = {
-    //                            sendEmail()
-    //                        }) {
-    //                            Text(text = "Send")
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
+
+    if (sendEmail) {
+        sendEmail(
+                emailService = emailService,
+                emailDataSource = emailDataSource,
+                onDismiss = { sendEmail = false }
+        )
+    }
 }
