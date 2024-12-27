@@ -49,66 +49,6 @@ actual fun sendEmail(
         onDismiss()
     }
 
-//    DialogWindow(onCloseRequest = onDismiss, title = "Send Email") {
-//        Mica(Modifier) {
-//            Box(
-//                modifier =
-//                    Modifier
-//                        .padding(16.dp)
-//            ) {
-//                Column(
-//                    modifier = Modifier.width(400.dp),
-//                    verticalArrangement = Arrangement.spacedBy(16.dp)
-//                ) {
-//                    TextField(
-//                        value = sendEmailFrom,
-//                        onValueChange = { sendEmailFrom = it },
-////                        label = "From",
-////                        placeholder = "Enter sender email"
-//                    )
-//
-//                    TextField(
-//                        value = sendEmailTo,
-//                        onValueChange = { sendEmailTo = it },
-////                        label = "To",
-////                        placeholder = "Enter recipient email"
-//                    )
-//
-//                    TextField(
-//                        value = sendEmailSubject,
-//                        onValueChange = { sendEmailSubject = it },
-////                        label = "Subject",
-////                        placeholder = "Enter email subject"
-//                    )
-//
-//                    TextField(
-//                        value = sendEmailBody,
-//                        onValueChange = { sendEmailBody = it },
-////                        label = "Message",
-////                        placeholder = "Enter email message",
-//                        modifier = Modifier.height(150.dp)
-//                    )
-//
-//                    Row(
-//                        modifier = Modifier.fillMaxWidth(),
-//                        horizontalArrangement = Arrangement.End,
-//                        verticalAlignment = Alignment.CenterVertically
-//                    ) {
-//                        Button(
-//                            onClick = onDismiss,
-//                            modifier = Modifier.padding(end = 8.dp)
-//                        ) { Text("Cancel") }
-//
-//                        Button(onClick = { sendEmailAction() }) {
-//                            Text("Send")
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-//        onSend: (from: String, to: String, subject: String, body: String) -> Unit,
-//        onClose: () -> Unit
     var from by remember { mutableStateOf("") }
     var to by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }

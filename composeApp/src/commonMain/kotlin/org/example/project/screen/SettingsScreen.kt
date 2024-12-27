@@ -1,16 +1,12 @@
 package org.example.project.screen
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+import androidx.compose.material.Divider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
@@ -20,24 +16,45 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.konyaco.fluent.FluentTheme
+import com.konyaco.fluent.component.*
+import com.konyaco.fluent.icons.Icons
+import com.konyaco.fluent.icons.filled.Mail
+import com.konyaco.fluent.icons.filled.MailDismiss
+import com.konyaco.fluent.icons.filled.MailOff
+import com.konyaco.fluent.icons.regular.Delete
+import kotlinx.coroutines.*
 import org.example.project.Authentication
 import org.example.project.EmailService
 import org.example.project.EmailServiceManager
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
+import org.example.project.shared.data.AccountsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.ui.FluentThemeEntry
+import org.example.project.ui.icons.Google
+import org.example.project.ui.icons.Microsoft
+import org.example.project.ui.platformSpecific.PlatformSpecificCardExpander
 import org.example.project.ui.platformSpecific.PlatformSpecificSwitch
 import org.example.project.ui.platformSpecific.PlatformSpecificText
 import org.example.project.ui.platformSpecific.buttons.PlatformSpecificIconButton
 import org.example.project.utils.NetworkError
+
+enum class AuthProvider(val domain: String) {
+    GOOGLE("google.com"),
+    MICROSOFT("microsoft.com"),
+    FACEBOOK("facebook.com"),
+    TWITTER("twitter.com"),
+    GITHUB("github.com");
+
+    companion object {
+        fun fromDomain(domain: String): AuthProvider? =
+            values().find { it.domain == domain }
+    }
+}
 
 data class SettingsScreen(
     val client: FirebaseAuthClient,
@@ -55,7 +72,7 @@ data class SettingsScreen(
     }
 
     @Composable
-    fun settingsPage(client: FirebaseAuthClient, driver: SqlDriver, authentication: Any?) {
+    fun settingsPage(client: FirebaseAuthClient, driver: SqlDriver, authentication: Authentication) {
         val navigator = LocalNavigator.currentOrThrow
 
 //        // db related stuff
@@ -126,69 +143,112 @@ data class SettingsScreen(
                 }
         }
 
-        val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
-        var searchQuery by remember { mutableStateOf("") }
-        var isDeleting by remember { mutableStateOf(false) }
 
+        FluentTheme {
+            Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.Start) {
 
-        FluentThemeEntry {
-            Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Settings page",
+                    modifier = Modifier.padding(bottom = 24.dp),
+                    style = FluentTheme.typography.titleLarge
+                )
 
-                PlatformSpecificText(text = "Settings page", modifier = Modifier.padding(bottom = 24.dp), fontSize = 32)
+                ConnectedInboxes(
+                    accounts = accounts.value,
+                    onAddAccount = {
+                        println("Add Account Clicked")
 
-                var minimise by remember { mutableStateOf(false) }
-
-                Column {
-                    // Add account button
-                    Button(onClick = {
                         scope.launch {
-                            val re = this@SettingsScreen.authentication.authenticateUser(client, accountsDataSource)
+                            val re = authentication.authenticateUser(client, accountsDataSource)
                             r = re.first
                             e = re.second
 
                             // Update accounts
-                            accounts.value = this@SettingsScreen.authentication.getAccounts(accountsDataSource)
+                            accounts.value = authentication.getAccounts(accountsDataSource)
 
                             // Sync will happen automatically due to LaunchedEffect
                         }
-                    }) {
-                        Text("Add account (GMAIL)")
-                    }
-
-                    LazyRow {
-                        items(accounts.value) { account ->
-                            Text(account.email)
-                            // Logout button (in your existing logout logic)
-                            Button(onClick = {
-                                scope.launch(Dispatchers.IO) {
-                                    this@SettingsScreen.authentication.logout(accountsDataSource, account.email)
-
-                                    // Update accounts
-                                    withContext(Dispatchers.Main) {
-                                        accounts.value =
-                                            this@SettingsScreen.authentication.getAccounts(accountsDataSource)
-
-                                        // Sync will happen automatically due to LaunchedEffect
-                                    }
-                                }
-                            }) {
-                                Text("Logout")
-                            }
+                        // Show account-adding logic
+                    },
+                    onLogoutAccount = { account ->
+                        authentication.logout(accountsDataSource, account.email)
+                        accounts.value = accounts.value.filter { it != account }.toMutableList()
+                        println("Logged out: ${account.email}")
+                    },
+                    onLogoutAll = {
+                        accounts.value.map { account ->
+                            authentication.logout(accountsDataSource, account.email)
                         }
-                    }
-                }
 
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(8.dp)
-                        .border(2.dp, Color.DarkGray, RoundedCornerShape(0.5f))
-                ) {
-                    Row {
-                        PlatformSpecificText(text = "Minimise", modifier = Modifier.padding(bottom = 18.dp))
-                        PlatformSpecificSwitch(minimise, { minimise = !minimise })
+                        accounts.value = mutableListOf()
+                        println("Logged out of all accounts")
                     }
+                )
+
+            }
+        }
+    }
+
+    @Composable
+    fun ConnectedInboxes(
+        accounts: MutableList<AccountsDAO>,
+        onAddAccount: () -> Unit,
+        onLogoutAccount: (account: AccountsDAO) -> Unit,
+        onLogoutAll: () -> Unit
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Connected Inboxes", style = FluentTheme.typography.subtitle)
+
+            accounts.forEach { account ->
+                AccountRow(
+                    account = account,
+                    onLogout = { onLogoutAccount(account) }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                AccentButton(onClick = onAddAccount) {
+                    Text("Add Account (Gmail)")
+                }
+                Button(
+                    onClick = onLogoutAll,
+                ) {
+                    Text("Log Out All")
                 }
             }
         }
+    }
+
+    @Composable
+    fun AccountRow(account: AccountsDAO, onLogout: () -> Unit) {
+        println(account.providerId)
+        PlatformSpecificCardExpander(
+            heading = account.email,
+            caption = account.providerId,
+            icon = when (account.providerId) {
+                AuthProvider.GOOGLE.domain -> Google
+                AuthProvider.MICROSOFT.domain -> Microsoft
+                else -> Icons.Filled.Mail
+            },
+            trailing = {
+                Button(
+                    onClick = onLogout,
+                    iconOnly = true
+                ) {
+                    Icon(
+                        modifier = Modifier.size(20.dp),
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null
+                    )
+                }
+            }
+        )
     }
 }
 
