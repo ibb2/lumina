@@ -500,15 +500,7 @@ actual class EmailService actual constructor(
         val idCred = CredentialManager(emailAddress, "idToken").returnCredentials()
 
 
-        val props = Properties().apply {
-            put("mail.smtp.host", "smtp.gmail.com")
-            put("mail.smtp.port", "587")
-            put("mail.smtp.auth", true)
-//            put("mail.smtp.ssl.enable", true)
-            put("mail.smtp.starttls.enable", "true"); //enable STARTTLS
-            put("mail.smtp.connectiontimeout", 1000)
-            put("mail.smtp.timeout", 3000)
-        }
+        val props = getProps()
 
         val auth: Authenticator = object : Authenticator() {
             //override the getPasswordAuthentication method
@@ -516,7 +508,6 @@ actual class EmailService actual constructor(
                 return PasswordAuthentication(emailAddress, atCred?.password.toString())
             }
         }
-
 
         val session = Session.getInstance(props, auth)
 

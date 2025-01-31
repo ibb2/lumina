@@ -6,7 +6,8 @@ import org.example.project.sqldelight.EmailsDataSource
 
 @Composable
 expect fun sendEmail(
-        emailService: EmailService,
-        emailDataSource: EmailsDataSource,
-        onDismiss: () -> Unit
-)
+    emailService: EmailService,
+    emailDataSource: EmailsDataSource,
+    onClose: () -> Unit,
+    onSend: (from: String, to: String, subject: String, body: String) -> Unit,
+    )
