@@ -3,9 +3,9 @@ package org.example.project.screen
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.LinearProgressIndicator
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,44 +34,45 @@ import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.AccountsDataSource
 import org.example.project.sqldelight.AttachmentsDataSource
 import org.example.project.sqldelight.EmailsDataSource
+import org.example.project.ui.Folder.FoldersTabRow
 import org.example.project.ui.displayEmails
 import org.example.project.ui.platformSpecific.PlatformSpecificTextField
 import org.example.project.utils.NetworkError
 
 data class HomeScreen(
-        val client: FirebaseAuthClient,
-        val emailService: EmailService,
-        val authentication: Authentication,
-        val driver: SqlDriver,
+    val client: FirebaseAuthClient,
+    val emailService: EmailService,
+    val authentication: Authentication,
+    val driver: SqlDriver,
 ) : Screen {
 
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         Main(
-                client = client,
-                emailService = emailService,
-                authentication = authentication,
-                driver = driver,
-                localNavigator = navigator
+            client = client,
+            emailService = emailService,
+            authentication = authentication,
+            driver = driver,
+            localNavigator = navigator
         )
     }
 
     @Composable
     fun Main(
-            client: FirebaseAuthClient,
-            emailService: EmailService,
-            authentication: Authentication,
-            driver: SqlDriver,
-            localNavigator: Navigator
+        client: FirebaseAuthClient,
+        emailService: EmailService,
+        authentication: Authentication,
+        driver: SqlDriver,
+        localNavigator: Navigator
     ) {
 
         // db related stuff
         val database =
-                LuminaDatabase(
-                        driver,
-                        EmailsAdapter = Emails.Adapter(attachments_countAdapter = IntColumnAdapter)
-                )
+            LuminaDatabase(
+                driver,
+                EmailsAdapter = Emails.Adapter(attachments_countAdapter = IntColumnAdapter)
+            )
 
         // Theme
         val isSystemInDarkMode = isSystemInDarkTheme()
@@ -116,7 +117,6 @@ data class HomeScreen(
             }
         }
 
-        val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
 
         // Search
         var searchQuery by remember { mutableStateOf(TextFieldValue()) }
@@ -149,9 +149,9 @@ data class HomeScreen(
 
         // UI with sync indicator
         Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.padding(16.dp).fillMaxSize()
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(16.dp).fillMaxSize()
         ) {
             fun updateTextFieldValue(newValue: TextFieldValue) {
                 searchQuery = newValue
@@ -173,34 +173,14 @@ data class HomeScreen(
                 )
             }
 
-            //            if (folders.size > 0) {
-            //                LazyRow(modifier = Modifier.fillMaxHeight(0.3f)) {
-            //                    itemsIndexed(folders) { _, it ->
-            //                        Row {
-            //                            val isSelected = selectedFolders.value.contains(it.name)
-            //                            val color = if (isSelected) Color.Green else Color.White
-            //                            Button(
-            //                                onClick = {
-            //                                    println("Folder selected ${it.name}")
-            //                                    val currentFolders =
-            // selectedFolders.value.toMutableList()
-            //                                    if (currentFolders.contains(it.name)) {
-            //                                        currentFolders.remove(it.name)
-            //                                    } else {
-            //                                        currentFolders.add(it.name)
-            //                                    }
-            //                                    // Update the entire list
-            //                                    selectedFolders.value = currentFolders
-            //                                },
-            //                                colors = ButtonDefaults.buttonColors(color)
-            //                            ) {
-            //                                Text(it.name)
-            //                            }
-            //                        }
-            //                        Divider(modifier = Modifier.width(4.dp))
-            //                    }
-            //                }
-            //            }
+
+            // Folders Tab row
+            val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
+
+            if (folders.size > 0) {
+                FoldersTabRow(folders, selectedFolders)
+            }
+
 
             if (isSyncing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -212,18 +192,18 @@ data class HomeScreen(
             }
 
             displayEmails(
-                    accounts = accounts.value,
-                    selectedFolders = selectedFolders,
-                    emails = allEmails.value.toMutableList(),
-                    attachments = attachments,
-                    emailDataSource = emailDataSource,
-                    client = client,
-                    emailService = emailService,
-                    authentication = authentication,
-                    driver = driver,
-                    localNavigator = localNavigator,
-                    accountsDataSource = accountsDataSource,
-                    attachmentsDataSource = attachmentsDataSource,
+                accounts = accounts.value,
+                selectedFolders = selectedFolders,
+                emails = allEmails.value.toMutableList(),
+                attachments = attachments,
+                emailDataSource = emailDataSource,
+                client = client,
+                emailService = emailService,
+                authentication = authentication,
+                driver = driver,
+                localNavigator = localNavigator,
+                accountsDataSource = accountsDataSource,
+                attachmentsDataSource = attachmentsDataSource,
             )
         }
     }
