@@ -157,7 +157,7 @@ data class HomeScreen(
                 searchQuery = newValue
             }
 
-            Box(modifier = Modifier.fillMaxWidth(.7f), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
 //                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
 
                 var text by remember { mutableStateOf("Hello") }
