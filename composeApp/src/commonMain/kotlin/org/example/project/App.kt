@@ -81,6 +81,10 @@ fun App(
     val attachmentsDataSource: AttachmentsDataSource = AttachmentsDataSource(database)
     val accountsDataSource: AccountsDataSource = AccountsDataSource(database)
 
+    // Drag area
+    Spacer(modifier = Modifier.height(64.dp))
+
+    // Content
     Navigator(HomeScreen(client, emailService, authentication, driver)) { navigator ->
         //        val navigator = LocalNavigator.currentOrThrow
         LaunchedEffect(navigator) { onNavigatorReady(navigator) }
@@ -89,139 +93,48 @@ fun App(
 
         val isCollapsed by remember { mutableStateOf(false) }
 
-        NavigationView(
-            modifier =
-                Modifier.windowInsetsPadding(
-                    insets = if (isCollapsed) collapseWindowInset else windowInset
-                ),
-            state = rememberNavigationState(),
-            displayMode = NavigationDisplayMode.Left,
-            contentPadding =
-                if (!isCollapsed) {
-                    PaddingValues()
-                } else {
-                    PaddingValues(top = 48.dp)
-                },
-            menuItems = {
-                //            repeat(6) { index ->
-                //                item {
-                //                    MenuItem(
-                //                        selected = true,
-                //                        onClick = { SettingsScreen(
-                //                            client,
-                //                            driver,
-                //                            emailService,
-                //                            authentication,
-                //                            accountsDataSource,
-                //                            emailDataSource,
-                //                            attachmentsDataSource
-                //                        ) },
-                //                        navItem = "Settings",
-                //                        icon = Icons.Default.Settings,
-                //                    )
-                //                }
-                //            }
-            },
-            footerItems = {
-                item {
-                    MenuItem(
-                        selected = false,
-                        onClick = {
-                            navigator.push(
-                                SettingsScreen(
-                                    client,
-                                    driver,
-                                    emailService,
-                                    authentication,
-                                    accountsDataSource,
-                                    emailDataSource,
-                                    attachmentsDataSource
-                                )
-                            )
-                        },
-                        navItem = "Settings",
-                        icon = Icons.Default.Settings,
+
+        AnimatedContent(
+            selectedItemWithContent,
+            Modifier.fillMaxSize(),
+            transitionSpec = {
+                (fadeIn(
+                    tween(
+                        FluentDuration.ShortDuration,
+                        easing = FluentEasing.FadeInFadeOutEasing,
+                        delayMillis = FluentDuration.QuickDuration
                     )
-                }
-            },
-            title = {
-                if (isCollapsed) {
-                    //                if (icon != null) {
-                    //                    Image(
-                    //                        painter = icon,
-                    //                        contentDescription = null,
-                    //                        modifier = Modifier.padding(start =
-                    // 12.dp).size(16.dp)
-                    //                    )
-                    //                }
-                    //                if (title.isNotEmpty()) {
-                    PlatformSpecificText(
-                        text = "Lumina Mail",
-                        style = FluentTheme.typography.caption,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
-                    //                }
-                } else {
-                    PlatformSpecificText("Menu")
-                }
-            },
-            backButton = {
-                if (isCollapsed) {
-                    NavigationDefaults.BackButton(
-                        onClick = { navigator.pop() },
-                        disabled = false,
-                        icon = { Icon(Icons.Default.ArrowLeft, contentDescription = null) },
-                        modifier =
-                            Modifier.windowInsetsPadding(
-                                contentInset.only(WindowInsetsSides.Start)
-                            )
-                    )
-                }
-            },
-            pane = {
-                AnimatedContent(
-                    selectedItemWithContent,
-                    Modifier.fillMaxSize(),
-                    transitionSpec = {
-                        (fadeIn(
+                ) +
+                        slideInVertically(
                             tween(
-                                FluentDuration.ShortDuration,
+                                FluentDuration.MediumDuration,
+                                easing = FluentEasing.FastInvokeEasing,
+                                delayMillis = FluentDuration.QuickDuration
+                            )
+                        ) { it / 5 }) togetherWith
+                        fadeOut(
+                            tween(
+                                FluentDuration.QuickDuration,
                                 easing = FluentEasing.FadeInFadeOutEasing,
                                 delayMillis = FluentDuration.QuickDuration
                             )
-                        ) +
-                                slideInVertically(
-                                    tween(
-                                        FluentDuration.MediumDuration,
-                                        easing = FluentEasing.FastInvokeEasing,
-                                        delayMillis = FluentDuration.QuickDuration
-                                    )
-                                ) { it / 5 }) togetherWith
-                                fadeOut(
-                                    tween(
-                                        FluentDuration.QuickDuration,
-                                        easing = FluentEasing.FadeInFadeOutEasing,
-                                        delayMillis = FluentDuration.QuickDuration
-                                    )
-                                )
-                    }
+                        )
+            }
+        ) {
+            if (it != null) {
+                navigator.lastItem.Content()
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (it != null) {
-                        navigator.lastItem.Content()
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            PlatformSpecificText(
-                                "No content selected",
-                                style = FluentTheme.typography.bodyStrong
-                            )
-                        }
-                    }
+                    PlatformSpecificText(
+                        "No content selected",
+                        style = FluentTheme.typography.bodyStrong
+                    )
                 }
             }
-        )
+        }
     }
 }
 
