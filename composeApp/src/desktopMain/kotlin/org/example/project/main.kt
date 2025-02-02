@@ -78,7 +78,7 @@ fun main() = application {
                 restartRequired -> {
                     Text("Restart required.")
                 }
-                !initialized -> {
+                initialized -> {
                     Box(Modifier.fillMaxSize()) {
                         Text(
                                 "Downloading $downloading%",

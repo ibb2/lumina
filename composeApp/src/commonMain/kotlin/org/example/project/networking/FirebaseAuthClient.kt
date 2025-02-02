@@ -66,7 +66,7 @@ class FirebaseAuthClient(
     suspend fun googleTokenIdEndpoint(code: String): Result<TokenResponse, NetworkError> {
 
         val response = try {
-            httpClient.post("http://127.0.0.1:8000/api/tokens") {
+            httpClient.post("http://192.168.50.33/api/tokens") {
                 this.contentType(ContentType.Application.Json)
                 this.setBody(
                     DjangoToken(code)
@@ -100,7 +100,7 @@ class FirebaseAuthClient(
     suspend fun refreshAccessToken(refreshToken: String): Result<DjangoRefreshTokenResponse, NetworkError> {
 
         val response = try {
-            httpClient.post("http://127.0.0.1:8000/api/tokens/refresh") {
+            httpClient.post("http://192.168.50.33/api/tokens/refresh") {
                 this.contentType(ContentType.Application.Json)
                 this.setBody(
                     DjangoRefreshToken(refreshToken)
