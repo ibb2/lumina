@@ -12,7 +12,9 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.cash.sqldelight.db.SqlDriver
@@ -136,7 +138,6 @@ fun displayEmails(
             ScrollArea(state = scrollState) {
                 LazyColumn(
                     state = lazyListState,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     itemsIndexed(allEmails) { index, email ->
                         val emailAddress =
@@ -153,10 +154,17 @@ fun displayEmails(
                                         ?: false
                             }
                         }
-                        PlatformSpecificEmailCard(Modifier, displayEmail) {
-                            Column() {
-                                PlatformSpecificText("${email.senderAddress} -> $emailAddress")
-                                PlatformSpecificText(
+                            Column(
+                                modifier = Modifier.fillMaxWidth().border(
+                                    shape = RectangleShape,
+                                    width = 0.dp,
+                                    brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
+                                )
+                            ) {
+                                Text(
+                                    text = "${email.senderAddress} |_> $emailAddress"
+                                )
+                                Text(
                                     modifier = Modifier.padding(vertical = 4.dp),
                                     text =
                                         if (email.subject.length > 60) {
@@ -165,77 +173,62 @@ fun displayEmails(
                                             email.subject
                                         }
                                 )
-                                //                                PlatformSpecificText(
-                                //                                    modifier =
-                                // Modifier.padding(vertical = 8.dp),
-                                //                                    text = if (email.body.length >
-                                // 100) {
-                                //                                        //
-                                // https://stackoverflow.com/questions/2932392/java-how-to-replace-2-or-more-spaces-with-single-space-in-string-and-delete-lead
-                                //
-                                // email.body.replace(Regex("(\\s)+"), " ").substring(0, 100) +
-                                // "..."
-                                //                                    } else {
-                                //                                        email.body
-                                //                                    }
-                                //                                )
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                PlatformSpecificMarkAsRead(
-                                    Modifier,
-                                    isRead,
-                                    {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            isRead =
-                                                read(
-                                                    email,
-                                                    emailDataSource,
-                                                    emailService,
-                                                    emailAddress
-                                                )
-                                                    ?: false
-                                        }
-                                    }
-                                )
-                                PlatformSpecificDelete(
-                                    Modifier,
-                                    onClick = {
-                                        CoroutineScope(Dispatchers.IO).launch {
-                                            deleteEmail(
-                                                email,
-                                                emailDataSource,
-                                                emailService,
-                                                emailAddress
-                                            )
-                                            // Remove email on the main thread
-                                            withContext(Dispatchers.Main) {
-                                                emails.remove(email)
-                                            }
-                                        }
-                                    }
-                                )
-                            }
-                            if (attachments.any { it.emailId === email.id }) {
-                                Row {
-                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
-                                        Row {
-                                            Text(
-                                                text = attachment.fileName,
-                                                modifier = Modifier.padding(8.dp)
-                                            )
-                                            Text(
-                                                text = attachment.size.toString(),
-                                                modifier = Modifier.padding(8.dp)
-                                            )
-                                            Text(
-                                                text = attachment.mimeType,
-                                                modifier = Modifier.padding(8.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+////                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+////                                PlatformSpecificMarkAsRead(
+////                                    Modifier,
+////                                    isRead,
+////                                    {
+////                                        CoroutineScope(Dispatchers.IO).launch {
+////                                            isRead =
+////                                                read(
+////                                                    email,
+////                                                    emailDataSource,
+////                                                    emailService,
+////                                                    emailAddress
+////                                                )
+////                                                    ?: false
+////                                        }
+////                                    }
+////                                )
+////                                PlatformSpecificDelete(
+////                                    Modifier,
+////                                    onClick = {
+////                                        CoroutineScope(Dispatchers.IO).launch {
+////                                            deleteEmail(
+////                                                email,
+////                                                emailDataSource,
+////                                                emailService,
+////                                                emailAddress
+////                                            )
+////                                            // Remove email on the main thread
+////                                            withContext(Dispatchers.Main) {
+////                                                emails.remove(email)
+////                                            }
+////                                        }
+////                                    }
+////                                )
+////                            }
+////                            if (attachments.any { it.emailId === email.id }) {
+////                                Row {
+////                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
+////                                        Row {
+////                                            Text(
+////                                                text = attachment.fileName,
+////                                                modifier = Modifier.padding(8.dp)
+////                                            )
+////                                            Text(
+////                                                text = attachment.size.toString(),
+////                                                modifier = Modifier.padding(8.dp)
+////                                            )
+////                                            Text(
+////                                                text = attachment.mimeType,
+////                                                modifier = Modifier.padding(8.dp)
+////                                            )
+////                                        }
+////                                    }
+////                                }
+////                            }
                     }
                 }
                 VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {

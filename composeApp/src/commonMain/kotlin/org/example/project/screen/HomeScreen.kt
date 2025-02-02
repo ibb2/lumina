@@ -1,12 +1,18 @@
 package org.example.project.screen
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import app.cash.sqldelight.adapter.primitive.IntColumnAdapter
@@ -152,7 +158,19 @@ data class HomeScreen(
             }
 
             Box(modifier = Modifier.fillMaxWidth(.7f), contentAlignment = Alignment.Center) {
-                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
+//                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
+
+                var text by remember { mutableStateOf("Hello") }
+
+                TextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth().border(
+                        shape = RectangleShape,
+                        width = 0.dp,
+                        brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
+                    )
+                )
             }
 
             //            if (folders.size > 0) {
