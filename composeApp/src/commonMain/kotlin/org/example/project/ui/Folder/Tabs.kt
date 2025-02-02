@@ -24,7 +24,7 @@ import org.example.project.shared.data.FoldersDAO
 @Composable
 fun FoldersTabRow(folders: MutableList<FoldersDAO>, selectedFolders: MutableState<List<String>>) {
 
-    LazyRow(modifier = Modifier) {
+    LazyRow(modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)) {
         itemsIndexed(folders) { _, it ->
             Row() {
                 val isSelected = selectedFolders.value.contains(it.name)
