@@ -1,5 +1,6 @@
 package org.example.project.ui
 
+import Switch_access_shortcut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
@@ -8,13 +9,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.SwitchAccessShortcut
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.cash.sqldelight.db.SqlDriver
@@ -159,9 +165,23 @@ fun displayEmails(
                             Column(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp)
                             ) {
-                                Text(
-                                    text = "${email.senderAddress} |_> $emailAddress"
-                                )
+                                Column {
+                                    Text(
+                                        text = email.senderAddress,
+                                        style = if (isRead) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Icon(
+                                            imageVector = Switch_access_shortcut, // Use Rounded, Filled, Outlined, etc.
+                                            contentDescription = "Indicates email direction: sender to recipient",
+                                            modifier = Modifier.scale(scaleX = -1f, scaleY = 1f).rotate(230f)
+                                        )
+                                        Text(
+                                            text = emailAddress,
+                                            style = if (isRead) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
+                                        )
+                                    }
+                                }
                                 Text(
                                     modifier = Modifier.padding(vertical = 4.dp),
                                     text =
@@ -169,7 +189,8 @@ fun displayEmails(
                                             email.subject.substring(0, 50) + "..."
                                         } else {
                                             email.subject
-                                        }
+                                        },
+                                    style = if (isRead) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
                                 )
                             }
                         }
