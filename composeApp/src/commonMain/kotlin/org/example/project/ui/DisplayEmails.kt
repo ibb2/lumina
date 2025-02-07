@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -138,6 +138,7 @@ fun displayEmails(
             ScrollArea(state = scrollState) {
                 LazyColumn(
                     state = lazyListState,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     itemsIndexed(allEmails) { index, email ->
                         val emailAddress =
@@ -154,12 +155,9 @@ fun displayEmails(
                                         ?: false
                             }
                         }
+                        Card {
                             Column(
-                                modifier = Modifier.fillMaxWidth().border(
-                                    shape = RectangleShape,
-                                    width = 0.dp,
-                                    brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
-                                )
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp)
                             ) {
                                 Text(
                                     text = "${email.senderAddress} |_> $emailAddress"
@@ -174,6 +172,7 @@ fun displayEmails(
                                         }
                                 )
                             }
+                        }
 ////                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
 ////                                PlatformSpecificMarkAsRead(
 ////                                    Modifier,
