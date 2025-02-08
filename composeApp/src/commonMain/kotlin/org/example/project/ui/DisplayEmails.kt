@@ -4,13 +4,21 @@ import Switch_access_shortcut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.SwitchAccessShortcut
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MarkAsUnread
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.MarkAsUnread
+import androidx.compose.material.icons.outlined.MarkEmailRead
+import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +29,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.cash.sqldelight.db.SqlDriver
@@ -161,74 +170,115 @@ fun displayEmails(
                                         ?: false
                             }
                         }
-                        Card {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp)
+
+
+                        val interactionSource = remember { MutableInteractionSource() }
+                        val showActions by interactionSource.collectIsHoveredAsState() // State for visibility
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp).hoverable(
+                                    interactionSource = interactionSource
+                                ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Subtle elevation
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.Top, // Align to top for longer previews
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Column {
-                                    Text(
-                                        text = email.senderAddress,
-                                        style = if (isRead) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
-                                    )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Icon(
-                                            imageVector = Switch_access_shortcut, // Use Rounded, Filled, Outlined, etc.
-                                            contentDescription = "Indicates email direction: sender to recipient",
-                                            modifier = Modifier.scale(scaleX = -1f, scaleY = 1f).rotate(230f)
-                                        )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Column {
                                         Text(
-                                            text = emailAddress,
+                                            text = email.senderAddress,
                                             style = if (isRead) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
                                         )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Icon(
+                                                imageVector = Switch_access_shortcut, // Use Rounded, Filled, Outlined, etc.
+                                                contentDescription = "Indicates email direction: sender to recipient",
+                                                modifier = Modifier.scale(scaleX = -1f, scaleY = 1f).rotate(230f)
+                                            )
+                                            Text(
+                                                text = emailAddress,
+                                                style = if (isRead) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
+                                            )
+                                        }
                                     }
                                 }
-                                Text(
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                    text =
-                                        if (email.subject.length > 60) {
+                                Column(modifier = Modifier.weight(2f)) { // Subject and body preview
+                                    Text(
+                                        text = if (email.subject.length > 60) {
                                             email.subject.substring(0, 50) + "..."
                                         } else {
                                             email.subject
                                         },
-                                    style = if (isRead) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.titleMedium,
-                                )
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = if (email.body.length > 60) {
+                                            email.body.substring(0, 50) + "..."
+                                        } else {
+                                            email.body
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2, // Limit preview lines
+                                        overflow = TextOverflow.Ellipsis // Add ellipsis if needed
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    if (showActions) { // Actions revealed
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(8.dp),
+                                            horizontalArrangement = Arrangement.End // Align to the end
+                                        ) {
+                                            IconButton(onClick = {
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    isRead =
+                                                        read(
+                                                            email,
+                                                            emailDataSource,
+                                                            emailService,
+                                                            emailAddress
+                                                        )
+                                                            ?: false
+                                                }
+                                            }) {
+                                                Icon(
+                                                    if (isRead) Icons.Outlined.MarkEmailUnread else Icons.Outlined.MarkEmailRead,
+                                                    contentDescription = "Read"
+                                                )
+                                            }
+                                            IconButton(onClick = {
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    deleteEmail(
+                                                        email,
+                                                        emailDataSource,
+                                                        emailService,
+                                                        emailAddress
+                                                    )
+                                                    // Remove email on the main thread
+                                                    withContext(Dispatchers.Main) {
+                                                        emails.remove(email)
+                                                    }
+                                                }
+                                            }) {
+                                                Icon(Icons.Outlined.Delete, contentDescription = "Delete")
+                                            }
+                                            // ... other buttons
+                                        }
+                                    }
+                                }
                             }
                         }
-////                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-////                                PlatformSpecificMarkAsRead(
-////                                    Modifier,
-////                                    isRead,
-////                                    {
-////                                        CoroutineScope(Dispatchers.IO).launch {
-////                                            isRead =
-////                                                read(
-////                                                    email,
-////                                                    emailDataSource,
-////                                                    emailService,
-////                                                    emailAddress
-////                                                )
-////                                                    ?: false
-////                                        }
-////                                    }
-////                                )
-////                                PlatformSpecificDelete(
-////                                    Modifier,
-////                                    onClick = {
-////                                        CoroutineScope(Dispatchers.IO).launch {
-////                                            deleteEmail(
-////                                                email,
-////                                                emailDataSource,
-////                                                emailService,
-////                                                emailAddress
-////                                            )
-////                                            // Remove email on the main thread
-////                                            withContext(Dispatchers.Main) {
-////                                                emails.remove(email)
-////                                            }
-////                                        }
-////                                    }
-////                                )
-////                            }
+////
 ////                            if (attachments.any { it.emailId === email.id }) {
 ////                                Row {
 ////                                    attachments.filter { it.emailId === email.id }.forEach { attachment ->
