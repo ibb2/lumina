@@ -1,10 +1,12 @@
 package org.example.project.ui.components.email
 
 import Switch_access_shortcut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.onClick
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.MarkEmailRead
@@ -18,6 +20,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,12 +32,15 @@ import org.example.project.read
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.EmailService
+import org.example.project.screen.EmailScreen
 
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EmailItem(
     emails: MutableList<EmailsDAO>,
     email: EmailsDAO,
+    index: Number,
     emailAddress: String,
     emailDataSource: EmailsDataSource,
     emailService: EmailService
@@ -46,12 +53,18 @@ fun EmailItem(
 
 //    val displayEmail = { displayEmailBody(!display, email) }
 
+    val navigator = LocalNavigator.currentOrThrow
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp).hoverable(
                 interactionSource = interactionSource
-            ),
+            ).onClick {
+
+                navigator.push(EmailScreen(email, index))
+
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Subtle elevation
     ) {
         Row(

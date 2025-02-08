@@ -75,7 +75,6 @@ fun displayEmails(
 ) {
 
     //    val localNavigator = LocalNavigator.currentOrThrow
-
     var display: Boolean by remember { mutableStateOf(false) }
     var emailFromUser: String by remember { mutableStateOf("") }
     var emailSubject: String by remember { mutableStateOf("") }
@@ -161,7 +160,7 @@ fun displayEmails(
                             accounts.find { it.email == email.account }?.email
                                 ?: "Unknown Account"
 
-                        EmailItem(emails, email, emailAddress, emailDataSource, emailService)
+                        EmailItem(emails, email, index, emailAddress, emailDataSource, emailService)
                     }
                 }
                 VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
