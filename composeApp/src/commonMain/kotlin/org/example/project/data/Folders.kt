@@ -11,6 +11,6 @@ data class MailFolder(
 
 data class FolderState(
     val folder: MailFolder,
-    val isExpanded: MutableState<Boolean> = mutableStateOf(true)
+    val isExpanded: MutableState<Boolean> = mutableStateOf(false)
 )
 
