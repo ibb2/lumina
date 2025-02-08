@@ -35,6 +35,7 @@ import com.russhwolf.settings.ExperimentalSettingsApi
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import org.example.project.data.MailFolder
 import org.example.project.data.NewEmail
 import org.example.project.networking.FirebaseAuthClient
 import org.example.project.networking.OAuthResponse
@@ -142,8 +143,8 @@ class EmailServiceManager(
     private val emailService: EmailService,
     private val emailsDataSource: EmailsDataSource
 ) {
-    private val _folders = MutableStateFlow<MutableList<FoldersDAO>>(mutableListOf())
-    val folders: StateFlow<MutableList<FoldersDAO>> = _folders.asStateFlow()
+    private val _folders = MutableStateFlow<MutableList<MailFolder>>(mutableListOf())
+    val folders: StateFlow<MutableList<MailFolder>> = _folders.asStateFlow()
 
     private val _emails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
     val emails: StateFlow<MutableList<EmailsDAO>> = _emails.asStateFlow()
@@ -224,8 +225,6 @@ class EmailServiceManager(
 
             // Combine results from all accounts
             val combinedFolders = foldersResults.flatten()
-            println("Folders $combinedFolders")
-
             // Update state flows
             _folders.value.addAll(combinedFolders)
         } catch (e: Exception) {
@@ -833,7 +832,7 @@ expect class EmailService(
     client: FirebaseAuthClient,
 ) {
 
-    val folders: StateFlow<MutableList<FoldersDAO>>
+    val folders: StateFlow<MutableList<MailFolder>>
     val emails: StateFlow<MutableList<EmailsDAO>>
     val attachments: StateFlow<MutableList<AttachmentsDAO>>
     val isSyncing: StateFlow<Boolean>
@@ -844,7 +843,7 @@ expect class EmailService(
 
     suspend fun watchEmails(emailAddress: String, dataSource: EmailsDataSource)
 
-    suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO>
+    suspend fun getFolders(emailAddress: String): MutableList<MailFolder>
 
     fun readEmail(
         email: EmailsDAO,

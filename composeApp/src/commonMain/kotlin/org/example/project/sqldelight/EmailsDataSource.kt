@@ -48,7 +48,6 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     // Method to trigger updates
     fun notifyEmailsUpdated() {
-        println("Emitting")
         // Fetch the latest emails and update the flow
         val updatedEmails =
             queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
@@ -76,18 +75,13 @@ class EmailsDataSource(db: LuminaDatabase) {
 
         CoroutineScope(Dispatchers.Default).launch {
             try {
-                println("Emitting: Attempting to emit emails")
                 _emailsFlow.emit(updatedEmails)
-                println("Emitting: Successfully emitted emails")
             } catch (e: Exception) {
-                println("Emitting: Error during emission - ${e.message}")
                 e.printStackTrace()
             }
         }
-
-        println("Emails updated: ${updatedEmails.size}")
     }
-
+  
     fun insertEmail(
         id: Long? = null,
         messageId: String,

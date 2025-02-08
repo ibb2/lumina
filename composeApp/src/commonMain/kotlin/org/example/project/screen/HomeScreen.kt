@@ -117,7 +117,6 @@ data class HomeScreen(
             }
         }
 
-
         // Search
         var searchQuery by remember { mutableStateOf(TextFieldValue()) }
         var isDeleting by remember { mutableStateOf(false) }
@@ -178,6 +177,7 @@ data class HomeScreen(
             val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
 
             if (folders.size > 0) {
+                println("Folders: ${folders}")
                 FoldersTabRow(folders, selectedFolders)
             }
 

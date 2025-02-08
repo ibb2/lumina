@@ -31,6 +31,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.eclipse.angus.mail.imap.IMAPFolder
+import org.example.project.data.MailFolder
 import org.example.project.data.NewEmail
 import org.example.project.mail.JavaMail
 import org.example.project.networking.*
@@ -60,7 +61,7 @@ actual class EmailService actual constructor(
     private var attachmentsDataSource: AttachmentsDataSource
     private var accountsDataSource: AccountsDataSource
 
-    private val _folders = MutableStateFlow<MutableList<FoldersDAO>>(mutableListOf())
+    private val _folders = MutableStateFlow<MutableList<MailFolder>>(mutableListOf())
     actual val folders = _folders.asStateFlow()
 
     private val _emails = MutableStateFlow<MutableList<EmailsDAO>>(mutableListOf())
@@ -162,34 +163,94 @@ actual class EmailService actual constructor(
         return if (totalEmailsForAccount > 0) totalEmailsForAccount < messagesSize else false
     }
 
-    actual suspend fun getFolders(emailAddress: String): MutableList<FoldersDAO> {
+    actual suspend fun getFolders(emailAddress: String): MutableList<MailFolder> {
 
         val props = getProps()
         val session = Session.getInstance(props)
         val store = connectToStore(session, props, emailAddress)
 
-        val localFolders: MutableList<FoldersDAO> = mutableListOf()
+        val localFolders: MutableList<MailFolder> = mutableListOf()
+        val nestedLocalFolders: MutableList<MutableList<MailFolder>> = mutableListOf(mutableListOf())
 
         // Display the folders
         println("Showing folders")
         val folders = store.defaultFolder.list("*")
-        folders.map {
-            println("Folder: ${it.name}")
-            try {
-                localFolders.add(
-                    FoldersDAO(
-                        null,
-                        "$emailAddress|${it.name}",
-                        it.name
-                    )
-                )
-            } catch (e: Exception) {
-                println("Folder already exists in database")
-            }
+
+        val defaultFolder = store.defaultFolder
+        val mailFolderStructure = buildFolderStructure(defaultFolder)
+
+        // Print the folder structure
+        printFolderStructure(mailFolderStructure, "")
+
+        return mutableListOf(mailFolderStructure)
+    }
+
+    // Recursive function to build the folder structure
+    fun buildFolderStructure(folder: Folder): MailFolder {
+        // Check if the folder can hold messages
+        val messageCount = if (folder.type and Folder.HOLDS_MESSAGES != 0) {
+            folder.open(Folder.READ_ONLY)
+            val count = folder.messageCount
+            folder.close(false)
+            count
+        } else {
+            0
         }
 
-        return localFolders
+        // Create a MailFolder object
+        val mailFolder = MailFolder(
+            name = folder.fullName,
+            messageCount = messageCount
+        )
+
+        // List and recursively process subfolders
+        val subFolders = folder.list()
+        for (subFolder in subFolders) {
+            val subMailFolder = buildFolderStructure(subFolder)
+            mailFolder.subFolders.add(subMailFolder)
+        }
+
+        return mailFolder
     }
+
+    // Function to print the folder structure
+    fun printFolderStructure(mailFolder: MailFolder, indent: String) {
+        println("${indent}${mailFolder.name} (Messages: ${mailFolder.messageCount})")
+        for (subFolder in mailFolder.subFolders) {
+            printFolderStructure(subFolder, "$indent  ")
+        }
+    }
+    // Recursive function to list all folders and subfolders
+//    fun listAllFolders(folder: Folder, indent: String) {
+//        // Open the folder in read-only mode
+//        println(0)
+//        for (f in folder.list("*6")) {
+//            if (f.type and Folder.HOLDS_MESSAGES != 0) {
+//                // Open the folder in read-only mode
+//                println("${indent}${f.fullName} (Messages: ${f.messageCount})")
+////                folder.close(false)
+//            } else {
+//                println("${indent}${f.fullName}")
+//            }
+//        }
+//        println(1)
+//
+//        // List and recursively process subfolders
+////        val subFolders = folder.list()
+////        subFolders.map { it: Folder ->
+////            println("Folder: ${it.fullName}")
+////            it.
+////        }
+////        for (subFolder in subFolders) {
+////            listAllFolders(subFolder, "$indent  ")
+////        }
+////        for (subFolder in subFolders) {
+////            listAllFolders(subFolder, "$indent  ")
+////        }
+//
+//        // Close the folder
+////        folder.close(false)
+//    }
 
     actual suspend fun getEmails(
         emailAddress: String
@@ -541,7 +602,6 @@ actual class EmailService actual constructor(
 
 
 actual class Authentication {
-
 
     private var code = ""
     private var accessToken = ""
