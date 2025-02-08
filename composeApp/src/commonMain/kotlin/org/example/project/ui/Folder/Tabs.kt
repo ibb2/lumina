@@ -4,10 +4,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.onClick
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -33,30 +37,35 @@ fun FoldersTabRow(
     val lazyListState = rememberLazyListState()
     val scrollState = rememberScrollAreaState(lazyListState)
 
-    ScrollArea(state = scrollState) {
-        LazyRow(modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)) {
-            items(folders[0].subFolders) { folder ->
-                FolderItem(
-                    folderState = FolderState(folder),
-                    selectedFolders = selectedFolders
-                )
+    Surface {
+        ScrollArea(state = scrollState) {
+            LazyRow(
+                modifier = Modifier.padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(32.dp)
+            ) {
+                items(folders[0].subFolders) { folder ->
+                    FolderItem(
+                        folderState = FolderState(folder),
+                        selectedFolders = selectedFolders
+                    )
+                }
             }
+            //        HorizontalScrollbar(modifier = Modifier.align(Alignment.BottomEnd).fillMaxWidth()) {
+            //            Thumb(
+            //                modifier =
+            //                    Modifier.background(
+            //                        Color.Black.copy(0.3f),
+            //                        RoundedCornerShape(100)
+            //                    ),
+            //                thumbVisibility =
+            //                    ThumbVisibility.HideWhileIdle(
+            //                        enter = fadeIn(),
+            //                        exit = fadeOut(),
+            //                        hideDelay = 1.seconds
+            //                    )
+            //            )
+            //        }
         }
-//        HorizontalScrollbar(modifier = Modifier.align(Alignment.BottomEnd).fillMaxWidth()) {
-//            Thumb(
-//                modifier =
-//                    Modifier.background(
-//                        Color.Black.copy(0.3f),
-//                        RoundedCornerShape(100)
-//                    ),
-//                thumbVisibility =
-//                    ThumbVisibility.HideWhileIdle(
-//                        enter = fadeIn(),
-//                        exit = fadeOut(),
-//                        hideDelay = 1.seconds
-//                    )
-//            )
-//        }
     }
 }
 
@@ -69,12 +78,14 @@ fun FolderItem(
     modifier: Modifier = Modifier,
     indentLevel: Int = 0
 ) {
-    Row(modifier = modifier.padding(start = (indentLevel * 16).dp)) {
+    Row(
+        modifier = modifier.padding(start = (indentLevel * 8).dp, top = 0.dp, bottom = 0.dp),
+        verticalAlignment = Alignment.Top
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .onClick {
-                    folderState.isExpanded.value = !folderState.isExpanded.value
                     val currentFolders = selectedFolders.value.toMutableList()
                     if (currentFolders.contains(folderState.folder.name)) {
                         currentFolders.remove(folderState.folder.name)
@@ -82,16 +93,28 @@ fun FolderItem(
                         currentFolders.add(folderState.folder.name)
                     }
                     selectedFolders.value = currentFolders
-                }
-                .padding(vertical = 8.dp),
+                },
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = folderState.folder.name,
                 textDecoration = if (selectedFolders.value.contains(folderState.folder.name)) TextDecoration.Underline else null,
-                style = MaterialTheme.typography.labelLarge
+                style = if (selectedFolders.value.contains(folderState.folder.name)) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium
             )
-            Text(text = "(${folderState.folder.messageCount})", style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = "(${folderState.folder.messageCount})",
+                style = if (selectedFolders.value.contains(folderState.folder.name)) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (folderState.folder.subFolders.isNotEmpty()) {
+            Icon(
+                if (folderState.isExpanded.value) Icons.Outlined.ChevronLeft else Icons.Outlined.ChevronRight,
+                contentDescription = "Right Arrow",
+                modifier = Modifier.clickable {
+                    folderState.isExpanded.value = !folderState.isExpanded.value
+                },
+            )
         }
         if (folderState.isExpanded.value) {
             folderState.folder.subFolders.forEach { subFolder ->
