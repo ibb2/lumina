@@ -1351,3 +1351,9 @@
 [0209/141656.719:ERROR:interface_endpoint_client.cc(707)] Message 0 rejected by interface blink.mojom.WidgetHost
 [0209/141739.951:ERROR:interface_endpoint_client.cc(707)] Message 0 rejected by interface blink.mojom.WidgetHost
 [0209/141749.853:ERROR:interface_endpoint_client.cc(707)] Message 0 rejected by interface blink.mojom.WidgetHost
+[0209/144529.927:INFO:CONSOLE(0)] "Third-party cookie will be blocked. Learn more in the Issues tab.", source: file:///kcefbrowser/1419787729#url=about:blank (0)
+[0209/144752.637:INFO:CONSOLE(5)] "The key "target-densitydpi" is not supported.", source: file:///kcefbrowser/1693597284#url=about:blank (5)
+[0209/144753.041:INFO:CONSOLE(0)] "Third-party cookie will be blocked. Learn more in the Issues tab.", source: file:///kcefbrowser/1693597284#url=about:blank (0)
+[0209/144753.041:INFO:CONSOLE(0)] "Third-party cookie will be blocked. Learn more in the Issues tab.", source: file:///kcefbrowser/1693597284#url=about:blank (0)
+[0209/145914.449:INFO:CONSOLE(0)] "Third-party cookie will be blocked. Learn more in the Issues tab.", source: file:///kcefbrowser/557163360#url=about:blank (0)
+[0209/145914.449:INFO:CONSOLE(0)] "Third-party cookie will be blocked. Learn more in the Issues tab.", source: file:///kcefbrowser/557163360#url=about:blank (0)

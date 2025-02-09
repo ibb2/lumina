@@ -2,6 +2,7 @@ package org.example.project.mail
 
 import com.example.Accounts
 import jakarta.mail.*
+import jakarta.mail.internet.ContentType
 import jakarta.mail.internet.InternetAddress
 import jakarta.mail.internet.MailDateFormat
 import jakarta.mail.internet.MimeMessage
@@ -18,6 +19,8 @@ import org.eclipse.angus.mail.imap.protocol.BODY
 import org.eclipse.angus.mail.imap.protocol.FetchResponse
 import org.eclipse.angus.mail.imap.protocol.IMAPProtocol
 import org.eclipse.angus.mail.imap.protocol.IMAPResponse
+import org.example.project.data.EmailContent
+import org.example.project.data.EmailParts
 import org.example.project.shared.data.AttachmentsDAO
 import org.example.project.shared.data.EmailsDAO
 import org.example.project.shared.utils.createCompositeKey
@@ -87,7 +90,7 @@ class JavaMail(
 
                         mm = MimeMessage(session, `is`)
 
-                        val (emailBody, attachments) = getEmailBody(mm, i)
+                        val (emailBody, htmlEmailBody, attachments) = getEmailBody(mm, i)
 
                         val receivedDate = mm.receivedDate?.toInstant()?.toString()
                             ?: getFallbackReceivedDate(mm)?.toInstant()?.toString()
@@ -114,6 +117,7 @@ class JavaMail(
                                 sentDate = sentDate,
                                 receivedDate = receivedDate,
                                 body = emailBody,
+                                htmlBody = htmlEmailBody,
                                 snippet = generateSnippet(emailBody),
                                 size = mm.size.toLong(),
                                 isRead = isRead,
@@ -130,8 +134,6 @@ class JavaMail(
                         fun Address.toSerializableAddress(): SerializableAddress = SerializableAddress(this.toString(), this.toString())
                         fun SerializableAddress.toAddress(): Address = InternetAddress(this.address, this.personal)
 
-
-
                         val emailId = emailsDataSource.insertEmail(
                             messageId = mm.messageID,
                             folderUID = null,
@@ -144,6 +146,7 @@ class JavaMail(
                             sentDate = sentDate,
                             receivedDate = receivedDate,
                             body = emailBody,
+                            htmlBody = emailBody,
                             snippet = generateSnippet(emailBody),
                             size = mm.size.toLong(),
                             isRead = isRead,
@@ -188,24 +191,47 @@ class JavaMail(
         return "" + (r.size - 1)
     }
 
-    private fun getEmailBody(mm: MimeMessage, i: Int): Pair<String, List<AttachmentsDAO>> {
+    private fun getEmailBody(mm: MimeMessage, i: Int): EmailContent {
         val attachments = mutableListOf<AttachmentsDAO>()
-        val emailBody = when (val content = mm.content) {
-            is String -> content // Plain text or HTML content
-            is MimeMultipart -> processMimeMultipart(content, attachments) // Multipart email (e.g., with attachments)
-            else -> "Unsupported content type"
+        val parts = EmailParts()
 
+        when (val content = mm.content) {
+            is String -> {
+                // If the content is a plain string, decide which field to use based on the content type.
+                if (mm.isMimeType("text/plain")) {
+                    parts.plainText = content
+                } else if (mm.isMimeType("text/html")) {
+                    parts.htmlText = content
+                } else {
+                    // Fallback: assign to plain text if type is not clearly set.
+                    parts.plainText = content
+                }
+            }
+            is MimeMultipart -> {
+                processMimeMultipart(content, parts, attachments)
+            }
+            else -> {
+                parts.plainText = "Unsupported content type"
+            }
         }
 
-        return Pair(emailBody, attachments)
+        return EmailContent(
+            plainText = parts.plainText,
+            htmlText = parts.htmlText,
+            attachments = attachments
+        )
     }
 
-    private fun processMimeMultipart(multipart: MimeMultipart, attachments: MutableList<AttachmentsDAO>): String {
-        var body = ""
+    private fun processMimeMultipart(
+        multipart: MimeMultipart,
+        parts: EmailParts,
+        attachments: MutableList<AttachmentsDAO>
+    ) {
         for (i in 0 until multipart.count) {
             val bodyPart = multipart.getBodyPart(i)
+
+            // Check if this part is an attachment.
             if (Part.ATTACHMENT.equals(bodyPart.disposition, ignoreCase = true) || bodyPart.fileName != null) {
-                // This is an attachment
                 val attachment = AttachmentsDAO(
                     id = null,
                     emailId = null,
@@ -217,15 +243,33 @@ class JavaMail(
                 )
                 attachments.add(attachment)
             } else {
-                // This is the body
-                body += when (val content = bodyPart.content) {
-                    is String -> content
-                    is MimeMultipart -> processMimeMultipart(content, attachments)
-                    else -> ""
+                // If the part itself is multipart, process it recursively.
+                if (bodyPart.isMimeType("multipart/*")) {
+                    (bodyPart.content as? MimeMultipart)?.let { nestedMultipart ->
+                        processMimeMultipart(nestedMultipart, parts, attachments)
+                    }
+                } else {
+                    // Determine the type of the content and accumulate appropriately.
+                    val content = bodyPart.content
+                    when {
+                        bodyPart.isMimeType("text/plain") && content is String -> {
+                            parts.plainText += content
+                        }
+                        bodyPart.isMimeType("text/html") && content is String -> {
+                            parts.htmlText += content
+                        }
+                        // Fallback: if you cannot use isMimeType(), check the header
+                        content is String -> {
+                            if (bodyPart.contentType.contains("text/plain", ignoreCase = true)) {
+                                parts.plainText += content
+                            } else if (bodyPart.contentType.contains("text/html", ignoreCase = true)) {
+                                parts.htmlText += content
+                            }
+                        }
+                    }
                 }
             }
         }
-        return body
     }
 
 

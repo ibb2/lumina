@@ -180,7 +180,7 @@ actual class EmailService actual constructor(
         val mailFolderStructure = buildFolderStructure(defaultFolder)
 
         // Print the folder structure
-        printFolderStructure(mailFolderStructure, "")
+//        printFolderStructure(mailFolderStructure, "")
 
         return mutableListOf(mailFolderStructure)
     }

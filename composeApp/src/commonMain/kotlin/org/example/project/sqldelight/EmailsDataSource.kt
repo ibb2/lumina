@@ -17,7 +17,7 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     // Create a private MutableStateFlow to manage email updates
     private val initEmails = queries.selectAllEmails(
-        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, html_body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
                 messageId = messageId ?: "",
@@ -31,6 +31,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                 sentDate = sentDate ?: "",
                 receivedDate = receivedDate ?: "",
                 body = body ?: "",
+                htmlBody = html_body ?: "",
                 snippet = snippet ?: "",
                 size = size ?: 0,
                 isRead = isRead,
@@ -50,7 +51,7 @@ class EmailsDataSource(db: LuminaDatabase) {
     fun notifyEmailsUpdated() {
         // Fetch the latest emails and update the flow
         val updatedEmails =
-            queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+            queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body,html_body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
                 EmailsDAO(
                     id = id,
                     messageId = messageId ?: "",
@@ -63,6 +64,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                     sentDate = sentDate ?: "",
                     receivedDate = receivedDate ?: "",
                     body = body ?: "",
+                    htmlBody = html_body ?: "",
                     snippet = snippet ?: "",
                     size = size ?: 0,
                     isRead = isRead,
@@ -95,6 +97,7 @@ class EmailsDataSource(db: LuminaDatabase) {
         sentDate: String,
         receivedDate: String,
         body: String,
+        htmlBody: String,
         snippet: String,
         size: Long,
         isRead: Boolean,
@@ -118,6 +121,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                 sentDate,
                 receivedDate,
                 body,
+                htmlBody,
                 snippet,
                 size,
                 isRead,
@@ -138,7 +142,7 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     fun selectAllEmailsForAccount(emailAddress: String): List<EmailsDAO> = queries.selectAllEmailsForAccount(
         emailAddress,
-        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+        mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, html_body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
                 messageId = messageId ?: "",
@@ -152,6 +156,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                 sentDate = sentDate ?: "",
                 receivedDate = receivedDate ?: "",
                 body = body ?: "",
+                htmlBody = html_body ?: "",
                 snippet = snippet ?: "",
                 size = size ?: 0,
                 isRead = isRead,
@@ -170,7 +175,7 @@ class EmailsDataSource(db: LuminaDatabase) {
 
     // Search
     private val all: Flow<List<EmailsDAO>>
-        get() = queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+        get() = queries.selectAllEmails(mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, html_body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
             EmailsDAO(
                 id = id,
                 messageId = messageId ?: "",
@@ -184,6 +189,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                 sentDate = sentDate ?: "",
                 receivedDate = receivedDate ?: "",
                 body = body ?: "",
+                htmlBody = html_body ?: "",
                 snippet = snippet ?: "",
                 size = size ?: 0,
                 isRead = isRead ?: false,
@@ -200,7 +206,7 @@ class EmailsDataSource(db: LuminaDatabase) {
         } else {
             queries.search(
                 query,
-                mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
+                mapper = { id, messageId, folderUID, compositeKey, folderName, subject, address, personal, recipients, sentDate, receivedDate, body, html_body, snippet, size, isRead, isFlagged, attachmentsCount, hasAttachments, account ->
                     EmailsDAO(
                         id = id,
                         messageId = messageId ?: "",
@@ -214,6 +220,7 @@ class EmailsDataSource(db: LuminaDatabase) {
                         sentDate = sentDate ?: "",
                         receivedDate = receivedDate ?: "",
                         body = body ?: "",
+                        htmlBody = html_body ?: "",
                         snippet = snippet ?: "",
                         size = size ?: 0,
                         isRead = isRead ?: false,

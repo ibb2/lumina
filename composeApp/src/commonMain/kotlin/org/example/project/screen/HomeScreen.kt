@@ -177,7 +177,6 @@ data class HomeScreen(
             val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
 
             if (folders.size > 0) {
-                println("Folders: ${folders}")
                 FoldersTabRow(folders, selectedFolders)
             }
 

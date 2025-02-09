@@ -13,6 +13,7 @@ data class EmailsDAO(
     val sentDate: String,
     val receivedDate: String,
     val body: String,
+    val htmlBody: String?,
     val snippet: String,
     val size: Long,
     val isRead: Boolean,
@@ -44,6 +45,7 @@ data class EmailsDAO(
         if (sentDate != other.sentDate) return false
         if (receivedDate != other.receivedDate) return false
         if (body != other.body) return false
+        if (htmlBody != other.htmlBody) return false
         if (snippet != other.snippet) return false
         if (account != other.account) return false
 
@@ -68,6 +70,7 @@ data class EmailsDAO(
         result = 31 * result + sentDate.hashCode()
         result = 31 * result + receivedDate.hashCode()
         result = 31 * result + body.hashCode()
+        result = 31 * result + htmlBody.hashCode()
         result = 31 * result + snippet.hashCode()
         result = 31 * result + account.hashCode()
         return result

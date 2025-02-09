@@ -14,6 +14,7 @@ CREATE TABLE Emails (
     sent_date TEXT,                                                     -- Sent date in ISO 8601 format
     received_date TEXT,                                                 -- Received date in ISO 8601 format
     body TEXT,                                                          -- Email body (plain text)
+    html_body TEXT,                                                     -- Email body (html)
     snippet TEXT,                                                       -- Short preview/snippet of the body
     size INTEGER,                                                       -- Email size in bytes
     is_read INTEGER AS Boolean NOT NULL DEFAULT 0,                      -- Read/unread status
@@ -37,6 +38,7 @@ CREATE VIRTUAL TABLE VirtualEmails USING fts5(
     sent_date TEXT,                                                     -- Sent date in ISO 8601 format
     received_date TEXT,                                                 -- Received date in ISO 8601 format
     body TEXT,                                                          -- Email body (plain text)
+    html_body TEXT,                                                     -- Email body (html)
     snippet TEXT,                                                       -- Short preview/snippet of the body
     size INTEGER,                                                       -- Email size in bytes
     is_read INTEGER AS Boolean NOT NULL DEFAULT 0,                      -- Read/unread status
@@ -62,6 +64,7 @@ INSERT OR REPLACE INTO Emails(
     sent_date,
     received_date,
     body,
+    html_body,
     snippet,
     size,
     is_read,
@@ -69,7 +72,7 @@ INSERT OR REPLACE INTO Emails(
     attachments_count,
     has_attachments,
     account
-) VALUES(?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+) VALUES(?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 
 updateEmailReadStatus:
 UPDATE Emails SET is_read = ? WHERE composite_key = ?;
@@ -109,6 +112,7 @@ CREATE TRIGGER launch_on_emails_insert AFTER INSERT ON Emails
     sent_date,
     received_date,
     body,
+    html_body,
     snippet,
     size,
     is_read,
@@ -128,6 +132,7 @@ CREATE TRIGGER launch_on_emails_insert AFTER INSERT ON Emails
                new.sent_date,
                new.received_date,
                new.body,
+               new.html_body,
                new.snippet,
                new.size,
                new.is_read,
@@ -154,6 +159,7 @@ BEGIN
      sent_date,
      received_date,
      body,
+     html_body,
      snippet,
      size,
      is_read,
@@ -174,6 +180,7 @@ BEGIN
       new.sent_date,
       new.received_date,
       new.body,
+      new.html_body,
       new.snippet,
       new.size,
       new.is_read,
