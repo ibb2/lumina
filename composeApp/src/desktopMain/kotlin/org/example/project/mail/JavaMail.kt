@@ -146,7 +146,7 @@ class JavaMail(
                             sentDate = sentDate,
                             receivedDate = receivedDate,
                             body = emailBody,
-                            htmlBody = emailBody,
+                            htmlBody = htmlEmailBody,
                             snippet = generateSnippet(emailBody),
                             size = mm.size.toLong(),
                             isRead = isRead,
