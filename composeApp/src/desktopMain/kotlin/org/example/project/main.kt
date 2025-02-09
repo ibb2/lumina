@@ -23,20 +23,19 @@ import org.example.project.sqldelight.DatabaseDriverFactory
 import org.jetbrains.skiko.hostOs
 
 fun main() = application {
-    val state =
-            rememberWindowState(
-                    position = WindowPosition(Alignment.Center),
-                    size = DpSize(1280.dp, 720.dp)
-            )
+    val state = rememberWindowState(
+        position = WindowPosition(Alignment.Center),
+        size = DpSize(1280.dp, 720.dp)
+    )
     val title = "Lumina"
 
     // Create a state to track navigation
     var navigator by remember { mutableStateOf<Navigator?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
 
-    // Update canGoBack whenever navigation stack changes
     LaunchedEffect(navigator) {
-        snapshotFlow { navigator?.canPop ?: false }.collect { canPop -> canGoBack = canPop }
+        snapshotFlow { navigator?.canPop ?: false }
+            .collect { canPop -> canGoBack = canPop }
     }
 
     Window(onCloseRequest = ::exitApplication, state = state, title = title) {
@@ -44,21 +43,21 @@ fun main() = application {
         var downloading by remember { mutableStateOf(0F) }
         var initialized by remember { mutableStateOf(false) }
 
-        // Move KCEF initialization before any UI rendering
+        // Initialize KCEF before UI rendering
         LaunchedEffect(Unit) {
             try {
                 withContext(Dispatchers.IO) {
-                    KCEF.init(
-                            builder = {
-                                release("jbr-release-17.0.10b1087.23")
-                                installDir(File("kcef-bundle"))
-                                progress {
-                                    onDownloading { downloading = max(it, 0F) }
-                                    onInitialized { initialized = true }
-                                }
-                                settings { cachePath = File("cache").absolutePath }
-                            }
-                    )
+                    KCEF.init(builder = {
+                        installDir(File("kcef-bundle"))
+                        progress {
+                            onDownloading { downloading = max(it, 0F) }
+                            onInitialized { initialized = true }
+                        }
+                        // Instead of the DSL block, call release directly:
+                        settings {
+                            cachePath = File("cache").absolutePath
+                        }
+                    })
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -67,42 +66,40 @@ fun main() = application {
         }
 
         WindowFrame(
-                onCloseRequest = ::exitApplication,
-                title = title,
-                state = state,
-                backButtonEnabled = canGoBack,
-                backButtonClick = { navigator?.pop() },
-                backButtonVisible = hostOs.isWindows
+            onCloseRequest = ::exitApplication,
+            title = title,
+            state = state,
+            backButtonEnabled = canGoBack,
+            backButtonClick = { navigator?.pop() },
+            backButtonVisible = hostOs.isWindows
         ) { windowInset, contentInset ->
             when {
                 restartRequired -> {
                     Text("Restart required.")
                 }
-                initialized -> {
+                !initialized -> {
                     Box(Modifier.fillMaxSize()) {
                         Text(
-                                "Downloading $downloading%",
-                                modifier = Modifier.align(Alignment.Center)
+                            "Downloading $downloading%",
+                            modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
                 else -> {
                     App(
-                            client =
-                                    FirebaseAuthClient(
-                                            httpClient = createHttpClient(OkHttp.create())
-                                    ),
-                            emailService =
-                                    EmailService(
-                                            FirebaseAuthClient(
-                                                    httpClient = createHttpClient(OkHttp.create())
-                                            )
-                                    ),
-                            authentication = Authentication(),
-                            driver = DatabaseDriverFactory().create(),
-                            windowInset = windowInset,
-                            contentInset = contentInset,
-                            onNavigatorReady = { nav -> navigator = nav }
+                        client = FirebaseAuthClient(
+                            httpClient = createHttpClient(OkHttp.create())
+                        ),
+                        emailService = EmailService(
+                            FirebaseAuthClient(
+                                httpClient = createHttpClient(OkHttp.create())
+                            )
+                        ),
+                        authentication = Authentication(),
+                        driver = DatabaseDriverFactory().create(),
+                        windowInset = windowInset,
+                        contentInset = contentInset,
+                        onNavigatorReady = { nav -> navigator = nav }
                     )
                 }
             }

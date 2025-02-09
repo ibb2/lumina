@@ -66,7 +66,7 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.voyager.navigator)
             implementation(libs.voyager.transition)
-            api("io.github.kevinnzou:compose-webview-multiplatform:1.9.4")
+            api("io.github.kevinnzou:compose-webview-multiplatform:1.9.40")
             implementation("app.cash.sqldelight:primitive-adapters:2.0.2")
             implementation("com.composables:core:1.19.1")
 //            implementation("com.squareup.sqldelight:coroutines-extensions:2.0.2")
