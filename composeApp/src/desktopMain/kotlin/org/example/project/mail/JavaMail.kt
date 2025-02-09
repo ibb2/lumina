@@ -46,7 +46,7 @@ class JavaMail(
     private var account: Accounts,
     /** Messages to fetch  */
     private var messages: Array<Message>,
-    ) : IMAPFolder.ProtocolCommand {
+) : IMAPFolder.ProtocolCommand {
     //    @Throws(ProtocolException::class)
     override fun doCommand(protocol: IMAPProtocol): Any {
 
@@ -131,7 +131,9 @@ class JavaMail(
                         @Serializable
                         data class SerializableAddress(val address: String, val personal: String)
 
-                        fun Address.toSerializableAddress(): SerializableAddress = SerializableAddress(this.toString(), this.toString())
+                        fun Address.toSerializableAddress(): SerializableAddress =
+                            SerializableAddress(this.toString(), this.toString())
+
                         fun SerializableAddress.toAddress(): Address = InternetAddress(this.address, this.personal)
 
                         val emailId = emailsDataSource.insertEmail(
@@ -207,9 +209,11 @@ class JavaMail(
                     parts.plainText = content
                 }
             }
+
             is MimeMultipart -> {
                 processMimeMultipart(content, parts, attachments)
             }
+
             else -> {
                 parts.plainText = "Unsupported content type"
             }
@@ -251,10 +255,13 @@ class JavaMail(
                 } else {
                     // Determine the type of the content and accumulate appropriately.
                     val content = bodyPart.content
+
+                    println("Type ${bodyPart.isMimeType("text/plain")} and ${content is String}")
                     when {
                         bodyPart.isMimeType("text/plain") && content is String -> {
                             parts.plainText += content
                         }
+
                         bodyPart.isMimeType("text/html") && content is String -> {
                             parts.htmlText += content
                         }
@@ -262,8 +269,11 @@ class JavaMail(
                         content is String -> {
                             if (bodyPart.contentType.contains("text/plain", ignoreCase = true)) {
                                 parts.plainText += content
+                                if (i == 0) println("PLAIN $content")
+
                             } else if (bodyPart.contentType.contains("text/html", ignoreCase = true)) {
                                 parts.htmlText += content
+                                if (i == 0) println("HTML $content")
                             }
                         }
                     }

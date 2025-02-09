@@ -45,7 +45,7 @@ fun EmailItem(
     index: Number,
     emailAddress: String,
     emailDataSource: EmailsDataSource,
-    emailService: EmailService, authentication: Authentication,driver: SqlDriver
+    emailService: EmailService, authentication: Authentication, driver: SqlDriver
 ) {
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -106,64 +106,61 @@ fun EmailItem(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (email.body.length > 60) {
-                        email.body.substring(0, 50) + "..."
-                    } else {
-                        email.body
-                    },
+                    text = email.snippet,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2, // Limit preview lines
                     overflow = TextOverflow.Ellipsis // Add ellipsis if needed
                 )
             }
-            Column(modifier = Modifier.weight(1f)) {
-                if (showActions) { // Actions revealed
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.End // Align to the end
-                    ) {
-                        IconButton(onClick = {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                isRead =
-                                    read(
-                                        email,
-                                        emailDataSource,
-                                        emailService,
-                                        emailAddress
-                                    )
-                                        ?: false
-                            }
-                        }) {
-                            Icon(
-                                if (isRead) Icons.Outlined.MarkEmailUnread else Icons.Outlined.MarkEmailRead,
-                                contentDescription = "Read"
-                            )
-                        }
-                        IconButton(onClick = {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                deleteEmail(
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            if (showActions) { // Actions revealed
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.End // Align to the end
+                ) {
+                    IconButton(onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            isRead =
+                                read(
                                     email,
                                     emailDataSource,
                                     emailService,
                                     emailAddress
                                 )
-                                // Remove email on the main thread
-                                withContext(Dispatchers.Main) {
-                                    emails.remove(email)
-                                }
-                            }
-                        }) {
-                            Icon(Icons.Outlined.Delete, contentDescription = "Delete")
+                                    ?: false
                         }
-                        // ... other buttons
+                    }) {
+                        Icon(
+                            if (isRead) Icons.Outlined.MarkEmailUnread else Icons.Outlined.MarkEmailRead,
+                            contentDescription = "Read"
+                        )
                     }
+                    IconButton(onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            deleteEmail(
+                                email,
+                                emailDataSource,
+                                emailService,
+                                emailAddress
+                            )
+                            // Remove email on the main thread
+                            withContext(Dispatchers.Main) {
+                                emails.remove(email)
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Outlined.Delete, contentDescription = "Delete")
+                    }
+                    // ... other buttons
                 }
             }
         }
     }
+
 ////
 ////                            if (attachments.any { it.emailId === email.id }) {
 ////                                Row {

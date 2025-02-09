@@ -1,4 +1,16 @@
 {
     "configurations": [
+        {
+            "name": "gradlew",
+            "type": "command",
+            "workingDir": "$PROJECT_DIR$",
+            "environment": {
+                "TERM": "xterm-256color"
+            },
+            "program": "/bin/sh",
+            "args": [
+                "$PROJECT_DIR$/gradlew"
+            ]
+        }
     ]
 }

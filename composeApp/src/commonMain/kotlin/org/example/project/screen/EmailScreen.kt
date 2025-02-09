@@ -26,8 +26,8 @@ data class EmailScreen(
     val email: EmailsDAO,
     val index: Number,
     val emailService: EmailService,
-    val authentication : Authentication,
-    val driver : SqlDriver,
+    val authentication: Authentication,
+    val driver: SqlDriver,
 ) : Screen {
 
     @Composable
@@ -57,7 +57,7 @@ fun DisplayEmail(
     var display: Boolean by remember { mutableStateOf(false) }
     var emailFromUser: String by remember { mutableStateOf("") }
     var emailSubject: String by remember { mutableStateOf("") }
-    var emailContent: String by remember { mutableStateOf(email.body) }
+    var emailContent: String by remember { mutableStateOf(if (email.htmlBody.isNullOrEmpty()) email.body else email.htmlBody) }
 
     // Send email
     var sendEmail by remember { mutableStateOf(false) }
