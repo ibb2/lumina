@@ -77,6 +77,7 @@ fun main() = application {
                 restartRequired -> {
                     Text("Restart required.")
                 }
+
                 !initialized -> {
                     Box(Modifier.fillMaxSize()) {
                         Text(
@@ -85,6 +86,7 @@ fun main() = application {
                         )
                     }
                 }
+
                 else -> {
                     App(
                         client = FirebaseAuthClient(

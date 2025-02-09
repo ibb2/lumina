@@ -245,7 +245,7 @@ data class HomeScreen(
                 Text("No emails found :)")
             }
 
-            Box(modifier= Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                 displayEmails(
                     accounts = accounts.value,
                     selectedFolders = selectedFolders,
@@ -263,15 +263,19 @@ data class HomeScreen(
             }
 
             Box(contentAlignment = Alignment.BottomStart, modifier = Modifier.fillMaxSize()) {
-                IconButton(onClick = { localNavigator.push(SettingsScreen(
-                    client,
-                    driver,
-                    emailService,
-                    authentication,
-                    accountsDataSource,
-                    emailDataSource,
-                    attachmentsDataSource
-                )) }) {
+                IconButton(onClick = {
+                    localNavigator.push(
+                        SettingsScreen(
+                            client,
+                            driver,
+                            emailService,
+                            authentication,
+                            accountsDataSource,
+                            emailDataSource,
+                            attachmentsDataSource
+                        )
+                    )
+                }) {
                     Icon(
                         Icons.Outlined.Settings,
                         contentDescription = "Settings",

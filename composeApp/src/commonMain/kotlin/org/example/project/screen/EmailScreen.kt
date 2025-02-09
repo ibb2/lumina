@@ -1,12 +1,14 @@
 package org.example.project.screen
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.cash.sqldelight.db.SqlDriver
 import cafe.adriel.voyager.core.screen.Screen
@@ -32,6 +34,7 @@ data class EmailScreen(
 
     @Composable
     override fun Content() {
+        Spacer(modifier = Modifier.height(48.dp))
         DisplayEmail(
             email = email,
             index = index,
@@ -95,9 +98,13 @@ fun DisplayEmail(
         )
     }
 
-    Card {
+
+    Column(
+        modifier = Modifier.padding(top = 32.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         Box(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
             contentAlignment = Alignment.TopStart
         ) {
             IconButton(
@@ -107,33 +114,48 @@ fun DisplayEmail(
             ) { Icon(Icons.Rounded.ChevronLeft, contentDescription = "Go back to home screen") }
         }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = email.senderAddress)
-            Text(text = email.account)
-            Text(text = email.receivedDate)
+        Card(shape = RoundedCornerShape(20)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp, horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(0.5f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Text(text = email.senderAddress)
+                    Text(text = email.account)
+                }
+                Row(modifier = Modifier.fillMaxWidth(0.5f), horizontalArrangement = Arrangement.End) {
+                    Text(text = email.receivedDate)
+                }
+            }
         }
-        if (email.recipients.isNotEmpty()) {
-            // TODO Handle Bcc and Ccc
-        }
+//        Card {
+//            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+//                if (email.recipients.isNotEmpty()) {
+//                    // TODO Handle Bcc and Ccc
+//                }
+//
+//            }
+//        }
 
+        Card() {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                val state = rememberWebViewStateWithHTMLData(emailContent)
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            val state = rememberWebViewStateWithHTMLData(emailContent)
+                val loadingState = state.loadingState
+                if (loadingState is LoadingState.Loading) {
+                    LinearProgressIndicator(
+                        progress = loadingState.progress,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
-            val loadingState = state.loadingState
-            if (loadingState is LoadingState.Loading) {
-                LinearProgressIndicator(
-                    progress = loadingState.progress,
-                    modifier = Modifier.fillMaxWidth()
+                WebView(
+                    state = state,
+                    modifier = Modifier.fillMaxSize().padding(16.dp).clip(shape = RoundedCornerShape(30)),
+                    captureBackPresses =
+                        false // Prevents WebView from capturing back presses
                 )
             }
-
-            WebView(
-                state = state,
-                modifier = Modifier.fillMaxSize(),
-                captureBackPresses =
-                    false // Prevents WebView from capturing back presses
-            )
         }
     }
 }
