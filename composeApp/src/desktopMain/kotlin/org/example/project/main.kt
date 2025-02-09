@@ -90,24 +90,23 @@ fun main() = application {
                 }
 
                 else -> {
-                    val colors = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.else LightColorPalette
-                            MaterialTheme(colorScheme = colors) {
-                                App(
-                                    client = FirebaseAuthClient(
-                                        httpClient = createHttpClient(OkHttp.create())
-                                    ),
-                                    emailService = EmailService(
-                                        FirebaseAuthClient(
-                                            httpClient = createHttpClient(OkHttp.create())
-                                        )
-                                    ),
-                                    authentication = Authentication(),
-                                    driver = DatabaseDriverFactory().create(),
-                                    windowInset = windowInset,
-                                    contentInset = contentInset,
-                                    onNavigatorReady = { nav -> navigator = nav }
+                    MaterialTheme(content = {
+                        App(
+                            client = FirebaseAuthClient(
+                                httpClient = createHttpClient(OkHttp.create())
+                            ),
+                            emailService = EmailService(
+                                FirebaseAuthClient(
+                                    httpClient = createHttpClient(OkHttp.create())
                                 )
-                            }
+                            ),
+                            authentication = Authentication(),
+                            driver = DatabaseDriverFactory().create(),
+                            windowInset = windowInset,
+                            contentInset = contentInset,
+                            onNavigatorReady = { nav -> navigator = nav }
+                        )
+                    })
                 }
             }
         }
