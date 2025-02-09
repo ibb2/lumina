@@ -144,49 +144,43 @@ fun displayEmails(
             }
         }
 
-    Box(contentAlignment = Alignment.BottomEnd) {
-        Row(
-            modifier = Modifier.padding(end = 16.dp).zIndex(10f),
-            horizontalArrangement = Arrangement.End
-        ) { Button(onClick = { sendEmail = true }) { Text(text = "Send Email") } }
-        Row(verticalAlignment = Alignment.Bottom) {
-            ScrollArea(state = scrollState) {
-                LazyColumn(
-                    state = lazyListState,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    itemsIndexed(allEmails) { index, email ->
-                        val emailAddress =
-                            accounts.find { it.email == email.account }?.email
-                                ?: "Unknown Account"
+    Row(verticalAlignment = Alignment.Bottom) {
+        ScrollArea(state = scrollState) {
+            LazyColumn(
+                state = lazyListState,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                itemsIndexed(allEmails) { index, email ->
+                    val emailAddress =
+                        accounts.find { it.email == email.account }?.email
+                            ?: "Unknown Account"
 
-                        EmailItem(
-                            emails,
-                            email,
-                            index,
-                            emailAddress,
-                            emailDataSource,
-                            emailService,
-                            authentication,
-                            driver
-                        )
-                    }
-                }
-                VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
-                    Thumb(
-                        modifier =
-                            Modifier.background(
-                                Color.Black.copy(0.3f),
-                                RoundedCornerShape(100)
-                            ),
-                        thumbVisibility =
-                            ThumbVisibility.HideWhileIdle(
-                                enter = fadeIn(),
-                                exit = fadeOut(),
-                                hideDelay = 1.seconds
-                            )
+                    EmailItem(
+                        emails,
+                        email,
+                        index,
+                        emailAddress,
+                        emailDataSource,
+                        emailService,
+                        authentication,
+                        driver
                     )
                 }
+            }
+            VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {
+                Thumb(
+                    modifier =
+                        Modifier.background(
+                            Color.Black.copy(0.3f),
+                            RoundedCornerShape(100)
+                        ),
+                    thumbVisibility =
+                        ThumbVisibility.HideWhileIdle(
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            hideDelay = 1.seconds
+                        )
+                )
             }
         }
 
@@ -194,35 +188,6 @@ fun displayEmails(
             emailsDialog(display, emailFromUser, emailSubject, emailContent) { display = false }
         }
 
-
-        fun sendEmailAction(from: String, to: String, subject: String, body: String) {
-            CoroutineScope(Dispatchers.IO).launch {
-                val sentEmailSuccess =
-                    emailService.sendNewEmail(
-                        emailDataSource,
-                        NewEmail(
-                            from = from,
-                            to = to,
-                            subject = subject,
-                            body = body
-                        ),
-                        from
-                    )
-                println("Email sent successfully? $sentEmailSuccess")
-            }
-        }
-
-
-        if (sendEmail) {
-            sendEmail(
-                emailService = emailService,
-                emailDataSource = emailDataSource,
-                onClose = { sendEmail = false },
-                onSend = { from, to, subject, body ->
-                    sendEmailAction(from, to, subject, body = body)
-                }
-            )
-        }
     }
 }
 

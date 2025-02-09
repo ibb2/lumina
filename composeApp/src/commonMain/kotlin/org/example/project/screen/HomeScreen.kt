@@ -5,8 +5,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.*
@@ -27,7 +29,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.example.Emails
 import com.example.project.database.LuminaDatabase
 import com.russhwolf.settings.Settings
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.example.project.Authentication
 import org.example.project.EmailService
@@ -42,6 +46,9 @@ import org.example.project.ui.Folder.FoldersTabRow
 import org.example.project.ui.displayEmails
 import org.example.project.ui.platformSpecific.PlatformSpecificTextField
 import org.example.project.utils.NetworkError
+import org.example.project.data.NewEmail
+import org.example.project.ui.platformSpecific.emails.sendEmail
+
 
 data class HomeScreen(
     val client: FirebaseAuthClient,
@@ -209,79 +216,131 @@ data class HomeScreen(
 //        }
         Box(modifier = Modifier.fillMaxSize().padding(top = 42.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)) {
 
-            fun updateTextFieldValue(newValue: TextFieldValue) {
-                searchQuery = newValue
-            }
-
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-//                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
-
-                var text by remember { mutableStateOf("Hello") }
-
-                TextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    modifier = Modifier.fillMaxWidth().border(
-                        shape = RectangleShape,
-                        width = 0.dp,
-                        brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
-                    )
-                )
-            }
-
-            // Folders Tab row
-            val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
-
-            if (folders.size > 0) {
-                FoldersTabRow(folders, selectedFolders)
-            }
-
-            if (isSyncing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
-            // Use emails and attachments in your display logic
-            if (isSearching && emails.isEmpty()) {
-                Text("No emails found :)")
-            }
-
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                displayEmails(
-                    accounts = accounts.value,
-                    selectedFolders = selectedFolders,
-                    emails = allEmails.value.toMutableList(),
-                    attachments = attachments,
-                    emailDataSource = emailDataSource,
-                    client = client,
-                    emailService = emailService,
-                    authentication = authentication,
-                    driver = driver,
-                    localNavigator = localNavigator,
-                    accountsDataSource = accountsDataSource,
-                    attachmentsDataSource = attachmentsDataSource,
-                )
-            }
-
-            Box(contentAlignment = Alignment.BottomStart, modifier = Modifier.fillMaxSize()) {
-                IconButton(onClick = {
-                    localNavigator.push(
-                        SettingsScreen(
-                            client,
-                            driver,
-                            emailService,
-                            authentication,
-                            accountsDataSource,
-                            emailDataSource,
-                            attachmentsDataSource
+            Row {
+                Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxHeight().width(48.dp)) {
+                    IconButton(onClick = {
+                        localNavigator.push(
+                            SettingsScreen(
+                                client,
+                                driver,
+                                emailService,
+                                authentication,
+                                accountsDataSource,
+                                emailDataSource,
+                                attachmentsDataSource
+                            )
                         )
-                    )
-                }) {
-                    Icon(
-                        Icons.Outlined.Settings,
-                        contentDescription = "Settings",
-                    )
+                    }) {
+                        Surface {
+
+                            Icon(
+                                Icons.Outlined.Settings,
+                                contentDescription = "Settings",
+                            )
+                        }
+                    }
                 }
+
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    fun updateTextFieldValue(newValue: TextFieldValue) {
+                        searchQuery = newValue
+                    }
+
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                        //                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
+
+                        var text by remember { mutableStateOf("Hello") }
+
+                        TextField(
+                            value = text,
+                            onValueChange = { text = it },
+                            modifier = Modifier.fillMaxWidth().border(
+                                shape = RectangleShape,
+                                width = 0.dp,
+                                brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
+                            )
+                        )
+                    }
+
+                    // Folders Tab row
+                    val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
+
+                    if (folders.size > 0) {
+                        FoldersTabRow(folders, selectedFolders)
+                    }
+
+                    if (isSyncing) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+
+                    // Use emails and attachments in your display logic
+                    if (isSearching && emails.isEmpty()) {
+                        Text("No emails found :)")
+                    }
+
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                        displayEmails(
+                            accounts = accounts.value,
+                            selectedFolders = selectedFolders,
+                            emails = allEmails.value.toMutableList(),
+                            attachments = attachments,
+                            emailDataSource = emailDataSource,
+                            client = client,
+                            emailService = emailService,
+                            authentication = authentication,
+                            driver = driver,
+                            localNavigator = localNavigator,
+                            accountsDataSource = accountsDataSource,
+                            attachmentsDataSource = attachmentsDataSource,
+                        )
+                    }
+                }
+            }
+
+            Box(contentAlignment = Alignment.BottomEnd, modifier = Modifier.fillMaxSize()) {
+                FloatingActionButton(
+                    onClick = {},
+                    modifier = Modifier.padding(2.dp),
+                    shape = MaterialTheme.shapes.small.copy(CornerSize(20)),
+                    content = {
+                        Icon(
+                            Icons.Outlined.Edit,
+                            contentDescription = "Settings",
+                        )
+                    },
+                )
             }
         }
     }
 }
+
+
+//@Composable
+//fun handleSendingEmails(emailService: EmailService, emailDataSource: EmailsDataSource) {
+//    fun sendEmailAction(from: String, to: String, subject: String, body: String) {
+//        CoroutineScope(Dispatchers.IO).launch {
+//            val sentEmailSuccess =
+//                emailService.sendNewEmail(
+//                    emailDataSource,
+//                    NewEmail(
+//                        from = from,
+//                        to = to,
+//                        subject = subject,
+//                        body = body
+//                    ),
+//                    from
+//                )
+//            println("Email sent successfully? $sentEmailSuccess")
+//        }
+//    }
+//
+//    sendEmail(
+//        emailService = emailService,
+//        emailDataSource = emailDataSource,
+//        onClose = { },
+//        onSend = { from, to, subject, body ->
+//            sendEmailAction(from, to, subject, body = body)
+//        }
+//    )
+//}
