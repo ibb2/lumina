@@ -6,11 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EditCalendar
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -156,160 +157,100 @@ data class HomeScreen(
                 println("Search failed: ${e.message}")
             }
         }
-
-        // UI with sync indicator
-//        Column(
-//            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.spacedBy(16.dp),
-//            modifier = Modifier.padding(16.dp).fillMaxSize()
-//        ) {
-//            fun updateTextFieldValue(newValue: TextFieldValue) {
-//                searchQuery = newValue
-//            }
-//
-//            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-////                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
-//
-//                var text by remember { mutableStateOf("Hello") }
-//
-//                TextField(
-//                    value = text,
-//                    onValueChange = { text = it },
-//                    modifier = Modifier.fillMaxWidth().border(
-//                        shape = RectangleShape,
-//                        width = 0.dp,
-//                        brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
-//                    )
-//                )
-//            }
-//
-//            // Folders Tab row
-//            val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
-//
-//            if (folders.size > 0) {
-//                FoldersTabRow(folders, selectedFolders)
-//            }
-//
-//            if (isSyncing) {
-//                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-//            }
-//
-//            // Use emails and attachments in your display logic
-//            if (isSearching && emails.isEmpty()) {
-//                Text("No emails found :)")
-//            }
-//
-//            displayEmails(
-//                accounts = accounts.value,
-//                selectedFolders = selectedFolders,
-//                emails = allEmails.value.toMutableList(),
-//                attachments = attachments,
-//                emailDataSource = emailDataSource,
-//                client = client,
-//                emailService = emailService,
-//                authentication = authentication,
-//                driver = driver,
-//                localNavigator = localNavigator,
-//                accountsDataSource = accountsDataSource,
-//                attachmentsDataSource = attachmentsDataSource,
-//            )
-//        }
-        Box(modifier = Modifier.fillMaxSize().padding(top = 42.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)) {
-
-            Row {
-                Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxHeight().width(48.dp)) {
-                    IconButton(onClick = {
-                        localNavigator.push(
-                            SettingsScreen(
-                                client,
-                                driver,
-                                emailService,
-                                authentication,
-                                accountsDataSource,
-                                emailDataSource,
-                                attachmentsDataSource
+        Scaffold {
+            Box(modifier = Modifier.fillMaxSize().padding(top = 42.dp, bottom = 8.dp, start = 16.dp, end = 16.dp)) {
+                Row {
+                    Column(verticalArrangement = Arrangement.Bottom, modifier = Modifier.fillMaxHeight().width(48.dp)) {
+                        IconButton(onClick = {
+                            localNavigator.push(
+                                SettingsScreen(
+                                    client,
+                                    driver,
+                                    emailService,
+                                    authentication,
+                                    accountsDataSource,
+                                    emailDataSource,
+                                    attachmentsDataSource
+                                )
                             )
-                        )
-                    }) {
-                        Surface {
-
+                        }) {
                             Icon(
-                                Icons.Outlined.Settings,
+                                Icons.Default.Settings,
                                 contentDescription = "Settings",
+                            )
+                        }
+                    }
+
+
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        fun updateTextFieldValue(newValue: TextFieldValue) {
+                            searchQuery = newValue
+                        }
+
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+                            //                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
+
+                            var text by remember { mutableStateOf("Hello") }
+
+                            TextField(
+                                value = text,
+                                onValueChange = { text = it },
+                                modifier = Modifier.fillMaxWidth().border(
+                                    shape = RectangleShape,
+                                    width = 0.dp,
+                                    brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
+                                )
+                            )
+                        }
+
+                        // Folders Tab row
+                        val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
+
+                        if (folders.size > 0) {
+                            FoldersTabRow(folders, selectedFolders)
+                        }
+
+                        if (isSyncing) {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
+
+                        // Use emails and attachments in your display logic
+                        if (isSearching && emails.isEmpty()) {
+                            Text("No emails found :)")
+                        }
+
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                            displayEmails(
+                                accounts = accounts.value,
+                                selectedFolders = selectedFolders,
+                                emails = allEmails.value.toMutableList(),
+                                attachments = attachments,
+                                emailDataSource = emailDataSource,
+                                client = client,
+                                emailService = emailService,
+                                authentication = authentication,
+                                driver = driver,
+                                localNavigator = localNavigator,
+                                accountsDataSource = accountsDataSource,
+                                attachmentsDataSource = attachmentsDataSource,
                             )
                         }
                     }
                 }
 
-
-                Column(modifier = Modifier.fillMaxSize()) {
-                    fun updateTextFieldValue(newValue: TextFieldValue) {
-                        searchQuery = newValue
-                    }
-
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-                        //                PlatformSpecificTextField(Modifier, searchQuery) { updateTextFieldValue(it) }
-
-                        var text by remember { mutableStateOf("Hello") }
-
-                        TextField(
-                            value = text,
-                            onValueChange = { text = it },
-                            modifier = Modifier.fillMaxWidth().border(
-                                shape = RectangleShape,
-                                width = 0.dp,
-                                brush = Brush.horizontalGradient(colors = listOf(Color.Black, Color.Black)),
+                Box(contentAlignment = Alignment.BottomEnd, modifier = Modifier.fillMaxSize()) {
+                    FloatingActionButton(
+                        onClick = {},
+                        modifier = Modifier.padding(2.dp),
+                        shape = MaterialTheme.shapes.small.copy(CornerSize(20)),
+                        content = {
+                            Icon(
+                                Icons.Rounded.Edit,
+                                contentDescription = "Settings",
                             )
-                        )
-                    }
-
-                    // Folders Tab row
-                    val selectedFolders = remember { mutableStateOf<List<String>>(emptyList()) }
-
-                    if (folders.size > 0) {
-                        FoldersTabRow(folders, selectedFolders)
-                    }
-
-                    if (isSyncing) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-
-                    // Use emails and attachments in your display logic
-                    if (isSearching && emails.isEmpty()) {
-                        Text("No emails found :)")
-                    }
-
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                        displayEmails(
-                            accounts = accounts.value,
-                            selectedFolders = selectedFolders,
-                            emails = allEmails.value.toMutableList(),
-                            attachments = attachments,
-                            emailDataSource = emailDataSource,
-                            client = client,
-                            emailService = emailService,
-                            authentication = authentication,
-                            driver = driver,
-                            localNavigator = localNavigator,
-                            accountsDataSource = accountsDataSource,
-                            attachmentsDataSource = attachmentsDataSource,
-                        )
-                    }
+                        },
+                    )
                 }
-            }
-
-            Box(contentAlignment = Alignment.BottomEnd, modifier = Modifier.fillMaxSize()) {
-                FloatingActionButton(
-                    onClick = {},
-                    modifier = Modifier.padding(2.dp),
-                    shape = MaterialTheme.shapes.small.copy(CornerSize(20)),
-                    content = {
-                        Icon(
-                            Icons.Outlined.Edit,
-                            contentDescription = "Settings",
-                        )
-                    },
-                )
             }
         }
     }

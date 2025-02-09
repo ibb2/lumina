@@ -140,6 +140,7 @@ fun App(
     }
 }
 
+
 class EmailServiceManager(
     private val emailService: EmailService,
     private val emailsDataSource: EmailsDataSource

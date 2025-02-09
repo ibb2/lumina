@@ -1,8 +1,10 @@
 package org.example.project
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,21 +90,24 @@ fun main() = application {
                 }
 
                 else -> {
-                    App(
-                        client = FirebaseAuthClient(
-                            httpClient = createHttpClient(OkHttp.create())
-                        ),
-                        emailService = EmailService(
-                            FirebaseAuthClient(
-                                httpClient = createHttpClient(OkHttp.create())
-                            )
-                        ),
-                        authentication = Authentication(),
-                        driver = DatabaseDriverFactory().create(),
-                        windowInset = windowInset,
-                        contentInset = contentInset,
-                        onNavigatorReady = { nav -> navigator = nav }
-                    )
+                    val colors = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.else LightColorPalette
+                            MaterialTheme(colorScheme = colors) {
+                                App(
+                                    client = FirebaseAuthClient(
+                                        httpClient = createHttpClient(OkHttp.create())
+                                    ),
+                                    emailService = EmailService(
+                                        FirebaseAuthClient(
+                                            httpClient = createHttpClient(OkHttp.create())
+                                        )
+                                    ),
+                                    authentication = Authentication(),
+                                    driver = DatabaseDriverFactory().create(),
+                                    windowInset = windowInset,
+                                    contentInset = contentInset,
+                                    onNavigatorReady = { nav -> navigator = nav }
+                                )
+                            }
                 }
             }
         }
