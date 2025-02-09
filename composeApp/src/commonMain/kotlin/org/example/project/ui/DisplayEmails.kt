@@ -160,7 +160,7 @@ fun displayEmails(
                             accounts.find { it.email == email.account }?.email
                                 ?: "Unknown Account"
 
-                        EmailItem(emails, email, index, emailAddress, emailDataSource, emailService)
+                        EmailItem(emails, email, index, emailAddress, emailDataSource, emailService, authentication, driver)
                     }
                 }
                 VerticalScrollbar(modifier = Modifier.align(Alignment.TopEnd).fillMaxHeight()) {

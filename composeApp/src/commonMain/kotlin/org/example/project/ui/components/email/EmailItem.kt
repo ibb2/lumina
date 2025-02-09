@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.cash.sqldelight.db.SqlDriver
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +34,7 @@ import org.example.project.shared.data.EmailsDAO
 import org.example.project.sqldelight.EmailsDataSource
 import org.example.project.EmailService
 import org.example.project.screen.EmailScreen
+import org.example.project.Authentication
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -43,7 +45,7 @@ fun EmailItem(
     index: Number,
     emailAddress: String,
     emailDataSource: EmailsDataSource,
-    emailService: EmailService
+    emailService: EmailService, authentication: Authentication,driver: SqlDriver
 ) {
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -62,7 +64,7 @@ fun EmailItem(
                 interactionSource = interactionSource
             ).onClick {
 
-                navigator.push(EmailScreen(email, index))
+                navigator.push(EmailScreen(email, index, emailService, authentication, driver))
 
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Subtle elevation

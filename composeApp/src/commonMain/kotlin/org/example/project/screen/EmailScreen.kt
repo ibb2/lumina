@@ -3,7 +3,6 @@ package org.example.project.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,11 +25,20 @@ import org.example.project.Authentication
 data class EmailScreen(
     val email: EmailsDAO,
     val index: Number,
+    val emailService: EmailService,
+    val authentication : Authentication,
+    val driver : SqlDriver,
 ) : Screen {
 
     @Composable
     override fun Content() {
-
+        DisplayEmail(
+            email = email,
+            index = index,
+            emailService = emailService,
+            authentication = authentication,
+            driver = driver,
+        )
 
     }
 }
@@ -39,6 +47,7 @@ data class EmailScreen(
 @Composable
 fun DisplayEmail(
     email: EmailsDAO,
+    index: Number,
     emailService: EmailService,
     authentication: Authentication,
     driver: SqlDriver,
@@ -48,7 +57,7 @@ fun DisplayEmail(
     var display: Boolean by remember { mutableStateOf(false) }
     var emailFromUser: String by remember { mutableStateOf("") }
     var emailSubject: String by remember { mutableStateOf("") }
-    var emailContent: String by remember { mutableStateOf("") }
+    var emailContent: String by remember { mutableStateOf(email.body) }
 
     // Send email
     var sendEmail by remember { mutableStateOf(false) }
