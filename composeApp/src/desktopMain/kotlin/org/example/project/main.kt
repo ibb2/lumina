@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,7 +92,8 @@ fun main() = application {
                 }
 
                 else -> {
-                    MaterialTheme(content = {
+                    val colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
+                    MaterialTheme(colorScheme = colorScheme, content = {
                         App(
                             client = FirebaseAuthClient(
                                 httpClient = createHttpClient(OkHttp.create())
